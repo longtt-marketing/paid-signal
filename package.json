@@ -1,0 +1,11 @@
+{
+  "name": "paid-signal",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test",
+    "deploy": "npx --yes wrangler deploy"
+  }
+}

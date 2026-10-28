@@ -1,0 +1,109 @@
+// The budget agent: Claude reads the reconciliation through tools and proposes changes. Code computed every number;
+// the agent may only quote them. A gate rejects ungrounded numbers or evidence ids, allows one repair, then flags.
+import { dollars, quotableNumbers, ungroundedNumbers } from "./ledger.js";
+
+export const SYSTEM = `You are a performance-marketing analyst for a small business that sells through PayPal.
+Ad platforms report leads; PayPal reports who actually paid. Your job: find where ad spend is not producing paid orders and propose budget changes.
+Rules:
+- Call read_reconciliation first. Call read_captures for any ad you make a claim about.
+- Quote only numbers that appear in tool results, written exactly as given. Do not compute new numbers, forecast returns or invent percentages.
+- Every action cites evidence: capture ids from read_captures, or "row:<ad key>" for the ad's reconciliation row.
+- Small samples are weak evidence. Say so when an ad has fewer than 3 paid orders. Refunds are not paid orders.
+- Prefer "keep and gather more data" over a confident change you cannot support.
+- Finish by calling submit_recommendation once.`;
+
+export const TOOLS = [
+  { name: "read_reconciliation", description: "Per-ad spend, leads, paid orders, refunds, net paid revenue, cost per paid order and lead-to-paid rate, plus totals. Computed in code from the ad export and PayPal captures.", input_schema: { type: "object", properties: {} } },
+  { name: "read_captures", description: "PayPal captures attributed to one ad: capture id, amount, status, refunded amount, capture time.", input_schema: { type: "object", properties: { ad: { type: "string" } }, required: ["ad"] } },
+  {
+    name: "submit_recommendation", description: "Final recommendation. Call exactly once.",
+    input_schema: {
+      type: "object", required: ["headline", "actions"],
+      properties: {
+        headline: { type: "string", description: "One sentence, quoting only tool numbers." },
+        actions: {
+          type: "array", maxItems: 4, items: {
+            type: "object", required: ["ad", "change", "reason", "evidence"],
+            properties: {
+              ad: { type: "string" }, change: { type: "string", enum: ["pause", "reduce", "increase", "keep", "fix_tracking"] },
+              reason: { type: "string" }, evidence: { type: "array", items: { type: "string" }, minItems: 1 },
+            },
+          },
+        },
+        caveats: { type: "string" },
+      },
+    },
+  },
+];
+
+export function reconciliationView(rec) {
+  return {
+    totals: { leads: rec.totals.leads, paid_orders: rec.totals.paid, fully_refunded: rec.totals.refunded, spend_usd: dollars(rec.totals.spend_cents), paid_revenue_usd: dollars(rec.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: dollars(rec.totals.spend_without_paid_cents) },
+    ads: rec.ads.map((r) => ({
+      ad: r.ad, spend_usd: dollars(r.spend_cents), leads: r.leads, paid_orders: r.paid, fully_refunded: r.refunded, paid_revenue_usd: dollars(r.revenue_cents),
+      cost_per_paid_order_usd: r.cost_per_paid_cents === null ? "none paid" : dollars(r.cost_per_paid_cents),
+      lead_to_paid: r.lead_to_paid === null ? "no leads" : Math.round(r.lead_to_paid * 100) + "%", paid_revenue_per_dollar: r.roas === null ? "no spend" : r.roas.toFixed(2),
+    })),
+    unmatched_captures: rec.unmatched_captures,
+  };
+}
+
+/** Checks a submitted recommendation against the reconciliation; returns a list of problems (empty = grounded). */
+export function checkRecommendation(rec, payments, out) {
+  const problems = [];
+  const allowed = quotableNumbers(rec);
+  const ads = new Set(rec.ads.map((r) => r.ad));
+  const ids = new Set(payments.map((p) => p.capture_id));
+  const extra = [3]; // the "fewer than 3 paid orders" rule may be quoted
+  const texts = [out.headline, out.caveats, ...(out.actions || []).map((a) => a.reason)];
+  for (const t of texts) for (const n of ungroundedNumbers(t, allowed, extra)) problems.push(`Number "${n}" is not in the tool results.`);
+  for (const a of out.actions || []) {
+    if (!ads.has(a.ad)) problems.push(`Ad "${a.ad}" is not in the reconciliation.`);
+    for (const e of a.evidence || []) if (!(e.startsWith("row:") ? ads.has(e.slice(4)) : ids.has(e))) problems.push(`Evidence "${e}" does not exist.`);
+  }
+  return problems;
+}
+
+export async function runAgent({ llm, rec, payments, maxTurns = 8 }) {
+  const trace = [];
+  const messages = [{ role: "user", content: "Review this shop's last ad period and recommend budget changes." }];
+  let repaired = false;
+  for (let turn = 0; turn < maxTurns; turn++) {
+    const { raw, calls } = await llm(messages);
+    messages.push({ role: "assistant", content: raw });
+    if (!calls.length) { messages.push({ role: "user", content: "Call submit_recommendation to finish." }); continue; }
+    const results = [];
+    for (const c of calls) {
+      if (c.name === "read_reconciliation") { trace.push({ tool: c.name }); results.push({ id: c.id, content: JSON.stringify(reconciliationView(rec)) }); }
+      else if (c.name === "read_captures") {
+        const list = payments.filter((p) => p.ad === c.input.ad).map((p) => ({ capture_id: p.capture_id, amount_usd: p.amount, status: p.status, refunded_usd: p.refunded_amount || "0.00", captured_at: p.captured_at }));
+        trace.push({ tool: c.name, ad: c.input.ad, n: list.length }); results.push({ id: c.id, content: JSON.stringify(list) });
+      } else if (c.name === "submit_recommendation") {
+        const problems = checkRecommendation(rec, payments, c.input);
+        trace.push({ tool: c.name, problems: problems.length });
+        if (!problems.length || repaired) return { recommendation: c.input, grounded: !problems.length, problems, trace };
+        repaired = true;
+        results.push({ id: c.id, content: `Rejected by the evidence check: ${problems.join(" ")} Fix only these and call submit_recommendation again.` });
+      } else results.push({ id: c.id, content: `Unknown tool ${c.name}.` });
+    }
+    messages.push({ role: "tool", results });
+  }
+  return { recommendation: null, grounded: false, problems: ["The agent did not finish."], trace };
+}
+
+/** Anthropic Messages API adapter; tool results are sent back as tool_result blocks. */
+export function anthropicLLM({ apiKey, workspaceId, model = "claude-sonnet-5-5", fetchImpl = fetch, timeoutMs = 60000 }) {
+  return async (messages) => {
+    const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
+      method: "POST", signal: AbortSignal.timeout(timeoutMs),
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json", ...(workspaceId ? { "anthropic-workspace-id": workspaceId } : {}) },
+      body: JSON.stringify({
+        model, max_tokens: 4000, system: SYSTEM, tools: TOOLS,
+        messages: messages.map((m) => m.role === "tool" ? { role: "user", content: m.results.map((r) => ({ type: "tool_result", tool_use_id: r.id, content: r.content })) } : m),
+      }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(`Anthropic ${res.status}: ${JSON.stringify(body).slice(0, 300)}`);
+    return { raw: body.content, calls: body.content.filter((b) => b.type === "tool_use").map((b) => ({ id: b.id, name: b.name, input: b.input })) };
+  };
+}

@@ -1,0 +1,252 @@
+// Paid Signal Worker. Secrets: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, ANTHROPIC_API_KEY (+ ANTHROPIC_WORKSPACE_ID),
+// PAYPAL_WEBHOOK_ID once the webhook is registered. KV LEDGER holds sandbox captures (no raw email, only its hash).
+import { paypal } from "./paypal.js";
+import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows } from "./ledger.js";
+import { runAgent, anthropicLLM } from "./agent.js";
+
+// The demo shop sells one thing; the price is fixed server-side so a page cannot choose what it pays.
+const PRODUCT = { sku: "trial-class", name: "Robotics trial class (demo shop)", amount: "49.00", currency: "USD" };
+const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+const sha = async (s) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
+
+async function listPayments(env) {
+  const out = []; let cursor;
+  do {
+    const page = await env.LEDGER.list({ prefix: "pay:", cursor });
+    for (const k of page.keys) { const v = await env.LEDGER.get(k.name, "json"); if (v) out.push(v); }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return out.sort((a, b) => String(a.captured_at).localeCompare(String(b.captured_at)));
+}
+
+/** Store what the capture proves: amount, status, the click that led to it. The payer email is kept only as a hash. */
+async function recordCapture(env, order) {
+  const pu = order.purchase_units?.[0] || {};
+  const cap = pu.payments?.captures?.[0];
+  if (!cap) return null;
+  const click = unpackClick(cap.custom_id || pu.custom_id);
+  const email = order.payer?.email_address;
+  const record = {
+    capture_id: cap.id, order_id: order.id, status: cap.status, amount: cap.amount?.value, currency: cap.amount?.currency_code,
+    ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt,
+    captured_at: cap.create_time || new Date().toISOString(), refunded_amount: "0.00",
+    payer_email_sha256: email ? await sha(email.trim().toLowerCase()) : null,
+  };
+  await env.LEDGER.put(`pay:${cap.id}`, JSON.stringify(record));
+  return record;
+}
+
+async function applyRefund(env, captureId, refundedValue, when) {
+  const rec = await env.LEDGER.get(`pay:${captureId}`, "json");
+  if (!rec) return null;
+  const total = (Math.round(Number(rec.refunded_amount || 0) * 100) + Math.round(Number(refundedValue) * 100)) / 100;
+  rec.refunded_amount = Math.min(total, Number(rec.amount)).toFixed(2);
+  rec.status = Number(rec.refunded_amount) >= Number(rec.amount) ? "REFUNDED" : "PARTIALLY_REFUNDED";
+  rec.refunded_at = when || new Date().toISOString();
+  await env.LEDGER.put(`pay:${captureId}`, JSON.stringify(rec));
+  return rec;
+}
+
+// metaEvents hashes the email itself; here only the stored hash exists, so pass it through as an already-hashed field.
+async function metaFromLedger(payments) {
+  const { events, held } = await metaEvents(payments.map((p) => ({ ...p, payer_email: null })));
+  for (const e of events) { const p = payments.find((x) => `paypal:${x.capture_id}` === e.event_id); if (p?.payer_email_sha256) e.user_data.em = [p.payer_email_sha256]; }
+  return { events, held };
+}
+
+async function listPrefix(env, prefix) {
+  const out = []; let cursor;
+  do {
+    const page = await env.LEDGER.list({ prefix, cursor });
+    for (const k of page.keys) { const v = await env.LEDGER.get(k.name, "json"); if (v) out.push(v); }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return out;
+}
+
+async function demoLeads(env, url) {
+  const text = await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-leads.csv`))).text();
+  const [head, ...rows] = text.replace(/\r/g, "").split("\n").filter(Boolean);
+  const keys = head.split(",");
+  return rows.map((r) => Object.fromEntries(r.split(",").map((v, i) => [keys[i], v.trim()])));
+}
+
+/** An invoice paid through PayPal becomes a capture in the ledger, attributed by the click packed in its reference. */
+async function recordInvoicePayment(env, invoice) {
+  const click = unpackClick(invoice.detail?.memo || invoice.detail?.reference);
+  const txs = invoice.payments?.transactions || [];
+  for (const t of txs) {
+    const id = t.payment_id; if (!id || (await env.LEDGER.get(`pay:${id}`))) continue;
+    await env.LEDGER.put(`pay:${id}`, JSON.stringify({
+      capture_id: id, order_id: invoice.id, status: "COMPLETED", amount: t.amount?.value, currency: t.amount?.currency_code || "USD",
+      ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt, captured_at: t.payment_date ? `${t.payment_date}T00:00:00Z` : new Date().toISOString(),
+      refunded_amount: "0.00", payer_email_sha256: null, via: "invoice",
+    }));
+  }
+  const rec = await env.LEDGER.get(`inv:${invoice.id}`, "json");
+  if (rec) { rec.status = invoice.status || "PAID"; rec.paid_at = new Date().toISOString(); await env.LEDGER.put(`inv:${invoice.id}`, JSON.stringify(rec)); }
+}
+
+async function quota(env, key, limit) {
+  const day = new Date().toISOString().slice(0, 10), k = `quota:${key}:${day}`;
+  const n = Number(await env.LEDGER.get(k)) || 0;
+  if (n >= limit) return false;
+  await env.LEDGER.put(k, String(n + 1), { expirationTtl: 172800 });
+  return true;
+}
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const pp = paypal({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET });
+    try {
+      if (url.pathname === "/api/config") return json({ paypal_client_id: env.PAYPAL_CLIENT_ID, product: PRODUCT, environment: "sandbox" });
+
+      if (url.pathname === "/api/checkout" && request.method === "POST") {
+        const b = await request.json();
+        const source = ["fb", "g"].includes(b.source) ? b.source : "other";
+        const customId = packClick({ ad: b.ad || "direct", source, clickId: b.click_id || "", clickedAt: b.clicked_at || Date.now() });
+        const order = await pp.createOrder({
+          amount: PRODUCT.amount, currency: PRODUCT.currency, description: PRODUCT.name, customId,
+          invoiceId: `PS-${crypto.randomUUID().slice(0, 12)}`, returnUrl: `${url.origin}/shop.html?done=1`, cancelUrl: `${url.origin}/shop.html`,
+          requestId: crypto.randomUUID(),
+        });
+        return json({ id: order.id, custom_id: customId, approve_url: (order.links || []).find((l) => l.rel === "payer-action" || l.rel === "approve")?.href });
+      }
+
+      if (url.pathname === "/api/capture" && request.method === "POST") {
+        const { order_id } = await request.json();
+        if (!/^[A-Z0-9]{10,24}$/.test(String(order_id))) return json({ error: "Bad order id." }, 400);
+        const order = await pp.captureOrder(order_id, `cap-${order_id}`);
+        const record = await recordCapture(env, order);
+        return json({ status: order.status, payment: record });
+      }
+
+      if (url.pathname === "/api/refund" && request.method === "POST") {
+        const { capture_id, amount } = await request.json();
+        if (!(await env.LEDGER.get(`pay:${capture_id}`))) return json({ error: "Unknown capture." }, 404);
+        if (!(await quota(env, "refund", 40))) return json({ error: "Daily demo refund limit reached." }, 429);
+        const r = await pp.refundCapture(capture_id, { amount, requestId: crypto.randomUUID() });
+        const rec = await applyRefund(env, capture_id, r.amount?.value || amount, r.create_time);
+        return json({ refund: { id: r.id, status: r.status, amount: r.amount?.value }, payment: rec });
+      }
+
+      // PayPal pushes capture and refund events here; nothing is trusted until PayPal verifies the signature.
+      if (url.pathname === "/api/webhook" && request.method === "POST") {
+        const event = await request.json();
+        if (!env.PAYPAL_WEBHOOK_ID || !(await pp.verifyWebhook({ headers: request.headers, event, webhookId: env.PAYPAL_WEBHOOK_ID }))) return json({ error: "unverified" }, 401);
+        const res = event.resource || {};
+        if (event.event_type === "PAYMENT.CAPTURE.COMPLETED" && !(await env.LEDGER.get(`pay:${res.id}`))) {
+          const orderId = res.supplementary_data?.related_ids?.order_id;
+          if (orderId) await recordCapture(env, await pp.getOrder(orderId));
+        }
+        if (event.event_type === "INVOICING.INVOICE.PAID" && res.id) await recordInvoicePayment(env, await pp.getInvoice(res.id));
+        if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
+          const captureId = (res.links || []).find((l) => l.rel === "up")?.href?.split("/").pop();
+          if (captureId) {
+            const known = await env.LEDGER.get(`seen:${res.id}`);
+            if (!known) { await applyRefund(env, captureId, res.amount?.value, res.create_time); await env.LEDGER.put(`seen:${res.id}`, "1"); }
+          }
+        }
+        await env.LEDGER.put(`hook:${Date.now()}:${event.id}`, JSON.stringify({ type: event.event_type, at: new Date().toISOString() }), { expirationTtl: 1209600 });
+        return json({ ok: true });
+      }
+
+      if (url.pathname === "/api/ledger") return json({ payments: await listPayments(env) });
+
+      // Leads the ad export counted but PayPal never saw pay. The agent may draft invoices for them; a person sends.
+      if (url.pathname === "/api/leads") return json({ leads: await demoLeads(env, url) });
+
+      if (url.pathname === "/api/invoices" && request.method === "GET") return json({ invoices: await listPrefix(env, "inv:") });
+
+      if (url.pathname === "/api/invoices/draft" && request.method === "POST") {
+        const { leads: ids = [], amount = PRODUCT.amount } = await request.json();
+        const leads = (await demoLeads(env, url)).filter((l) => ids.includes(l.lead));
+        if (!leads.length) return json({ error: "No matching leads. Use the exact lead names from the lead list." }, 400);
+        if (!(await quota(env, "invoice", 60))) return json({ error: "Daily demo invoice limit reached." }, 429);
+        const existing = await listPrefix(env, "inv:");
+        const out = [];
+        for (const l of leads.slice(0, 6)) {
+          const dup = existing.find((i) => i.lead === l.lead && i.status !== "CANCELLED");
+          if (dup) { out.push({ ...dup, note: "already drafted" }); continue; }
+          const reference = packClick({ ad: l.ad, source: l.source, clickId: l.click_id, clickedAt: Date.now() });
+          const inv = await pp.createDraftInvoice({ email: l.email, name: l.lead, item: PRODUCT.name, amount: String(amount), reference, business: "Kite Robotics Club (demo)",
+            note: `You asked about: ${l.asked_for}. Pay with PayPal to book the trial class.` });
+          const rec = { id: inv.id, lead: l.lead, ad: l.ad, email: l.email, amount: String(amount), status: inv.status || "DRAFT", reference, created_at: new Date().toISOString() };
+          await env.LEDGER.put(`inv:${inv.id}`, JSON.stringify(rec));
+          out.push(rec);
+        }
+        return json({ invoices: out });
+      }
+
+      if (url.pathname === "/api/invoices/send" && request.method === "POST") {
+        const { id } = await request.json();
+        const rec = await env.LEDGER.get(`inv:${id}`, "json");
+        if (!rec) return json({ error: "Unknown invoice." }, 404);
+        await pp.sendInvoice(id);
+        const fresh = await pp.getInvoice(id);
+        rec.status = fresh.status; rec.sent_at = new Date().toISOString(); rec.pay_url = (fresh.detail?.metadata?.recipient_view_url) || null;
+        await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec));
+        return json({ invoice: rec });
+      }
+
+      // Cross-check the webhook ledger against PayPal's own transaction history.
+      if (url.pathname === "/api/paypal-check") {
+        const end = new Date(), start = new Date(end - 30 * 86400000);
+        const iso = (d) => d.toISOString().replace(/\.\d+Z$/, "Z");
+        let tx;
+        try { tx = await pp.searchTransactions(iso(start), iso(end)); }
+        catch (e) { return json({ status: "unavailable", reason: e.status === 403 ? "Transaction Search is not enabled on this PayPal app yet." : e.message }); }
+        const ledger = await listPayments(env);
+        const ids = new Set(ledger.map((p) => p.capture_id));
+        const items = (tx.transaction_details || []).map((t) => t.transaction_info).filter((t) => Number(t.transaction_amount?.value) > 0);
+        const seen = new Set(items.map((t) => t.transaction_id));
+        return json({
+          status: "ok", checked_at: new Date().toISOString(), paypal_count: items.length, ledger_count: ledger.length,
+          matched: ledger.filter((p) => seen.has(p.capture_id)).map((p) => p.capture_id),
+          not_yet_in_paypal_report: ledger.filter((p) => !seen.has(p.capture_id)).map((p) => p.capture_id),
+          in_paypal_not_in_ledger: items.filter((t) => !ids.has(t.transaction_id)).map((t) => ({ id: t.transaction_id, amount: t.transaction_amount?.value, custom: t.custom_field || null })),
+          note: "PayPal's report can lag new transactions by up to 3 hours.",
+        });
+      }
+
+      // The browser-side Studio agent framework talks to Claude through this proxy; the key never leaves the Worker.
+      if (url.pathname === "/api/ai/turn" && request.method === "POST") {
+        if (!(await quota(env, "ai-turn", Number(env.AI_TURNS_DAILY || 400)))) return json({ error: "The shared daily AI limit is reached." }, 429);
+        const b = await request.json();
+        const model = ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"].includes(b.model) ? b.model : "claude-sonnet-5-5";
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json", ...(env.ANTHROPIC_WORKSPACE_ID ? { "anthropic-workspace-id": env.ANTHROPIC_WORKSPACE_ID } : {}) },
+          body: JSON.stringify({ model, max_tokens: Math.min(Number(b.max_tokens) || 4000, 8000), system: b.system, messages: b.messages, tools: b.tools, ...(b.tool_choice ? { tool_choice: b.tool_choice } : {}) }),
+        });
+        return new Response(await res.text(), { status: res.status, headers: { "content-type": "application/json" } });
+      }
+
+      if (url.pathname === "/api/reconcile" && request.method === "POST") {
+        const { csv } = await request.json();
+        const parsed = parseAdCsv(csv);
+        const payments = await listPayments(env);
+        const rec = reconcile(parsed.rows, payments);
+        return json({ reconciliation: rec, csv_errors: parsed.errors, meta: await metaFromLedger(payments), google: googleRows(payments) });
+      }
+
+      if (url.pathname === "/api/agent" && request.method === "POST") {
+        const { csv } = await request.json();
+        if (!(await quota(env, "agent", Number(env.AGENT_DAILY || 40)))) return json({ error: "The shared daily agent limit is reached. The reconciliation still works." }, 429);
+        const payments = await listPayments(env);
+        const rec = reconcile(parseAdCsv(csv).rows, payments);
+        const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined });
+        const started = Date.now();
+        const out = await runAgent({ llm, rec, payments });
+        return json({ ...out, ms: Date.now() - started });
+      }
+
+      if (url.pathname.startsWith("/api/")) return json({ error: "Not found" }, 404);
+      return env.ASSETS.fetch(request);
+    } catch (e) {
+      return json({ error: e.message, paypal: e.paypal || null }, e.status && e.status < 500 ? 400 : 502);
+    }
+  },
+};

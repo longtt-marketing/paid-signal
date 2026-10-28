@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kite Robotics Club: trial class (demo shop)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<style>
+.shop{max-width:560px;margin:0 auto;padding:32px 16px 64px;display:flex;flex-direction:column;gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px}
+.price{font:600 34px var(--mono)}
+.click{font:400 12px var(--mono);color:var(--faint);overflow-wrap:anywhere}
+.done{background:var(--paid-bg);border-color:#9fd7b8}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal <span class="badge">demo shop · PayPal sandbox</span></a><nav><a href="/">Back to the dashboard</a></nav></header>
+<main class="shop">
+  <p class="kicker">Fictional shop for the demo · no real money</p>
+  <div class="card">
+    <h1 style="margin:0;font-size:30px">Robotics trial class</h1>
+    <p style="margin:0;color:var(--mute)">One 60-minute session for ages 6 to 12. This page plays the part of the ad's landing page.</p>
+    <div class="price">$49.00</div>
+    <p class="click" id="click">No ad click on this visit.</p>
+    <div id="paypal-buttons"></div>
+    <button id="redirect" type="button">Or pay on PayPal in this tab</button>
+    <p class="note" id="msg"></p>
+  </div>
+  <div class="card" id="receipt" hidden></div>
+  <details class="card"><summary>Sandbox buyer for judges</summary><p class="note">Pay with a PayPal sandbox personal account. The login for judges is in the project's testing instructions. Sandbox money is not real.</p></details>
+</main>
+<script type="module">
+const $ = (s) => document.querySelector(s);
+const q = new URLSearchParams(location.search);
+// keep the click for this visit: an ad platform puts fbclid or gclid on the landing URL
+const click = q.get("fbclid") ? { source: "fb", click_id: q.get("fbclid") } : q.get("gclid") ? { source: "g", click_id: q.get("gclid") } : null;
+if (click) sessionStorage.setItem("ps-click", JSON.stringify({ ...click, ad: q.get("ad") || "direct", clicked_at: Date.now() }));
+const saved = JSON.parse(sessionStorage.getItem("ps-click") || "null");
+if (saved) $("#click").textContent = `Ad click kept for checkout: ${saved.ad} · ${saved.source}:${saved.click_id}`;
+
+async function capture(orderID) {
+  $("#msg").textContent = "Capturing the payment…";
+  const res = await fetch("/api/capture", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ order_id: orderID }) });
+  const data = await res.json();
+  if (!res.ok) { $("#msg").textContent = data.error; return; }
+  const p = data.payment;
+  $("#msg").textContent = "";
+  const r = $("#receipt"); r.hidden = false; r.classList.add("done");
+  r.innerHTML = `<p class="kicker">Paid · PayPal ${data.status}</p><b style="font-size:20px">Capture ${p.capture_id}</b><p class="note">$${p.amount} for ad "${p.ad}" (${p.source}:${p.click_id}). This payment now counts as a paid order in the dashboard and becomes a Purchase event.</p><a href="/#reconcile">See it in the dashboard</a>`;
+  sessionStorage.removeItem("ps-click");
+}
+async function createOrder() {
+  const res = await fetch("/api/checkout", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(saved || { ad: "direct" }) });
+  const data = await res.json(); if (!res.ok) throw new Error(data.error); return data;
+}
+// back from the full-page PayPal approval: PayPal adds the order id as token
+if (q.get("token") && q.get("PayerID")) { history.replaceState(null, "", "/shop.html"); await capture(q.get("token")); }
+$("#redirect").onclick = async () => { try { const o = await createOrder(); location.href = o.approve_url; } catch (e) { $("#msg").textContent = e.message; } };
+const cfg = await (await fetch("/api/config")).json();
+const s = document.createElement("script");
+s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(cfg.paypal_client_id)}&currency=USD&intent=capture&components=buttons&locale=en_US`;
+s.onload = () => paypal.Buttons({
+  style: { layout: "vertical", shape: "rect", label: "pay" },
+  createOrder: async () => (await createOrder()).id,
+  onApprove: async ({ orderID }) => capture(orderID),
+  onError: (err) => { $("#msg").textContent = "PayPal could not complete this payment: " + (err?.message || err); },
+}).render("#paypal-buttons");
+document.head.append(s);
+</script>
+</body>
+</html>

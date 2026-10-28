@@ -1,0 +1,20 @@
+{
+  "name": "paid-signal-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "node -e \"require('fs').rmSync('../public/assets',{recursive:true,force:true})\" && vite build"
+  },
+  "dependencies": {
+    "ag-grid-community": "36.2.0",
+    "ag-studio": "3.0.0",
+    "ag-studio-react": "3.0.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "5.0.4",
+    "vite": "7.1.12"
+  }
+}
