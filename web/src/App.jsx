@@ -24,6 +24,8 @@ export default function App() {
   const [decisions, setDecisions] = useState({});
   const [error, setError] = useState("");
   const [invoices, setInvoices] = useState([]);
+  const [license, setLicense] = useState(undefined);
+  useEffect(() => { api("/api/config").then((c) => setLicense(c.ag_studio_license || null)).catch(() => setLicense(null)); }, []);
   const csvRef = useRef("");
   csvRef.current = csv;
   const loadInvoices = useCallback(() => api("/api/invoices").then((d) => setInvoices(d.invoices.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))))).catch(() => {}), []);
@@ -52,6 +54,7 @@ export default function App() {
     catch (e) { setAgent({ status: "error", error: e.message }); }
   };
   const openAssistant = () => { const a = studio.current?.api; if (!a) return; const s = a.getState(); a.setState({ ...s, panels: { ...(s.panels || {}), ai: { collapsed: false } } }); };
+  const refund = async (id) => { if (!window.confirm(`Refund sandbox capture ${id} in full?`)) return; try { await api("/api/refund", { capture_id: id }); } catch (e) { alert(e.message); } load(csvRef.current); };
   const decide = (i, verdict) => setDecisions((d) => ({ ...d, [i]: verdict }));
 
   const t = state?.reconciliation?.totals;
@@ -66,6 +69,7 @@ export default function App() {
         <button className={page === "captures" ? "nav on" : "nav"} onClick={() => go("captures")}>PayPal captures</button>
         <a className="nav" href="#actions">Agent actions {open > 0 && <span className="count">{open}</span>}</a>
         <a className="nav" href="#invoices">PayPal invoices {invoices.filter((i) => i.status === "DRAFT").length > 0 && <span className="count">{invoices.filter((i) => i.status === "DRAFT").length}</span>}</a>
+        <a className="nav" href="#captures">Captures &amp; refunds</a>
         <a className="nav" href="#signal">Signal to ad platforms</a>
         <a className="nav" href="#links">Ad links</a>
         <div className="side-foot">PayPal sandbox · webhooks verified by PayPal · {state ? `${state.payments.length} captures` : "loading"}</div>
@@ -86,9 +90,9 @@ export default function App() {
         </header>
         {error && <p className="err">{error}</p>}
         <div className="studio">
-          <AgStudioProvider modules={[AgStudioAiModule]}>
-            <AgStudio ref={studio} data={data} initialState={initialReport} widgets={widgets} theme={theme} mode="view" ai={ai} panels={PANELS} style={{ width: "100%", height: "100%" }} />
-          </AgStudioProvider>
+          {license !== undefined && <AgStudioProvider modules={[AgStudioAiModule]} licenseKey={license || undefined}>
+            <AgStudio ref={studio} data={data} initialState={initialReport} widgets={widgets} theme={theme} mode="view" ai={ai} panels={PANELS} onApiReady={(e) => { window.__studio = e.api; }} style={{ width: "100%", height: "100%" }} />
+          </AgStudioProvider>}
         </div>
       </main>
 
@@ -125,6 +129,17 @@ export default function App() {
               <p className="mono">{i.id} · ${i.amount}</p>
               {i.status === "DRAFT" ? <button className="primary" onClick={() => send(i.id)}>Send through PayPal</button>
                 : i.pay_url && i.status !== "PAID" ? <a href={i.pay_url} target="_blank" rel="noopener">Open the payer view ↗</a> : null}
+            </div>
+          ))}
+        </section>
+
+        <section id="captures" className="card">
+          <div className="row between"><h2>PayPal captures</h2>{state && <span className="ok">{state.payments.length} in the ledger</span>}</div>
+          <p className="muted">Recorded from PayPal's signature-verified webhooks. Refund one to see the ad's numbers drop and its Google row become a retraction (sandbox, limited per visitor).</p>
+          {(state?.payments || []).slice().reverse().slice(0, 6).map((p) => (
+            <div key={p.capture_id} className="cap">
+              <span><b>{adName(p.ad)}</b><small className="mono">{p.capture_id} · ${p.amount}{Number(p.refunded_amount) > 0 ? ` · refunded $${p.refunded_amount}` : ""}{p.via === "invoice" ? " · via invoice" : ""}</small></span>
+              {p.status === "COMPLETED" ? <button className="mini" onClick={() => refund(p.capture_id)}>Refund</button> : <span className="tag">{p.status}</span>}
             </div>
           ))}
         </section>

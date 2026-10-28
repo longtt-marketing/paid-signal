@@ -33,6 +33,9 @@ async function recordCapture(env, order) {
     captured_at: cap.create_time || new Date().toISOString(), refunded_amount: "0.00",
     payer_email_sha256: email ? await sha(email.trim().toLowerCase()) : null,
   };
+  // a replayed capture must not wipe refunds already recorded against it
+  const prev = await env.LEDGER.get(`pay:${cap.id}`, "json");
+  if (prev) { record.refunded_amount = prev.refunded_amount; record.status = prev.status; if (prev.refunded_at) record.refunded_at = prev.refunded_at; }
   await env.LEDGER.put(`pay:${cap.id}`, JSON.stringify(record));
   return record;
 }
@@ -88,6 +91,14 @@ async function recordInvoicePayment(env, invoice) {
   if (rec) { rec.status = invoice.status || "PAID"; rec.paid_at = new Date().toISOString(); await env.LEDGER.put(`inv:${invoice.id}`, JSON.stringify(rec)); }
 }
 
+/** Shared daily limit plus a per-visitor one, so a single visitor cannot use up the demo for judges. */
+async function guard(env, request, key, perIp, total) {
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  if (!(await quota(env, `${key}:ip:${ip}`, perIp))) return `You reached this demo's limit for ${key} today.`;
+  if (!(await quota(env, key, total))) return `The shared daily ${key} limit is reached.`;
+  return null;
+}
+
 async function quota(env, key, limit) {
   const day = new Date().toISOString().slice(0, 10), k = `quota:${key}:${day}`;
   const n = Number(await env.LEDGER.get(k)) || 0;
@@ -101,7 +112,7 @@ export default {
     const url = new URL(request.url);
     const pp = paypal({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET });
     try {
-      if (url.pathname === "/api/config") return json({ paypal_client_id: env.PAYPAL_CLIENT_ID, product: PRODUCT, environment: "sandbox" });
+      if (url.pathname === "/api/config") return json({ paypal_client_id: env.PAYPAL_CLIENT_ID, product: PRODUCT, environment: "sandbox", ag_studio_license: env.AG_STUDIO_LICENSE || null });
 
       if (url.pathname === "/api/checkout" && request.method === "POST") {
         const b = await request.json();
@@ -126,8 +137,10 @@ export default {
       if (url.pathname === "/api/refund" && request.method === "POST") {
         const { capture_id, amount } = await request.json();
         if (!(await env.LEDGER.get(`pay:${capture_id}`))) return json({ error: "Unknown capture." }, 404);
-        if (!(await quota(env, "refund", 40))) return json({ error: "Daily demo refund limit reached." }, 429);
+        const stop = await guard(env, request, "refunds", 3, 30); if (stop) return json({ error: stop }, 429);
         const r = await pp.refundCapture(capture_id, { amount, requestId: crypto.randomUUID() });
+        // mark the refund as applied first, so PayPal's PAYMENT.CAPTURE.REFUNDED webhook for it is not counted again
+        await env.LEDGER.put(`seen:${r.id}`, "1");
         const rec = await applyRefund(env, capture_id, r.amount?.value || amount, r.create_time);
         return json({ refund: { id: r.id, status: r.status, amount: r.amount?.value }, payment: rec });
       }
@@ -161,16 +174,17 @@ export default {
       if (url.pathname === "/api/invoices" && request.method === "GET") return json({ invoices: await listPrefix(env, "inv:") });
 
       if (url.pathname === "/api/invoices/draft" && request.method === "POST") {
-        const { leads: ids = [], amount = PRODUCT.amount } = await request.json();
+        const { leads: ids = [] } = await request.json();
+        const amount = PRODUCT.amount; // fixed server-side, like the checkout price
         const leads = (await demoLeads(env, url)).filter((l) => ids.includes(l.lead));
         if (!leads.length) return json({ error: "No matching leads. Use the exact lead names from the lead list." }, 400);
-        if (!(await quota(env, "invoice", 60))) return json({ error: "Daily demo invoice limit reached." }, 429);
+        const stop = await guard(env, request, "invoices", 10, 60); if (stop) return json({ error: stop }, 429);
         const existing = await listPrefix(env, "inv:");
         const out = [];
         for (const l of leads.slice(0, 6)) {
           const dup = existing.find((i) => i.lead === l.lead && i.status !== "CANCELLED");
           if (dup) { out.push({ ...dup, note: "already drafted" }); continue; }
-          const reference = packClick({ ad: l.ad, source: l.source, clickId: l.click_id, clickedAt: Date.now() });
+          const reference = packClick({ ad: l.ad, source: l.source, clickId: l.click_id, clickedAt: 0 }); // the demo leads carry no click time
           const inv = await pp.createDraftInvoice({ email: l.email, name: l.lead, item: PRODUCT.name, amount: String(amount), reference, business: "Kite Robotics Club (demo)",
             note: `You asked about: ${l.asked_for}. Pay with PayPal to book the trial class.` });
           const rec = { id: inv.id, lead: l.lead, ad: l.ad, email: l.email, amount: String(amount), status: inv.status || "DRAFT", reference, created_at: new Date().toISOString() };
@@ -184,6 +198,7 @@ export default {
         const { id } = await request.json();
         const rec = await env.LEDGER.get(`inv:${id}`, "json");
         if (!rec) return json({ error: "Unknown invoice." }, 404);
+        const stop = await guard(env, request, "invoice sends", 6, 40); if (stop) return json({ error: stop }, 429);
         await pp.sendInvoice(id);
         const fresh = await pp.getInvoice(id);
         rec.status = fresh.status; rec.sent_at = new Date().toISOString(); rec.pay_url = (fresh.detail?.metadata?.recipient_view_url) || null;
@@ -213,13 +228,15 @@ export default {
 
       // The browser-side Studio agent framework talks to Claude through this proxy; the key never leaves the Worker.
       if (url.pathname === "/api/ai/turn" && request.method === "POST") {
-        if (!(await quota(env, "ai-turn", Number(env.AI_TURNS_DAILY || 400)))) return json({ error: "The shared daily AI limit is reached." }, 429);
-        const b = await request.json();
-        const model = ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"].includes(b.model) ? b.model : "claude-sonnet-5-5";
+        const raw = await request.text();
+        if (raw.length > 400000) return json({ error: "Request too large." }, 413);
+        const stop = await guard(env, request, "assistant turns", 80, Number(env.AI_TURNS_DAILY || 600)); if (stop) return json({ error: stop }, 429);
+        const b = JSON.parse(raw);
+        const model = "claude-sonnet-5-5"; // one model, whatever the page asks for
         const res = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json", ...(env.ANTHROPIC_WORKSPACE_ID ? { "anthropic-workspace-id": env.ANTHROPIC_WORKSPACE_ID } : {}) },
-          body: JSON.stringify({ model, max_tokens: Math.min(Number(b.max_tokens) || 4000, 8000), system: b.system, messages: b.messages, tools: b.tools, ...(b.tool_choice ? { tool_choice: b.tool_choice } : {}) }),
+          body: JSON.stringify({ model, max_tokens: Math.min(Number(b.max_tokens) || 4000, 6000), system: b.system, messages: b.messages, tools: b.tools, ...(b.tool_choice ? { tool_choice: b.tool_choice } : {}) }),
         });
         return new Response(await res.text(), { status: res.status, headers: { "content-type": "application/json" } });
       }

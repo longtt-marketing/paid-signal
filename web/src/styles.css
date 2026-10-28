@@ -52,8 +52,9 @@ code{font-family:var(--mono);font-size:12px}
 .claim-claimed{background:var(--claimed)}.claim-confirmed{background:var(--paid)}.claim-none{background:var(--gap-line)}
 .claim-v{font:500 13px var(--mono);text-align:right}.claim-v.gap{color:var(--gap)}
 .claim-key{margin-top:auto;display:flex;gap:16px;font-size:12px;color:var(--faint)}.claim-key i{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:middle;margin-right:4px}
-@media (max-width:1180px){.shell{grid-template-columns:1fr;height:auto}.side{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line);padding:12px}.brand{padding:0 8px}.nav{width:auto}.side-foot{display:none}.aside{border-left:0;border-top:1px solid var(--line)}.studio{min-height:1100px}}
+@media (max-width:1180px){.shell{grid-template-columns:1fr;height:auto}.side{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line);padding:12px}.brand{padding:0 8px}.nav{width:auto}.side-foot{display:none}.aside{border-left:0;border-top:1px solid var(--line)}.studio{min-height:980px}}
 @media (max-width:640px){.head{padding:16px}.csv textarea{width:100%}.claim-row{grid-template-columns:1fr 70px}.claim-bars{grid-column:1/-1;grid-row:2}}
 
 button.mini{min-height:32px;padding:0 10px;font-size:12px}
 .mono{font-family:var(--mono);font-size:12px!important}
+.cap{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line2)}.cap span{display:flex;flex-direction:column;min-width:0}.cap small{color:var(--faint);overflow-wrap:anywhere}

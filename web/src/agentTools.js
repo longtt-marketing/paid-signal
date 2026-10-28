@@ -72,7 +72,6 @@ export function buildAi({ getCsv, onInvoices }) {
       })),
       primary: "lead",
       promptStarters: PROMPT_STARTERS,
-      models: [{ id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5" }, { id: "claude-opus-5-5", label: "Claude Opus 5.5" }],
     }));
   };
 }

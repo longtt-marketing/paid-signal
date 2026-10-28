@@ -54,3 +54,13 @@ test("Google rows: retraction for a full refund, restatement for a partial one",
   assert.equal(conversions.length, 2);
   assert.deepEqual(adjustments.map((a) => [a.order_id, a.adjustment_type, a.adjusted_value]), [["G1", "RETRACTION", undefined], ["G2", "RESTATEMENT", "39.00"]]);
 });
+
+test("a real Meta export maps to ad name, amount spent and results", () => {
+  const { rows } = parseAdCsv("Campaign name,Ad set name,Ad name,Results,Cost per results,Amount spent (USD)\nSpring,Set A,Trial video,14,6.87,96.20");
+  assert.deepEqual(rows.map((r) => [r.ad, r.spend_cents, r.leads]), [["Trial video", 9620, 14]]);
+});
+
+test("capture ids quoted as evidence are not mistaken for numbers", () => {
+  const r = reconcile([{ ad: "trial", spend_cents: 9620, leads: 14 }], [pay({})]);
+  assert.deepEqual(ungroundedNumbers("Capture 59A98014DG653005N is the only payer for trial.", quotableNumbers(r)), []);
+});

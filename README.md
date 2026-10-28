@@ -13,10 +13,12 @@ Paid Signal closes that loop on the PayPal developer platform:
 2. **Order → money.** PayPal captures the payment. A **signature-verified webhook** (`PAYMENT.CAPTURE.COMPLETED`,
    `PAYMENT.CAPTURE.REFUNDED`, `INVOICING.INVOICE.PAID`) records it, attributed to the ad.
 3. **Money → decision.** An AG Studio dashboard puts what each ad *claims* (leads) next to what PayPal *confirms*
-   (payers, net revenue). A Claude agent proposes budget changes and drafts PayPal invoices for warm leads. Every
-   number it writes is checked against the reconciliation, and nothing moves money without a person clicking.
-4. **Decision → ad platform.** Confirmed payments become Meta Conversions API `Purchase` events (deduplicated by
-   `event_id = paypal:<capture>`) and Google Ads offline conversions; refunds become retractions.
+   (payers, net revenue). A Claude budget agent proposes changes; every number it writes is checked in code against
+   the reconciliation. Inside AG Studio, Claude can draft PayPal invoices for warm leads; sending one, refunding and
+   approving are clicks a person makes.
+4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
+   by `event_id = paypal:<capture>`) and Google Ads offline conversion rows; refunds become retractions. The demo shows
+   and downloads these payloads; it does not send them.
 
 Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
 
@@ -31,7 +33,7 @@ Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
 4. Press **Open the Studio assistant** and choose **Invoice warm leads**. Claude, running inside AG Studio's agent
    framework, lists leads who never paid and drafts PayPal invoices for those who showed intent. Send one from
    **PayPal invoices**; when it is paid, the payment is attributed to the lead's ad.
-5. Refund a capture in **PayPal captures**: the ad's numbers drop and the Google row becomes a retraction.
+5. Refund a capture in **Captures & refunds**: the ad's numbers drop and its Google row becomes a retraction.
 
 ## PayPal developer platform used
 
@@ -40,7 +42,7 @@ Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
 | Orders v2: create (with `custom_id`, `invoice_id`, `PayPal-Request-Id` idempotency), capture | `src/paypal.js`, `/api/checkout`, `/api/capture` |
 | Payments v2: refund a capture | `/api/refund` |
 | Invoicing v2: create draft (click in the private memo), send, get | `/api/invoices/*`, agent tool `draft_paypal_invoices` |
-| Webhooks: register, **verify-webhook-signature** for every delivery | `/api/webhook` |
+| Webhooks: registered by `scripts/register-webhook.py`, **verify-webhook-signature** for every delivery | `/api/webhook` |
 | Reporting: Transaction Search, to cross-check the webhook ledger | `/api/paypal-check`, agent tool `check_paypal_ledger` |
 | JavaScript SDK buttons, plus a full-page approval fallback | `public/shop.html` |
 
@@ -48,7 +50,8 @@ Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
 
 - **Budget agent** (`src/agent.js`): Claude with tool use (`read_reconciliation`, `read_captures`,
   `submit_recommendation`). A code gate rejects any number that is not in the reconciliation and any evidence id that
-  does not exist, allows one repair, then flags. Tested in `test/agent.test.js`.
+  does not exist, allows one repair, then flags. Tested in `test/agent.test.js`. (The Studio assistant below has no
+  such gate; its tools return computed numbers and it is instructed to quote them.)
 - **Studio assistant** (`web/src/claudeAdapter.js`, `web/src/agentTools.js`): AG Studio's Studio Agent Framework with
   a custom `AgLlmAdapter` for Claude (the Anthropic key stays in the Worker proxy). Studio's five built-in agents run on
   Claude; the lead agent gains four Paid Signal tools: `read_paid_signal`, `list_unpaid_leads`,
@@ -85,8 +88,10 @@ npx wrangler dev                      # or: npx wrangler deploy
 ## Honest limits
 
 - The ad export and the leads are **demo data for a fictional shop**; the PayPal captures, refunds and invoices are
-  real **sandbox** transactions. No live ad account was used, and no Conversions API event is sent unless you supply
-  your own test token.
+  real **sandbox** transactions. No live ad account was used and no Conversions API event is sent: the payloads are
+  previews to download.
+- This is a public sandbox demo: refunds, invoice drafts and assistant turns are open to visitors and limited per
+  visitor and per day. The AG Studio trial key is a front-end key and is served to the browser.
 - Matching relies on the click id reaching checkout. Payments without one are shown as unmatched rather than guessed.
 - Small numbers are weak evidence; the agent is told to say so, and does.
 - Transaction Search can lag new transactions by up to three hours.

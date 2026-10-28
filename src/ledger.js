@@ -21,8 +21,13 @@ export function parseAdCsv(text) {
   if (!lines.length) return { rows: [], errors: ["The ad export is empty."] };
   const split = (l) => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === "," && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map((s) => s.trim()); };
   const head = split(lines[0]).map((h) => h.toLowerCase());
-  const col = (names) => head.findIndex((h) => names.some((n) => h === n || h.includes(n)));
-  const ai = col(["ad key", "ad name", "ad", "campaign"]), si = col(["amount spent", "spend", "cost"]), li = col(["leads", "results", "conversions"]);
+  // exact names first, in priority order; never a rate column such as "cost per result"
+  const col = (names) => {
+    for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; }
+    for (const n of names) { const i = head.findIndex((h) => h.startsWith(n) && !h.includes(" per ")); if (i >= 0) return i; }
+    return -1;
+  };
+  const ai = col(["ad", "ad key", "ad name", "campaign"]), si = col(["spend", "amount spent", "cost"]), li = col(["leads", "results", "conversions"]);
   const errors = [];
   if (ai < 0 || si < 0 || li < 0) return { rows: [], errors: ["The export needs columns for ad, spend and leads."] };
   const rows = [];
@@ -81,7 +86,9 @@ export function quotableNumbers(rec) {
 /** Every number in the text must be one the reconciliation produced (currency signs and commas ignored). */
 export function ungroundedNumbers(text, allowed, extra = []) {
   const ok = new Set([...allowed, ...extra].map((s) => String(s).replace(/[$,]/g, "")));
-  const found = String(text ?? "").match(/\$?\d[\d,]*(?:\.\d+)?%?/g) || [];
+  // ids such as capture 59A98014DG653005N are evidence, not quantities: drop them before extracting numbers
+  const clean = String(text ?? "").replace(/\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9-]{10,}\b/g, " ");
+  const found = clean.match(/\$?\d[\d,]*(?:\.\d+)?%?/g) || [];
   return found.map((s) => s.replace(/[$,]/g, "")).filter((n) => !ok.has(n) && !ok.has(n.replace(/\.00$/, "")));
 }
 
