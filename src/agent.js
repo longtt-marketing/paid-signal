@@ -10,6 +10,7 @@ Rules:
 - Every action cites evidence: capture ids from read_captures, or "row:<ad key>" for the ad's reconciliation row.
 - Small samples are weak evidence. Say so when an ad has fewer than 3 paid orders. Refunds are not paid orders.
 - Prefer "keep and gather more data" over a confident change you cannot support.
+- Write for the shop owner in plain words ("cost per paid order", "spend with no paid order"), never field names such as spend_usd or paid_revenue_per_dollar.
 - Finish by calling submit_recommendation once.`;
 
 export const TOOLS = [
@@ -54,7 +55,8 @@ export function checkRecommendation(rec, payments, out) {
   const allowed = quotableNumbers(rec);
   const ads = new Set(rec.ads.map((r) => r.ad));
   const ids = new Set(payments.map((p) => p.capture_id));
-  const extra = [3]; // the "fewer than 3 paid orders" rule may be quoted
+  // the "fewer than 3 paid orders" rule, and what read_captures shows: amounts and capture dates/times
+  const extra = [3, ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00", ...(String(p.captured_at).match(/\d+/g) || [])])];
   const texts = [out.headline, out.caveats, ...(out.actions || []).map((a) => a.reason)];
   for (const t of texts) for (const n of ungroundedNumbers(t, allowed, extra)) problems.push(`Number "${n}" is not in the tool results.`);
   for (const a of out.actions || []) {

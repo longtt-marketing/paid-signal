@@ -47,7 +47,7 @@ export function buildData(rec, payments) {
     relations: [{ id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],
     calendars: [{ id: "calendar", label: "Calendar", range: { from: { type: "date", value: dates[0] || today }, to: { type: "date", value: dates.at(-1) || today } }, fragments: ["month", "week", "day"] }],
     expressions: [
-      { id: "costPerPayer", name: "Cost per payer", description: "Ad spend divided by PayPal payers.", format: "currencyFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
+      { id: "costPerPayer", name: "Cost per payer", description: "Ad spend divided by PayPal payers.", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
       { id: "revenuePerDollar", name: "Paid revenue per ad dollar", description: "PayPal net revenue divided by ad spend.", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.revenue"), sum("ads.spend")] } },
     ],
   };
@@ -72,10 +72,10 @@ export const initialReport = {
           type: "grid",
           dataMapping: { cols: [{ id: "ads.name" }, sum("ads.spend"), sum("ads.leads"), sum("ads.payers"), sum("ads.refunds"), sum("ads.revenue"), { id: "costPerPayer" }] },
           sort: [{ field: { id: "ads.spend" }, direction: "desc" }],
-          format: { title: { enabled: true, text: "Per ad" } },
+          format: { title: { enabled: true, text: "Per ad" }, style: { headerRow: { wrapText: true } } },
         },
       },
-      widgetLayout: { leads: at(0, 0, 6, 7), payers: at(6, 0, 6, 7), rpd: at(12, 0, 6, 7), nopayer: at(18, 0, 6, 7), claim: at(0, 7, 24, 13), table: at(0, 20, 24, 14) },
+      widgetLayout: { leads: at(0, 0, 6, 7), payers: at(6, 0, 6, 7), rpd: at(12, 0, 6, 7), nopayer: at(18, 0, 6, 7), claim: at(0, 7, 24, 13), table: at(0, 20, 24, 18) },
     },
     {
       id: "captures", name: "PayPal captures",

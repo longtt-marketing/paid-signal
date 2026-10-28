@@ -39,3 +39,9 @@ test("a second ungrounded submission is returned flagged, never silently accepte
   assert.equal(out.grounded, false);
   assert.ok(out.problems.length > 0);
 });
+
+test("numbers read_captures returns (amount, capture time) are grounded; invented ones still are not", () => {
+  const out = { headline: "trial has 1 paid order.", actions: [{ ad: "trial", change: "keep", reason: "Capture CAP1 paid $49.00 on 2026-10-28 at 10:00:00.", evidence: ["CAP1"] }] };
+  assert.deepEqual(checkRecommendation(rec, payments, out), []);
+  assert.equal(checkRecommendation(rec, payments, { ...out, headline: "trial will earn $49.50." }).length, 1);
+});
