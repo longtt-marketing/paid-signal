@@ -20,7 +20,7 @@ Paid Signal closes that loop on the PayPal developer platform:
    by `event_id = paypal:<capture>`) and Google Ads offline conversion rows; refunds become retractions. The demo shows
    and downloads these payloads; it does not send them.
 
-Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
+Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev** · Test scenarios: https://paid-signal.thelongmarketing.workers.dev/scenarios.html (nine cases: duplicates, partial refunds, payments with no click, late payments; marked live in the sandbox or automated test)
 
 ## Try it in three minutes
 

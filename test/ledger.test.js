@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { packClick, unpackClick, parseAdCsv, reconcile, quotableNumbers, ungroundedNumbers, metaEvents, googleRows } from "../src/ledger.js";
+import { packClick, unpackClick, parseAdCsv, reconcile, quotableNumbers, ungroundedNumbers, metaEvents, googleRows, possibleDuplicates } from "../src/ledger.js";
 
-const pay = (o) => ({ capture_id: "C1", order_id: "O1", ad: "trial", source: "fb", click_id: "abc", clicked_at: 1761600000000, amount: "49.00", currency: "USD", captured_at: "2026-10-28T10:00:00Z", ...o });
+const pay = (o) => ({ capture_id: "C1", order_id: "O1", ad: "trial", source: "fb", click_id: "abc", clicked_at: 1793178000000, amount: "49.00", currency: "USD", captured_at: "2026-10-28T10:00:00Z", ...o });
 
 test("click survives the round trip through custom_id and stays within 127 chars", () => {
   const packed = packClick({ ad: "trial;video=1", source: "fb", clickId: "x".repeat(200), clickedAt: 5 });
@@ -44,7 +44,7 @@ test("Meta events: fbc format, deterministic event_id, refunded held back, hashe
   const { events, held } = await metaEvents([pay({ payer_email: " Buyer@Example.com " }), pay({ capture_id: "R", refunded_amount: "49" }), pay({ capture_id: "N", source: "other", click_id: "" })]);
   assert.equal(events.length, 1);
   assert.equal(events[0].event_id, "paypal:C1");
-  assert.equal(events[0].user_data.fbc, "fb.1.1761600000000.abc");
+  assert.equal(events[0].user_data.fbc, "fb.1.1793178000000.abc");
   assert.match(events[0].user_data.em[0], /^[0-9a-f]{64}$/);
   assert.deepEqual(held.map((h) => h.reason), ["fully refunded", "no click id or email to match"]);
 });
@@ -63,4 +63,20 @@ test("a real Meta export maps to ad name, amount spent and results", () => {
 test("capture ids quoted as evidence are not mistaken for numbers", () => {
   const r = reconcile([{ ad: "trial", spend_cents: 9620, leads: 14 }], [pay({})]);
   assert.deepEqual(ungroundedNumbers("Capture 59A98014DG653005N is the only payer for trial.", quotableNumbers(r)), []);
+});
+
+test("a second payment by the same payer for the same ad within minutes is flagged; refunded or later ones are not", () => {
+  const h = { payer_email_sha256: "abc" };
+  const d = possibleDuplicates([pay({ ...h, capture_id: "A", captured_at: "2026-10-29T04:29:46Z" }), pay({ ...h, capture_id: "B", captured_at: "2026-10-29T04:30:03Z" }),
+    pay({ ...h, capture_id: "C", captured_at: "2026-10-29T09:00:00Z" }), pay({ ...h, capture_id: "D", ad: "other", captured_at: "2026-10-29T09:00:05Z" })]);
+  assert.deepEqual(d, [{ capture_id: "B", first: "A", seconds: 17 }]);
+  assert.deepEqual(possibleDuplicates([pay({ ...h, capture_id: "A" }), pay({ ...h, capture_id: "B", refunded_amount: "49.00" })]), []);
+});
+
+test("attribution windows: no Meta event 28+ days after the click, no Google row 90+ days after", async () => {
+  const late = (days, o) => pay({ clicked_at: Date.parse("2026-10-28T10:00:00Z") - days * 86400000, ...o });
+  assert.deepEqual((await metaEvents([late(30, {})])).held.map((h) => h.reason), ["paid more than 28 days after the click"]);
+  assert.equal((await metaEvents([late(20, {})])).events.length, 1);
+  assert.equal(googleRows([late(91, { source: "g" })]).conversions.length, 0);
+  assert.equal(googleRows([late(60, { source: "g" })]).conversions.length, 1);
 });

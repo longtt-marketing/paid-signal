@@ -1,7 +1,7 @@
 // Paid Signal Worker. Secrets: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, ANTHROPIC_API_KEY (+ ANTHROPIC_WORKSPACE_ID),
 // PAYPAL_WEBHOOK_ID once the webhook is registered. KV LEDGER holds sandbox captures (no raw email, only its hash).
 import { paypal } from "./paypal.js";
-import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows } from "./ledger.js";
+import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates } from "./ledger.js";
 import { runAgent, anthropicLLM } from "./agent.js";
 
 // The demo shop sells one thing; the price is fixed server-side so a page cannot choose what it pays.
@@ -53,9 +53,7 @@ async function applyRefund(env, captureId, refundedValue, when) {
 
 // metaEvents hashes the email itself; here only the stored hash exists, so pass it through as an already-hashed field.
 async function metaFromLedger(payments) {
-  const { events, held } = await metaEvents(payments.map((p) => ({ ...p, payer_email: null })));
-  for (const e of events) { const p = payments.find((x) => `paypal:${x.capture_id}` === e.event_id); if (p?.payer_email_sha256) e.user_data.em = [p.payer_email_sha256]; }
-  return { events, held };
+  return metaEvents(payments.map((p) => ({ ...p, payer_email: null })));
 }
 
 async function listPrefix(env, prefix) {
@@ -117,11 +115,13 @@ export default {
       if (url.pathname === "/api/checkout" && request.method === "POST") {
         const b = await request.json();
         const source = ["fb", "g"].includes(b.source) ? b.source : "other";
-        const customId = packClick({ ad: b.ad || "direct", source, clickId: b.click_id || "", clickedAt: b.clicked_at || Date.now() });
+        const customId = packClick({ ad: b.ad || "direct", source, clickId: b.click_id || "", clickedAt: b.clicked_at || 0 });
+        // one checkout intent per visit: a second click on Pay gets the same PayPal order back, so it cannot be charged twice
+        const intent = /^[a-z0-9-]{8,40}$/.test(String(b.intent)) ? b.intent : crypto.randomUUID();
         const order = await pp.createOrder({
           amount: PRODUCT.amount, currency: PRODUCT.currency, description: PRODUCT.name, customId,
-          invoiceId: `PS-${crypto.randomUUID().slice(0, 12)}`, returnUrl: `${url.origin}/shop.html?done=1`, cancelUrl: `${url.origin}/shop.html`,
-          requestId: crypto.randomUUID(),
+          invoiceId: `PS-${intent.replace(/-/g, "").slice(0, 16)}`, returnUrl: `${url.origin}/shop.html?done=1`, cancelUrl: `${url.origin}/shop.html`,
+          requestId: `chk-${intent}`,
         });
         return json({ id: order.id, custom_id: customId, approve_url: (order.links || []).find((l) => l.rel === "payer-action" || l.rel === "approve")?.href });
       }
@@ -136,9 +136,12 @@ export default {
 
       if (url.pathname === "/api/refund" && request.method === "POST") {
         const { capture_id, amount } = await request.json();
-        if (!(await env.LEDGER.get(`pay:${capture_id}`))) return json({ error: "Unknown capture." }, 404);
+        const cur = await env.LEDGER.get(`pay:${capture_id}`, "json");
+        if (!cur) return json({ error: "Unknown capture." }, 404);
+        const left = (Math.round(Number(cur.amount) * 100) - Math.round(Number(cur.refunded_amount || 0) * 100)) / 100;
+        if (amount !== undefined && !(Number(amount) > 0 && Number(amount) <= left)) return json({ error: `Refund between $0.01 and $${left.toFixed(2)}.` }, 400);
         const stop = await guard(env, request, "refunds", 3, 30); if (stop) return json({ error: stop }, 429);
-        const r = await pp.refundCapture(capture_id, { amount, requestId: crypto.randomUUID() });
+        const r = await pp.refundCapture(capture_id, { amount: amount === undefined ? undefined : Number(amount).toFixed(2), requestId: crypto.randomUUID() });
         // mark the refund as applied first, so PayPal's PAYMENT.CAPTURE.REFUNDED webhook for it is not counted again
         await env.LEDGER.put(`seen:${r.id}`, "1");
         const rec = await applyRefund(env, capture_id, r.amount?.value || amount, r.create_time);
@@ -166,7 +169,7 @@ export default {
         return json({ ok: true });
       }
 
-      if (url.pathname === "/api/ledger") return json({ payments: await listPayments(env) });
+      if (url.pathname === "/api/ledger") { const payments = await listPayments(env); return json({ payments, duplicates: possibleDuplicates(payments) }); }
 
       // Leads the ad export counted but PayPal never saw pay. The agent may draft invoices for them; a person sends.
       if (url.pathname === "/api/leads") return json({ leads: await demoLeads(env, url) });

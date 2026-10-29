@@ -5,31 +5,61 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kite Robotics Club: trial class (demo shop)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-.shop{max-width:560px;margin:0 auto;padding:32px 16px 64px;display:flex;flex-direction:column;gap:18px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:12px}
-.price{font:600 34px var(--mono)}
-.click{font:400 12px var(--mono);color:var(--faint);overflow-wrap:anywhere}
-.done{background:var(--paid-bg);border-color:#9fd7b8}
+:root{--paper:#f6f5f1;--card:#fff;--ink:#15171c;--mute:#4a4f5a;--faint:#6b7080;--line:#e3e0d8;--line2:#ece9e2;--chip:#f1efe9;--paid:#1a7a48;--paid-bg:#e7f4ec;--paid-ink:#14532d;--go:#2fbf71}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 "Inter Tight",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+a{color:var(--ink)}a:hover{color:var(--paid)}
+:focus-visible{outline:3px solid #1d5fd1;outline-offset:2px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 32px;border-bottom:1px solid var(--line);background:var(--card)}
+.brand{display:flex;align-items:center;gap:12px;font-weight:600;font-size:17px;color:var(--ink);text-decoration:none}
+.mark{width:30px;height:30px;border-radius:9px;background:var(--ink);display:grid;place-items:center}.mark i{width:12px;height:12px;border-radius:50%;background:var(--go)}
+.pill{font-size:13px;font-weight:500;color:var(--mute);padding:6px 12px;border-radius:999px;background:var(--chip)}
+main{display:flex;justify-content:center;padding:72px 24px 96px}
+.shop{width:100%;max-width:960px;display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.product{flex:1 1 360px;display:flex;flex-direction:column;gap:20px;padding-top:8px}
+h1{margin:0;font-size:clamp(36px,5vw,48px);line-height:1.05;font-weight:700;letter-spacing:-.03em}
+.sub{margin:0;font-size:18px;color:var(--mute)}
+.points{display:flex;flex-direction:column;gap:12px;margin:8px 0 0;padding:0;list-style:none}
+.points li{display:flex;align-items:center;gap:12px}
+.pay{flex:1 1 360px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:18px}
+.total{display:flex;justify-content:space-between;align-items:baseline}.total span{color:var(--mute);font-size:15px}.total b{font-size:40px;font-weight:700;letter-spacing:-.02em}
+#paypal-buttons{min-height:52px}
+.alt{min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:600 15px "Inter Tight",sans-serif;cursor:pointer}
+.alt:hover{background:var(--chip)}
+.click{margin:0;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:var(--paid-bg);color:var(--paid-ink);font-size:14px}
+.click i{width:8px;height:8px;border-radius:50%;background:var(--paid);flex:none}.click.none{background:var(--chip);color:var(--mute)}.click.none i{background:var(--faint)}
+.msg{margin:0;font-size:14px;color:var(--mute)}.msg:empty{display:none}
+.done{width:100%;max-width:520px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:36px;display:flex;flex-direction:column;gap:24px;align-items:flex-start}
+.tick{width:56px;height:56px;border-radius:50%;background:var(--paid-bg);display:grid;place-items:center}
+.done h1{font-size:40px}.done .sub{margin-top:8px}
+.rows{width:100%;border-top:1px solid var(--line2)}
+.rows div{display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line2);font-size:15px}.rows span{color:var(--mute)}.rows b{font-weight:600;text-align:right;overflow-wrap:anywhere}
+.cta{display:flex;justify-content:center;align-items:center;width:100%;min-height:50px;border-radius:12px;background:var(--ink);color:#fff;text-decoration:none;font-weight:600}.cta:hover{color:#fff;background:#2b2f38}
 </style>
 </head>
 <body>
-<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal <span class="badge">demo shop · PayPal sandbox</span></a><nav><a href="/">Back to the dashboard</a></nav></header>
-<main class="shop">
-  <p class="kicker">Fictional shop for the demo · no real money</p>
-  <div class="card">
-    <h1 style="margin:0;font-size:30px">Robotics trial class</h1>
-    <p style="margin:0;color:var(--mute)">One 60-minute session for ages 6 to 12. This page plays the part of the ad's landing page.</p>
-    <div class="price">$49.00</div>
-    <p class="click" id="click">No ad click on this visit.</p>
-    <div id="paypal-buttons"></div>
-    <button id="redirect" type="button">Or pay on PayPal in this tab</button>
-    <p class="note" id="msg"></p>
+<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Kite Robotics Club</a><span class="pill">Demo shop · PayPal sandbox</span></header>
+<main>
+  <div class="shop" id="shop">
+    <section class="product">
+      <h1>Robotics trial class</h1>
+      <p class="sub">60 minutes · ages 6 to 12 · any centre</p>
+      <ul class="points">
+        <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a7a48" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Build and code a first robot</li>
+        <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a7a48" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Coach notes for parents</li>
+      </ul>
+    </section>
+    <section class="pay" aria-label="Payment">
+      <div class="total"><span>Total</span><b>$49.00</b></div>
+      <div id="paypal-buttons"></div>
+      <button class="alt" id="redirect" type="button">Pay in this tab</button>
+      <p class="click none" id="click"><i></i><span>No ad click on this visit</span></p>
+      <p class="msg" id="msg" role="status"></p>
+    </section>
   </div>
-  <div class="card" id="receipt" hidden></div>
-  <details class="card"><summary>Sandbox buyer for judges</summary><p class="note">Pay with a PayPal sandbox personal account. The login for judges is in the project's testing instructions. Sandbox money is not real.</p></details>
+  <section class="done" id="receipt" hidden aria-live="polite"></section>
 </main>
 <script type="module">
 const $ = (s) => document.querySelector(s);
@@ -38,7 +68,9 @@ const q = new URLSearchParams(location.search);
 const click = q.get("fbclid") ? { source: "fb", click_id: q.get("fbclid") } : q.get("gclid") ? { source: "g", click_id: q.get("gclid") } : null;
 if (click) sessionStorage.setItem("ps-click", JSON.stringify({ ...click, ad: q.get("ad") || "direct", clicked_at: Date.now() }));
 const saved = JSON.parse(sessionStorage.getItem("ps-click") || "null");
-if (saved) $("#click").textContent = `Ad click kept for checkout: ${saved.ad} · ${saved.source}:${saved.click_id}`;
+const AD = { trial_video: "Trial class", free_guide: "Free guide", parent_carousel: "Testimonial", holiday_static: "Holiday camp" };
+const SRC = { fb: "Meta", g: "Google" };
+if (saved) { $("#click").classList.remove("none"); $("#click span").innerHTML = `<b>Ad click attached</b> · ${AD[saved.ad] || saved.ad} · ${SRC[saved.source] || saved.source}`; }
 
 async function capture(orderID) {
   $("#msg").textContent = "Capturing the payment…";
@@ -47,12 +79,18 @@ async function capture(orderID) {
   if (!res.ok) { $("#msg").textContent = data.error; return; }
   const p = data.payment;
   $("#msg").textContent = "";
-  const r = $("#receipt"); r.hidden = false; r.classList.add("done");
-  r.innerHTML = `<p class="kicker">Paid · PayPal ${data.status}</p><b style="font-size:20px">Capture ${p.capture_id}</b><p class="note">$${p.amount} for ad "${p.ad}" (${p.source}:${p.click_id}). This payment now counts as a paid order in the dashboard and becomes a Purchase event.</p><a href="/#reconcile">See it in the dashboard</a>`;
-  sessionStorage.removeItem("ps-click");
+  $("#shop").hidden = true;
+  const r = $("#receipt"); r.hidden = false;
+  r.innerHTML = `<span class="tick"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a7a48" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
+    <div><h1>Paid $${p.amount}</h1><p class="sub">Robotics trial class · booked</p></div>
+    <div class="rows"><div><span>PayPal capture</span><b>${p.capture_id}</b></div><div><span>Counted for</span><b>${AD[p.ad] || p.ad} · ${SRC[p.source] || "direct"}</b></div></div>
+    <a class="cta" href="/">Open the dashboard</a>`;
+  sessionStorage.removeItem("ps-click"); sessionStorage.removeItem("ps-intent");
 }
+// one intent per visit until it is paid: pressing Pay twice reuses the same PayPal order
+const intent = sessionStorage.getItem("ps-intent") || crypto.randomUUID(); sessionStorage.setItem("ps-intent", intent);
 async function createOrder() {
-  const res = await fetch("/api/checkout", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(saved || { ad: "direct" }) });
+  const res = await fetch("/api/checkout", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...(saved || { ad: "direct" }), intent }) });
   const data = await res.json(); if (!res.ok) throw new Error(data.error); return data;
 }
 // back from the full-page PayPal approval: PayPal adds the order id as token
@@ -62,7 +100,7 @@ const cfg = await (await fetch("/api/config")).json();
 const s = document.createElement("script");
 s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(cfg.paypal_client_id)}&currency=USD&intent=capture&components=buttons&locale=en_US&disable-funding=card`;
 s.onload = () => paypal.Buttons({
-  style: { layout: "vertical", shape: "rect", label: "pay" },
+  style: { layout: "vertical", shape: "rect", label: "pay", height: 52 },
   createOrder: async () => (await createOrder()).id,
   onApprove: async ({ orderID }) => capture(orderID),
   onError: (err) => { $("#msg").textContent = "PayPal could not complete this payment: " + (err?.message || err); },

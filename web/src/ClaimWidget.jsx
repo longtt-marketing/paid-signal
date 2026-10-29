@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 const pick = (row, field, i) => row[field?.key] ?? row[field?.id] ?? Object.values(row)[i];
 
-export function ClaimWidget({ dataMapping, widgetApi }) {
+export function ClaimWidget({ dataMapping, widgetApi, context }) {
   const [rows, setRows] = useState([]);
   const cat = dataMapping?.category?.[0], claimed = dataMapping?.claimed?.[0], confirmed = dataMapping?.confirmed?.[0];
 
@@ -19,7 +19,7 @@ export function ClaimWidget({ dataMapping, widgetApi }) {
       widgetApi.setDisplayState(out.length ? "displayed" : "noData");
     }).catch(() => live && widgetApi.setDisplayState("noData"));
     return () => { live = false; };
-  }, [cat, claimed, confirmed, widgetApi]);
+  }, [cat, claimed, confirmed, widgetApi, context?.dataVersion]); // Studio sends no data-changed event; the app bumps dataVersion
 
   const max = Math.max(1, ...rows.map((r) => r.claimed));
   return (

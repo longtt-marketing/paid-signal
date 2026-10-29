@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paid Signal: test scenarios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f6f5f1;--card:#fff;--ink:#15171c;--mute:#4a4f5a;--faint:#6b7080;--line:#e3e0d8;--line2:#ece9e2;--chip:#f1efe9;--paid:#1a7a48;--paid-bg:#e7f4ec;--test:#1d4f91;--test-bg:#e8f0fb;--go:#2fbf71}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 "Inter Tight",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+a{color:var(--ink)}a:hover{color:var(--paid)}:focus-visible{outline:3px solid #1d5fd1;outline-offset:2px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 32px;border-bottom:1px solid var(--line);background:var(--card)}
+.brand{display:flex;align-items:center;gap:12px;font-weight:600;font-size:17px;color:var(--ink);text-decoration:none}
+.mark{width:30px;height:30px;border-radius:9px;background:var(--ink);display:grid;place-items:center}.mark i{width:12px;height:12px;border-radius:50%;background:var(--go)}
+.top nav{display:flex;gap:20px}.top nav a{text-decoration:none;font-size:15px;color:var(--mute)}.top nav a:hover{color:var(--ink)}
+main{max-width:1040px;margin:0 auto;padding:56px 24px 96px;display:flex;flex-direction:column;gap:28px}
+h1{margin:0;font-size:clamp(32px,4.5vw,44px);line-height:1.05;font-weight:700;letter-spacing:-.03em}
+.lede{margin:12px 0 0;font-size:18px;color:var(--mute)}
+.key{display:flex;gap:10px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:5px 11px;border-radius:999px;white-space:nowrap}
+.badge i{width:7px;height:7px;border-radius:50%}
+.live{background:var(--paid-bg);color:var(--paid)}.live i{background:var(--paid)}
+.test{background:var(--test-bg);color:var(--test)}.test i{background:var(--test)}
+ol{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+li{display:grid;grid-template-columns:40px minmax(0,1.1fr) minmax(0,1.4fr) 190px;gap:20px;align-items:start;padding:20px 24px;border-top:1px solid var(--line2)}
+li:first-child{border-top:0}
+.n{font-size:15px;font-weight:600;color:var(--faint);padding-top:1px}
+h2{margin:0;font-size:17px;font-weight:600;line-height:1.35}
+.does{margin:0;color:var(--mute);font-size:15px}
+.ev{margin:6px 0 0;font-size:13px;color:var(--faint);overflow-wrap:anywhere}
+.st{display:flex;justify-content:flex-end}
+.foot{margin:0;font-size:14px;color:var(--faint)}
+@media (max-width:760px){li{grid-template-columns:28px minmax(0,1fr);gap:8px 14px}.does,.st{grid-column:2}.st{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav><a href="/">Dashboard</a><a href="/shop.html">Demo shop</a></nav></header>
+<main>
+  <div>
+    <h1>Test scenarios</h1>
+    <p class="lede">What Paid Signal does when payments get complicated.</p>
+  </div>
+  <div class="key"><span class="badge live"><i></i>Live in PayPal sandbox</span><span class="badge test"><i></i>Automated test</span></div>
+  <ol>
+    <li><span class="n">1</span><div><h2>Buyer comes from a Meta ad</h2><p class="ev">Capture 59A98014DG653005N · Trial class</p></div><p class="does">The fbclid rides in the order's custom_id. The capture counts as a paid order for that ad and becomes a Meta Purchase event, deduplicated by capture.</p><div class="st"><span class="badge live"><i></i>Live</span></div></li>
+    <li><span class="n">2</span><div><h2>Buyer comes from a Google ad</h2><p class="ev">Capture 7Y943188M77480212 · Holiday camp</p></div><p class="does">The gclid is kept the same way and becomes a Google offline conversion row.</p><div class="st"><span class="badge live"><i></i>Live</span></div></li>
+    <li><span class="n">3</span><div><h2>Warm lead is invoiced, then pays</h2><p class="ev">Invoice INV2-XSMX-ELUG-QLVV-PMMM · payment 81X20615X87083050 · Free guide</p></div><p class="does">Claude drafts the invoice with the ad click in its memo, a person sends it, and the payment counts for the lead's ad. The sandbox sent no INVOICING.INVOICE.PAID event, so sent invoices are re-checked with PayPal.</p><div class="st"><span class="badge live"><i></i>Live</span></div></li>
+    <li><span class="n">4</span><div><h2>Buyer presses Pay twice</h2><p class="ev">Two clicks returned order 2UD41406J29438706 both times · 71264306943252202 flagged 17 s after 7Y943188M77480212</p></div><p class="does">One checkout intent per visit, so a second click gets the same PayPal order. Two payments from the same payer for the same ad within minutes are flagged as a possible duplicate.</p><div class="st"><span class="badge live"><i></i>Live</span></div></li>
+    <li><span class="n">5</span><div><h2>Full refund</h2><p class="ev">71264306943252202 refunded $49.00</p></div><p class="does">The order stops counting. Google gets a RETRACTION; the Meta event is held back.</p><div class="st"><span class="badge live"><i></i>Live</span></div></li>
+    <li><span class="n">6</span><div><h2>Partial refund</h2><p class="ev">7Y943188M77480212 refunded $9.00</p></div><p class="does">The order still counts, revenue drops to $40. Google gets a RESTATEMENT to the new value.</p><div class="st"><span class="badge live"><i></i>Live</span></div></li>
+    <li><span class="n">7</span><div><h2>Payment with no ad click</h2><p class="ev">test/ledger.test.js · reconcile</p></div><p class="does">PayPal still confirms the money, but it is listed as unmatched and never credited to an ad or sent as a conversion.</p><div class="st"><span class="badge test"><i></i>Test</span></div></li>
+    <li><span class="n">8</span><div><h2>Paid long after the click</h2><p class="ev">test/ledger.test.js · attribution windows</p></div><p class="does">The revenue stays in the ledger, but no Meta event after 28 days and no Google row after 90 days.</p><div class="st"><span class="badge test"><i></i>Test</span></div></li>
+    <li><span class="n">9</span><div><h2>Agent writes a number it was not given</h2><p class="ev">test/agent.test.js</p></div><p class="does">The code gate rejects it, allows one repair, then flags the recommendation. Approve and Dismiss are logged on the server with their evidence.</p><div class="st"><span class="badge test"><i></i>Test</span></div></li>
+  </ol>
+  <p class="foot">The ad export and leads are fictional demo data. PayPal calls are real sandbox calls. Meta and Google payloads are previews; nothing is sent.</p>
+</main>
+</body>
+</html>

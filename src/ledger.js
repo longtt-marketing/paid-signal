@@ -92,6 +92,22 @@ export function ungroundedNumbers(text, allowed, extra = []) {
   return found.map((s) => s.replace(/[$,]/g, "")).filter((n) => !ok.has(n) && !ok.has(n.replace(/\.00$/, "")));
 }
 
+/** Two live captures from the same payer for the same ad within `windowMs` look like a double click at checkout. */
+export function possibleDuplicates(payments, windowMs = 10 * 60 * 1000) {
+  const at = (p) => Date.parse(p.captured_at);
+  const live = payments.filter((p) => p.payer_email_sha256 && cents(p.refunded_amount || 0) < cents(p.amount)).sort((a, b) => at(a) - at(b));
+  const out = [];
+  for (const [i, b] of live.entries()) {
+    const a = live.slice(0, i).reverse().find((x) => x.payer_email_sha256 === b.payer_email_sha256 && x.ad === b.ad && at(b) - at(x) <= windowMs);
+    if (a) out.push({ capture_id: b.capture_id, first: a.capture_id, seconds: Math.round((at(b) - at(a)) / 1000) });
+  }
+  return out;
+}
+
+// a payment long after its click is not credited to the ad: Meta's longest click window is 28 days, Google's 90
+const DAY = 86400000;
+const clickAge = (p) => (p.clicked_at ? Date.parse(p.captured_at) - p.clicked_at : 0);
+
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 export async function sha256(s) { return hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s))); }
 
@@ -104,9 +120,12 @@ export async function metaEvents(payments) {
   for (const p of payments) {
     const gross = cents(p.amount), back = cents(p.refunded_amount || 0);
     if (back >= gross) { held.push({ capture_id: p.capture_id, reason: "fully refunded" }); continue; }
+    if (clickAge(p) > 28 * DAY) { held.push({ capture_id: p.capture_id, reason: "paid more than 28 days after the click" }); continue; }
     const user = {};
     if (p.source === "fb" && p.click_id) user.fbc = `fb.1.${p.clicked_at || Date.parse(p.captured_at)}.${p.click_id}`;
+    // the ledger keeps only the hash; Meta matches on it, so a purchase from a Google click still reaches Meta
     if (p.payer_email) user.em = [await sha256(p.payer_email.trim().toLowerCase())];
+    else if (p.payer_email_sha256) user.em = [p.payer_email_sha256];
     if (!user.fbc && !user.em) { held.push({ capture_id: p.capture_id, reason: "no click id or email to match" }); continue; }
     events.push({
       event_name: "Purchase", event_time: Math.floor(Date.parse(p.captured_at) / 1000), event_id: `paypal:${p.capture_id}`,
@@ -121,7 +140,7 @@ export async function metaEvents(payments) {
 export function googleRows(payments, conversionName = "PayPal paid order") {
   const conversions = [], adjustments = [];
   for (const p of payments) {
-    if (p.source !== "g" || !p.click_id) continue;
+    if (p.source !== "g" || !p.click_id || clickAge(p) > 90 * DAY) continue;
     const gross = cents(p.amount), back = cents(p.refunded_amount || 0);
     conversions.push({ gclid: p.click_id, conversion_name: conversionName, conversion_time: p.captured_at, value: dollars(gross), currency: p.currency || "USD", order_id: p.capture_id });
     if (back >= gross) adjustments.push({ order_id: p.capture_id, conversion_name: conversionName, adjustment_type: "RETRACTION", adjustment_time: p.refunded_at || p.captured_at });

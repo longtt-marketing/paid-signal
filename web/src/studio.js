@@ -47,7 +47,11 @@ export function buildData(rec, payments) {
     relations: [{ id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],
     calendars: [{ id: "calendar", label: "Calendar", range: { from: { type: "date", value: dates[0] || today }, to: { type: "date", value: dates.at(-1) || today } }, fragments: ["month", "week", "day"] }],
     expressions: [
-      { id: "costPerPayer", name: "Cost per paid order", description: "Ad spend divided by PayPal paid orders.", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
+      // named measures, so the grid shows "Spend" rather than "Spend (sum)"
+      ...[["mSpend", "Spend", "ads.spend", "decimalFormat"], ["mLeads", "Leads", "ads.leads", "integerFormat"], ["mPaid", "Paid orders", "ads.payers", "integerFormat"],
+        ["mRefunds", "Refunds", "ads.refunds", "integerFormat"], ["mRevenue", "Revenue", "ads.revenue", "decimalFormat"]]
+        .map(([id, name, field, format]) => ({ id, name, format, isMeasure: true, expression: sum(field) })),
+      { id: "costPerPayer", name: "Cost / paid order", description: "Ad spend divided by PayPal paid orders.", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
       { id: "revenuePerDollar", name: "Paid revenue per ad dollar", description: "PayPal net revenue divided by ad spend.", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.revenue"), sum("ads.spend")] } },
     ],
   };
@@ -63,15 +67,15 @@ export const initialReport = {
     {
       id: "overview", name: "Ads vs PayPal",
       widgets: {
-        leads: kpi("Ad-reported leads", sum("ads.leads")),
-        payers: kpi("PayPal paid orders", sum("ads.payers")),
-        rpd: kpi("Paid revenue per ad dollar", { id: "revenuePerDollar" }),
-        nopayer: kpi("Spend with no paid order (USD)", sum("ads.noPayer")),
+        leads: kpi("Leads (ads)", sum("ads.leads")),
+        payers: kpi("Paid orders", sum("ads.payers")),
+        rpd: kpi("Revenue per ad $", { id: "revenuePerDollar" }),
+        nopayer: kpi("Unpaid ad spend", sum("ads.noPayer")),
         claim: { type: "claim-vs-confirmed", dataMapping: { category: [{ id: "ads.name" }], claimed: [sum("ads.leads")], confirmed: [sum("ads.payers")] }, format: { title: { enabled: true, text: "What each ad claims vs what PayPal confirms" } } },
         table: {
           type: "grid",
-          dataMapping: { cols: [{ id: "ads.name" }, sum("ads.spend"), sum("ads.leads"), sum("ads.payers"), sum("ads.refunds"), sum("ads.revenue"), { id: "costPerPayer" }] },
-          sort: [{ field: { id: "ads.spend" }, direction: "desc" }],
+          dataMapping: { cols: [{ id: "ads.name" }, { id: "mSpend" }, { id: "mLeads" }, { id: "mPaid" }, { id: "mRefunds" }, { id: "mRevenue" }, { id: "costPerPayer" }] },
+          sort: [{ field: { id: "mSpend" }, direction: "desc" }],
           format: { title: { enabled: true, text: "Per ad" }, style: { headerRow: { wrapText: true } } },
         },
       },
@@ -108,5 +112,5 @@ export const theme = studioTheme.withParams({
   gridFontFamily: v("sans"), gridFontSize: 14, gridCellTextColor: v("ink"), gridHeaderBackgroundColor: v("head"), gridHeaderTextColor: v("mute"),
   gridHeaderFontWeight: 600, gridHeaderFontSize: 12, gridRowHeight: 40, gridRowBorder: line("line2"), gridHeaderRowBorder: line("line"), gridWrapperBorder: false,
   chartFontFamily: v("sans"), chartTextColor: v("ink"), chartSubtleTextColor: v("faint"), chartAxisLineColor: v("line"), chartGridLineColor: v("line2"),
-  chartPaletteFills1Color: "#c9cbd2", chartPaletteStrokes1Color: "#c9cbd2", chartPaletteFills2Color: "#1a7a48", chartPaletteStrokes2Color: "#1a7a48",
+  chartPaletteFills1Color: "#1a7a48", chartPaletteStrokes1Color: "#1a7a48", chartPaletteFills2Color: "#c9cbd2", chartPaletteStrokes2Color: "#c9cbd2",
 });
