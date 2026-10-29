@@ -56,6 +56,19 @@ async function applyRefund(env, captureId, refundedValue, when) {
   return rec;
 }
 
+// The dashboard's answer is in the HTML itself, so a phone or a slow connection sees it before the app loads.
+async function firstPaint(env, url, page) {
+  try {
+    const csv = await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text();
+    const t = reconcile(parseAdCsv(csv).rows, await listPayments(env)).totals;
+    const html = `<main style="padding:28px 24px;font-family:'Inter Tight',system-ui,sans-serif;color:#15171c;background:#f6f5f1;min-height:100vh">`
+      + `<p style="margin:0 0 6px;font-size:13px;color:#6b7080">Kite Robotics Club · demo ads · PayPal sandbox</p>`
+      + `<h1 style="margin:0;font-size:clamp(26px,4vw,40px);line-height:1.1;letter-spacing:-.02em">Ads report ${t.leads} leads. <span style="color:#1a7a48">PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}.</span></h1>`
+      + `<p style="margin:14px 0 0;color:#4a4f5a">Loading the AG Studio dashboard…</p></main>`;
+    return new HTMLRewriter().on("#root", { element(e) { e.setInnerContent(html, { html: true }); } }).transform(page);
+  } catch { return page; }
+}
+
 // MCP tools reuse the Worker's own read-only routes, so an MCP client sees exactly what the dashboard shows
 async function mcpTool(env, url, name, args) {
   const get = async (path, body) => (await app.fetch(new Request(url.origin + path, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {}), env)).json();
@@ -145,7 +158,7 @@ const app = {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pp = paypal({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET });
-    // order create and read go through PayPal's APIMatic-generated server SDK; the rest uses the small REST client
+    // order create/read and refunds go through PayPal's APIMatic-generated server SDK; the rest uses the small REST client
     const orders = ordersSdk({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET });
     try {
       if (url.pathname === "/api/config") return json({ paypal_client_id: env.PAYPAL_CLIENT_ID, product: PRODUCT, environment: "sandbox", ag_studio_license: env.AG_STUDIO_LICENSE || null });
@@ -182,7 +195,7 @@ const app = {
         const partial = amount !== undefined && Number(amount) < left;
         if (String(cur.captured_at) < SEEDED_BEFORE) return json({ preview: true, message: `Capture ${capture_id} is one of the demo's seeded sandbox payments, so this refund is only previewed: its ad would lose $${amount ?? left} of paid revenue, and ${partial ? (cur.source === "g" ? "its Google row would become a restatement" : "its Meta event value would drop") : (cur.source === "g" ? "its Google row would become a retraction" : "its Meta event would be held back")}. To run a real sandbox refund, pay in the demo shop and refund that payment.` });
         const stop = await guard(env, request, "refunds", 3, 30); if (stop) return json({ error: stop }, 429);
-        const r = await pp.refundCapture(capture_id, { amount: amount === undefined ? undefined : Number(amount).toFixed(2), requestId: crypto.randomUUID() });
+        const r = await orders.refundCapture(capture_id, { amount: amount === undefined ? undefined : Number(amount).toFixed(2), requestId: crypto.randomUUID() });
         // mark the refund as applied first, so PayPal's PAYMENT.CAPTURE.REFUNDED webhook for it is not counted again
         await env.LEDGER.put(`seen:${r.id}`, "1");
         const rec = await applyRefund(env, capture_id, r.amount?.value || amount, r.create_time);
@@ -379,6 +392,7 @@ const app = {
       }
 
       if (url.pathname.startsWith("/api/")) return json({ error: "Not found" }, 404);
+      if (url.pathname === "/" && request.method === "GET") return firstPaint(env, url, await env.ASSETS.fetch(request));
       return env.ASSETS.fetch(request);
     } catch (e) {
       return json({ error: e.message, paypal: e.paypal || null }, e.status && e.status < 500 ? 400 : 502);

@@ -5,7 +5,7 @@
   // nodejs_compat: PayPal's Agent Toolkit (and its APIMatic-built server SDK) run in the Worker
   "compatibility_flags": ["nodejs_compat"],
   "account_id": "21c5c2506610e1f9514868073f57da7d",
-  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/"] },  // "/" gets the headline in its first paint
   // Secrets (never in git): PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, ANTHROPIC_API_KEY, ANTHROPIC_WORKSPACE_ID, PAYPAL_WEBHOOK_ID
   // Anthropic refuses some Cloudflare locations near Vietnam; run near the US (as Taste Brief does).
   "placement": { "region": "aws:us-east-1" },

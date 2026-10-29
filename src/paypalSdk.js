@@ -1,10 +1,10 @@
-// Orders through PayPal's official server SDK (generated with APIMatic). Returns PayPal's own JSON (snake_case), so the
+// Order create/read and refunds through PayPal's official server SDK (generated with APIMatic). Returns PayPal's own JSON (snake_case), so the
 // rest of the Worker reads it exactly as it reads the REST client in paypal.js.
-import { Client, Environment, OrdersController, CheckoutPaymentIntent, PaypalExperienceUserAction, PaypalWalletContextShippingPreference } from "@paypal/paypal-server-sdk";
+import { Client, Environment, OrdersController, PaymentsController, CheckoutPaymentIntent, PaypalExperienceUserAction, PaypalWalletContextShippingPreference } from "@paypal/paypal-server-sdk";
 
 export function ordersSdk({ clientId, secret }) {
   const client = new Client({ clientCredentialsAuthCredentials: { oAuthClientId: clientId, oAuthClientSecret: secret }, environment: Environment.Sandbox, timeout: 15000 });
-  const orders = new OrdersController(client);
+  const orders = new OrdersController(client), payments = new PaymentsController(client);
   const run = async (p) => {
     try { return JSON.parse((await p).body); }
     catch (e) {
@@ -25,6 +25,11 @@ export function ordersSdk({ clientId, secret }) {
       },
     })),
     getOrder: (id) => run(orders.getOrder({ id })),
+    /** Full refund without an amount, partial with one. */
+    refundCapture: (captureId, { amount, currency = "USD", requestId } = {}) => run(payments.refundCapturedPayment({
+      captureId, paypalRequestId: requestId, prefer: "return=representation",
+      body: amount ? { amount: { value: amount, currencyCode: currency } } : {},
+    })),
   };
 }
 

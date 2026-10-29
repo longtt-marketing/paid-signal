@@ -57,7 +57,7 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
 | --- | --- |
 | **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): `get_invoice`, `send_invoice` for the send agent, allowlisted and pinned to the approved invoice | `src/sendAgent.js`, `/api/invoices/approve` |
 | Orders v2: create and read through **PayPal's server SDK** (`@paypal/paypal-server-sdk`, generated with APIMatic), with `custom_id`, `invoice_id`, `PayPal-Request-Id` idempotency; capture through REST | `src/paypalSdk.js`, `src/paypal.js`, `/api/checkout`, `/api/capture` |
-| Payments v2: refund a capture | `/api/refund` |
+| Payments v2: refund a capture (full or partial), through the server SDK | `src/paypalSdk.js`, `/api/refund` |
 | Invoicing v2: create draft (click in the private memo), send, get; sent invoices are re-checked with PayPal on Refresh, because the sandbox does not always emit `INVOICING.INVOICE.PAID` | `/api/invoices/*`, agent tool `draft_paypal_invoices` |
 | Webhooks: registered by `scripts/register-webhook.py`, **verify-webhook-signature** for every delivery | `/api/webhook` |
 | Reporting: Transaction Search, to cross-check the webhook ledger against PayPal's own history (payments only) | `/api/paypal-check`, agent tool `check_paypal_ledger` |
@@ -111,7 +111,7 @@ web/     app source (Vite)
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # ledger, attribution, agent gate, send agent and MCP tests
+npm test                              # 45 tests: money rules, gate, send agent, MCP
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy
