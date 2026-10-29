@@ -225,7 +225,9 @@ export default {
         catch (e) { return json({ status: "unavailable", reason: e.status === 403 ? "Transaction Search is not enabled on this PayPal app yet." : e.message }); }
         const ledger = await listPayments(env);
         const ids = new Set(ledger.map((p) => p.capture_id));
-        const items = (tx.transaction_details || []).map((t) => t.transaction_info).filter((t) => Number(t.transaction_amount?.value) > 0);
+        // T00xx are payments received; other codes (T1900 sandbox funding, fees, transfers) are not customer payments
+        const items = (tx.transaction_details || []).map((t) => t.transaction_info)
+          .filter((t) => String(t.transaction_event_code || "").startsWith("T00") && Number(t.transaction_amount?.value) > 0);
         const seen = new Set(items.map((t) => t.transaction_id));
         return json({
           status: "ok", checked_at: new Date().toISOString(), paypal_count: items.length, ledger_count: ledger.length,
