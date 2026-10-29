@@ -15,7 +15,7 @@ jobs:
       - name: Pages load
         run: |
           for p in / /shop.html /scenarios.html; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE$p"); echo "$p $code"; test "$code" = 200
+            code=$(curl -sL -o /dev/null -w "%{http_code}" "$BASE$p"); echo "$p $code"; test "$code" = 200
           done
       - name: Ledger and reconciliation answer
         run: |
