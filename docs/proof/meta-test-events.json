@@ -1,0 +1,31 @@
+{
+  "sent_at": "2026-10-29T10:55:04.750Z",
+  "dataset": "Paid Signal demo (test events only)",
+  "events_sent": 5,
+  "held": [
+    {
+      "capture_id": "7A791792B60079253",
+      "reason": "possible duplicate"
+    },
+    {
+      "capture_id": "19L75638WN729671C",
+      "reason": "fully refunded"
+    },
+    {
+      "capture_id": "71264306943252202",
+      "reason": "fully refunded"
+    }
+  ],
+  "meta_response": {
+    "status": 200,
+    "events_received": 5,
+    "messages": []
+  },
+  "event_ids": [
+    "paypal:59A98014DG653005N",
+    "paypal:7G581478P1052730P",
+    "paypal:81X20615X87083050",
+    "paypal:7Y943188M77480212",
+    "paypal:392527382E750334K"
+  ]
+}

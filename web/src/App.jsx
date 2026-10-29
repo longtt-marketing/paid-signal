@@ -186,7 +186,7 @@ export default function App() {
 
         <section id="signal" className="card">
           <div className="row between"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Purchase events</span>}</div>
-          <p className="muted">Meta Purchase events and Google offline conversions, deduplicated by capture. Preview only.</p>
+          <p className="muted">Meta Purchase events and Google offline conversions, deduplicated by capture. Preview here; also sent to a Meta test dataset.</p>
           {state && <pre tabIndex={0} aria-label="Meta Purchase event preview">{JSON.stringify(state.meta.events[0] || { note: "No paid capture with a click id yet." }, null, 2)}</pre>}
           {state?.meta.held.length > 0 && <p className="note">Held back from Meta: {state.meta.held.map((h) => `${h.capture_id} (${h.reason})`).join(", ")}</p>}
           {state && <div className="gsig">

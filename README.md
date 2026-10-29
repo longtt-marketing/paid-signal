@@ -22,7 +22,9 @@ Paid Signal closes that loop on the PayPal developer platform:
 4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
    by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund becomes a Google retraction or restatement and holds the Meta event back;
    a possible duplicate payment is held back from both until it is refunded. The demo shows
-   and downloads these payloads; it does not send them.
+   and downloads these payloads. The Purchase events were also sent to a real Meta dataset as **test events**: Meta's
+   Test Events tab shows them processed and a resent copy deduplicated by `event_id`
+   ([`scripts/meta-test-event.mjs`](scripts/meta-test-event.mjs), [screenshot](docs/proof/meta-test-events.png)).
 
 Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev** · Test scenarios: https://paid-signal.thelongmarketing.workers.dev/scenarios.html (nine cases: duplicates, partial refunds, payments with no click, late payments; marked live in the sandbox or automated test)
 
@@ -120,8 +122,8 @@ npx wrangler dev                      # or: npx wrangler deploy
 ## Honest limits
 
 - The ad export and the leads are **demo data for a fictional shop**; the PayPal captures, refunds and invoices are
-  real **sandbox** transactions. No live ad account was used and no Conversions API event is sent: the payloads are
-  previews to download.
+  real **sandbox** transactions. No live ad account was used. Meta events went only to a test dataset with a test event code;
+  Google rows are previews to download.
 - This is a public sandbox demo: refunds, invoice drafts and assistant turns are open to visitors and limited per
   visitor and per day. The AG Studio trial key is a front-end key and is served to the browser.
 - Matching relies on the click id reaching checkout. PayPal verifies the payment, not the click. Payments without one are shown as unmatched rather than guessed.
