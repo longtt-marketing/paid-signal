@@ -229,14 +229,30 @@ export default {
         const items = (tx.transaction_details || []).map((t) => t.transaction_info)
           .filter((t) => String(t.transaction_event_code || "").startsWith("T00") && Number(t.transaction_amount?.value) > 0);
         const seen = new Set(items.map((t) => t.transaction_id));
+        const cutoff = Date.parse(tx.last_refreshed_datetime || "") || Date.now();
+        const newer = (p) => Date.parse(p.captured_at) > cutoff || p.via === "invoice"; // invoice payments carry PayPal's local-day time
         return json({
           status: "ok", checked_at: new Date().toISOString(), paypal_count: items.length, ledger_count: ledger.length,
+          // PayPal states how current its report is; a payment newer than that is pending, not missing
+          report_current_to: tx.last_refreshed_datetime || null,
           matched: ledger.filter((p) => seen.has(p.capture_id)).map((p) => p.capture_id),
-          not_yet_in_paypal_report: ledger.filter((p) => !seen.has(p.capture_id)).map((p) => p.capture_id),
+          after_report_refresh: ledger.filter((p) => !seen.has(p.capture_id) && newer(p)).map((p) => p.capture_id),
+          missing_from_paypal_report: ledger.filter((p) => !seen.has(p.capture_id) && !newer(p)).map((p) => p.capture_id),
           in_paypal_not_in_ledger: items.filter((t) => !ids.has(t.transaction_id)).map((t) => ({ id: t.transaction_id, amount: t.transaction_amount?.value, custom: t.custom_field || null })),
-          note: "PayPal's report can lag new transactions by up to 3 hours.",
         });
       }
+
+      // Approve / Dismiss on an agent recommendation is kept server-side with its evidence, so a decision is auditable
+      if (url.pathname === "/api/decisions" && request.method === "POST") {
+        const stop = await guard(env, request, "decisions", 40, 400); if (stop) return json({ error: stop }, 429);
+        const b = await request.json();
+        if (!["approved", "dismissed"].includes(b.verdict) || !b.ad) return json({ error: "verdict and ad are required" }, 400);
+        const at = new Date().toISOString(), id = `D-${Date.now().toString(36).toUpperCase()}`;
+        const rec = { id, at, ad: String(b.ad).slice(0, 60), change: String(b.change || "").slice(0, 20), verdict: b.verdict, reason: String(b.reason || "").slice(0, 600), evidence: (b.evidence || []).slice(0, 8).map((e) => String(e).slice(0, 40)) };
+        await env.LEDGER.put(`dec:${at}:${id}`, JSON.stringify(rec), { expirationTtl: 2592000 });
+        return json(rec);
+      }
+      if (url.pathname === "/api/decisions") return json({ decisions: (await listPrefix(env, "dec:")).reverse().slice(0, 50) });
 
       // The browser-side Studio agent framework talks to Claude through this proxy; the key never leaves the Worker.
       if (url.pathname === "/api/ai/turn" && request.method === "POST") {
@@ -244,6 +260,8 @@ export default {
         if (raw.length > 400000) return json({ error: "Request too large." }, 413);
         const stop = await guard(env, request, "assistant turns", 80, Number(env.AI_TURNS_DAILY || 600)); if (stop) return json({ error: stop }, 429);
         const b = JSON.parse(raw);
+        // only AG Studio agent turns: Studio always sends its tool definitions; a bare chat request is refused
+        if (!Array.isArray(b.tools) || !b.tools.length || !Array.isArray(b.messages)) return json({ error: "Only AG Studio agent turns are accepted." }, 400);
         const model = "claude-sonnet-5-5"; // one model, whatever the page asks for
         const res = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",

@@ -58,7 +58,12 @@ export default function App() {
   const syncInvoices = useCallback(async () => { try { const d = await api("/api/invoices/sync", {}); if (d.paid && csvRef.current) load(csvRef.current); } catch {} loadInvoices(); }, [load, loadInvoices]);
   useEffect(() => { syncInvoices(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const refund = async (id) => { if (!window.confirm(`Refund sandbox capture ${id} in full?`)) return; try { await api("/api/refund", { capture_id: id }); } catch (e) { alert(e.message); } load(csvRef.current); };
-  const decide = (i, verdict) => setDecisions((d) => ({ ...d, [i]: verdict }));
+  // a decision is recorded on the server (who decided is the visitor; what and when is kept with the evidence)
+  const decide = async (i, verdict) => {
+    const a = actions[i];
+    try { const d = await api("/api/decisions", { ad: a.ad, change: a.change, verdict, reason: a.reason, evidence: a.evidence }); setDecisions((s) => ({ ...s, [i]: { verdict, id: d.id, at: d.at } })); }
+    catch (e) { alert(e.message); }
+  };
 
   const t = state?.reconciliation?.totals;
   const actions = agent.recommendation?.actions || [];
@@ -75,14 +80,14 @@ export default function App() {
         <a className="nav" href="#captures">Captures &amp; refunds</a>
         <a className="nav" href="#signal">Signal to ad platforms</a>
         <a className="nav" href="#links">Ad links</a>
-        <div className="side-foot">PayPal sandbox · webhooks verified by PayPal · {state ? `${state.payments.length} captures` : "loading"}</div>
+        <div className="side-foot">PayPal sandbox · verified webhooks + invoice re-check · {state ? `${state.payments.length} payments` : "loading"}</div>
       </nav>
 
       <main className="main">
         <header className="head">
           <div>
             <p className="kicker">Kite Robotics Club (fictional) · demo ad export · real PayPal sandbox captures</p>
-            <h1>{t ? <>Ads report {t.leads} leads. <span className="paid">PayPal confirms {t.paid} {t.paid === 1 ? "payer" : "payers"}.</span></> : "Loading the ledger…"}</h1>
+            <h1>{t ? <>Ads report {t.leads} leads. <span className="paid">PayPal confirms {t.paid} paid {t.paid === 1 ? "order" : "orders"}.</span></> : "Loading the ledger…"}</h1>
           </div>
           <details className="csv">
             <summary>Your ad export</summary>
@@ -107,12 +112,12 @@ export default function App() {
           {agent.status === "error" && <p className="err">{agent.error}</p>}
           {agent.recommendation && <p className="headline">{agent.recommendation.headline}</p>}
           {actions.map((a, i) => (
-            <div key={i} className={`action ${decisions[i] || ""}`}>
+            <div key={i} className={`action ${decisions[i]?.verdict || ""}`}>
               <span className={`tag ${a.change}`}>{CHANGE[a.change] || a.change} · needs approval</span>
               <b>{adName(a.ad)}</b>
               <p>{a.reason}</p>
-              <div className="chips">{a.evidence.map((e) => <span key={e} className="chip">{e}</span>)}</div>
-              {decisions[i] ? <p className="decided">{decisions[i] === "approved" ? "Approved and logged" : "Dismissed"}</p>
+              <div className="chips">{a.evidence.map((e) => <span key={e} className="chip">{e.startsWith("row:") ? `${adName(e.slice(4))} row` : `capture ${e}`}</span>)}</div>
+              {decisions[i] ? <p className="decided">{decisions[i].verdict === "approved" ? "Approved" : "Dismissed"} · logged {new Date(decisions[i].at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {decisions[i].id}</p>
                 : <div className="row"><button className="primary" onClick={() => decide(i, "approved")}>Approve</button><button onClick={() => decide(i, "dismissed")}>Dismiss</button></div>}
             </div>
           ))}
@@ -161,7 +166,7 @@ export default function App() {
             <a key={k} className="adlink" href={`/shop.html?ad=${k}&${s === "fb" ? "fbclid=IwAR" : "gclid=Cj0K"}${Date.now().toString(36)}`}>{adName(k)}<small>{s === "fb" ? "Meta" : "Google"} click</small></a>
           ))}
         </section>
-        {t && <p className="foot">Spend {usd(t.spend_cents)} · paid revenue {usd(t.revenue_cents)} · spend on ads with no payer {usd(t.spend_without_paid_cents)}</p>}
+        {t && <p className="foot">Spend {usd(t.spend_cents)} · paid revenue {usd(t.revenue_cents)} · spend on ads with no paid order {usd(t.spend_without_paid_cents)}</p>}
       </aside>
     </div>
   );

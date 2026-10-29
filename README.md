@@ -13,7 +13,7 @@ Paid Signal closes that loop on the PayPal developer platform:
 2. **Order → money.** PayPal captures the payment. A **signature-verified webhook** (`PAYMENT.CAPTURE.COMPLETED`,
    `PAYMENT.CAPTURE.REFUNDED`, `INVOICING.INVOICE.PAID`) records it, attributed to the ad.
 3. **Money → decision.** An AG Studio dashboard puts what each ad *claims* (leads) next to what PayPal *confirms*
-   (payers, net revenue). A Claude budget agent proposes changes; every number it writes is checked in code against
+   (paid orders, net revenue). A Claude budget agent proposes changes; every number it writes is checked in code against
    the reconciliation. Inside AG Studio, Claude can draft PayPal invoices for warm leads; sending one, refunding and
    approving are clicks a person makes.
 4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
@@ -60,7 +60,7 @@ Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
 ## AG Studio
 
 `web/` is a React app on AG Studio: data sources for ads and PayPal captures joined on the ad key, calculated measures
-(cost per payer, paid revenue per ad dollar), a themed report, and a custom widget, **Claimed vs confirmed**
+(cost per paid order, paid revenue per ad dollar), a themed report, and a custom widget, **Claimed vs confirmed**
 (`web/src/ClaimWidget.jsx`), that reads through Studio's widget API so page filters and cross-filters apply to it.
 
 ## Architecture
@@ -92,8 +92,9 @@ npx wrangler dev                      # or: npx wrangler deploy
   previews to download.
 - This is a public sandbox demo: refunds, invoice drafts and assistant turns are open to visitors and limited per
   visitor and per day. The AG Studio trial key is a front-end key and is served to the browser.
-- Matching relies on the click id reaching checkout. Payments without one are shown as unmatched rather than guessed.
+- Matching relies on the click id reaching checkout. PayPal verifies the payment, not the click. Payments without one are shown as unmatched rather than guessed.
+- The evidence gate checks that numbers and ids exist, not that the reasoning is right. Approvals are logged on the server but, in this public demo, not tied to an owner login.
 - Small numbers are weak evidence; the agent is told to say so, and does.
-- Transaction Search can lag new transactions by up to three hours.
+- Transaction Search reports how current it is (the sandbox refreshes about daily); payments newer than that are listed as pending, not missing.
 
 Built by Trần Thế Long, a performance marketer, with Claude Code. MIT licensed.

@@ -7,7 +7,7 @@ const get = async (path, signal) => { const r = await fetch(path, { signal }); c
 const post = async (path, body, signal) => { const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal }); const d = await r.json(); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; };
 
 export const PROMPT_STARTERS = [
-  { label: "Which ads bring payers?", prompt: "Using the Paid Signal tools, which ads bring paying customers and which only bring leads? Quote the numbers exactly." },
+  { label: "Which ads bring paid orders?", prompt: "Using the Paid Signal tools, which ads bring paying customers and which only bring leads? Quote the numbers exactly." },
   { label: "Invoice warm leads", prompt: "List the leads that never paid, and draft PayPal invoices for the ones who asked about booking or price. Explain who you left out and why." },
   { label: "Chart paid revenue by ad", prompt: "Add a bar chart of paid revenue by ad to this page." },
   { label: "Check against PayPal", prompt: "Check the webhook ledger against PayPal's own transaction history and tell me if anything is missing." },

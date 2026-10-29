@@ -60,7 +60,7 @@ if (q.get("token") && q.get("PayerID")) { history.replaceState(null, "", "/shop.
 $("#redirect").onclick = async () => { try { const o = await createOrder(); location.href = o.approve_url; } catch (e) { $("#msg").textContent = e.message; } };
 const cfg = await (await fetch("/api/config")).json();
 const s = document.createElement("script");
-s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(cfg.paypal_client_id)}&currency=USD&intent=capture&components=buttons&locale=en_US`;
+s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(cfg.paypal_client_id)}&currency=USD&intent=capture&components=buttons&locale=en_US&disable-funding=card`;
 s.onload = () => paypal.Buttons({
   style: { layout: "vertical", shape: "rect", label: "pay" },
   createOrder: async () => (await createOrder()).id,

@@ -6,7 +6,7 @@ import { studioTheme } from "ag-studio";
 export const AD_NAMES = {
   trial_video: "Trial class · video",
   free_guide: "Free guide · lead form",
-  parent_carousel: "Parent testimonial · carousel",
+  parent_carousel: "Testimonial · carousel",
   holiday_static: "Holiday camp · static",
 };
 export const adName = (k) => AD_NAMES[k] || k;
@@ -31,12 +31,12 @@ export function buildData(rec, payments) {
   const dates = caps.map((c) => c.date).sort();
   const today = new Date().toISOString().slice(0, 10);
   return {
-    description: "A small shop's ad export (spend and leads the ad platform reports per ad) joined to PayPal sandbox captures attributed to those ads by the click id stored in each order's custom_id. Payers counts captures not fully refunded.",
+    description: "A small shop's ad export (spend and leads the ad platform reports per ad) joined to PayPal sandbox captures attributed to those ads by the click id stored in each order's custom_id. Paid orders counts captures not fully refunded.",
     sources: [
       {
         id: "ads", name: "Ads", description: "One row per ad from the ad platform export.", data: ads,
         fields: [f("ad", "Ad key", "textFormat", true), f("name", "Ad", "textFormat"), f("spend", "Spend", "currencyFormat"), f("leads", "Leads (ad-reported)", "integerFormat"),
-          f("payers", "Payers (PayPal)", "integerFormat"), f("refunds", "Refunded captures", "integerFormat"), f("revenue", "Paid revenue", "currencyFormat"), f("noPayer", "Spend with no payer", "currencyFormat")],
+          f("payers", "Paid orders (PayPal)", "integerFormat"), f("refunds", "Refunded captures", "integerFormat"), f("revenue", "Paid revenue", "currencyFormat"), f("noPayer", "Spend with no paid order", "currencyFormat")],
       },
       {
         id: "captures", name: "PayPal captures", description: "One row per PayPal capture, attributed to an ad by click id.", data: caps,
@@ -47,7 +47,7 @@ export function buildData(rec, payments) {
     relations: [{ id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],
     calendars: [{ id: "calendar", label: "Calendar", range: { from: { type: "date", value: dates[0] || today }, to: { type: "date", value: dates.at(-1) || today } }, fragments: ["month", "week", "day"] }],
     expressions: [
-      { id: "costPerPayer", name: "Cost per payer", description: "Ad spend divided by PayPal payers.", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
+      { id: "costPerPayer", name: "Cost per paid order", description: "Ad spend divided by PayPal paid orders.", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
       { id: "revenuePerDollar", name: "Paid revenue per ad dollar", description: "PayPal net revenue divided by ad spend.", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.revenue"), sum("ads.spend")] } },
     ],
   };
@@ -64,9 +64,9 @@ export const initialReport = {
       id: "overview", name: "Ads vs PayPal",
       widgets: {
         leads: kpi("Ad-reported leads", sum("ads.leads")),
-        payers: kpi("PayPal payers", sum("ads.payers")),
+        payers: kpi("PayPal paid orders", sum("ads.payers")),
         rpd: kpi("Paid revenue per ad dollar", { id: "revenuePerDollar" }),
-        nopayer: kpi("Spend with no payer", sum("ads.noPayer")),
+        nopayer: kpi("Spend with no paid order (USD)", sum("ads.noPayer")),
         claim: { type: "claim-vs-confirmed", dataMapping: { category: [{ id: "ads.name" }], claimed: [sum("ads.leads")], confirmed: [sum("ads.payers")] }, format: { title: { enabled: true, text: "What each ad claims vs what PayPal confirms" } } },
         table: {
           type: "grid",
