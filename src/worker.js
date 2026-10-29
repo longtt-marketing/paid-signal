@@ -52,9 +52,14 @@ async function applyRefund(env, captureId, refundedValue, when) {
   return rec;
 }
 
+// a possible duplicate still counts as paid in the ledger, but is not reported to ad platforms until refunded or reviewed
+const heldDuplicates = (payments) => new Set(possibleDuplicates(payments).map((d) => d.capture_id));
+// payments captured before this are the seeded demo ledger; refunds on them are previewed, not sent
+const SEEDED_BEFORE = "2026-10-29T09:00:00Z";
+
 // metaEvents hashes the email itself; here only the stored hash exists, so pass it through as an already-hashed field.
 async function metaFromLedger(payments, sourceUrl) {
-  return metaEvents(payments.map((p) => ({ ...p, payer_email: null })), { sourceUrl });
+  return metaEvents(payments.map((p) => ({ ...p, payer_email: null })), { sourceUrl, hold: heldDuplicates(payments) });
 }
 
 async function listPrefix(env, prefix) {
@@ -141,6 +146,9 @@ export default {
         if (!cur) return json({ error: "Unknown capture." }, 404);
         const left = (Math.round(Number(cur.amount) * 100) - Math.round(Number(cur.refunded_amount || 0) * 100)) / 100;
         if (amount !== undefined && !(Number(amount) > 0 && Number(amount) <= left)) return json({ error: `Refund between $0.01 and $${left.toFixed(2)}.` }, 400);
+        // the seeded demo payments carry the scenarios page and the dashboard story through judging: preview, don't send
+        const partial = amount !== undefined && Number(amount) < left;
+        if (String(cur.captured_at) < SEEDED_BEFORE) return json({ preview: true, message: `Capture ${capture_id} is one of the demo's seeded sandbox payments, so this refund is only previewed: its ad would lose $${amount ?? left} of paid revenue, and ${partial ? (cur.source === "g" ? "its Google row would become a restatement" : "its Meta event value would drop") : (cur.source === "g" ? "its Google row would become a retraction" : "its Meta event would be held back")}. To run a real sandbox refund, pay in the demo shop and refund that payment.` });
         const stop = await guard(env, request, "refunds", 3, 30); if (stop) return json({ error: stop }, 429);
         const r = await pp.refundCapture(capture_id, { amount: amount === undefined ? undefined : Number(amount).toFixed(2), requestId: crypto.randomUUID() });
         // mark the refund as applied first, so PayPal's PAYMENT.CAPTURE.REFUNDED webhook for it is not counted again
@@ -281,7 +289,7 @@ export default {
         const parsed = parseAdCsv(csv);
         const payments = await listPayments(env);
         const rec = reconcile(parsed.rows, payments);
-        return json({ reconciliation: rec, csv_errors: parsed.errors, meta: await metaFromLedger(payments, `${url.origin}/shop.html`), google: googleRows(payments) });
+        return json({ reconciliation: rec, csv_errors: parsed.errors, meta: await metaFromLedger(payments, `${url.origin}/shop.html`), google: googleRows(payments, undefined, { hold: heldDuplicates(payments) }) });
       }
 
       // The same gate for the budget agent that runs inside AG Studio: its recommendation is accepted only if every

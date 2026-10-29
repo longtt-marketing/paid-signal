@@ -9,6 +9,7 @@ Rules:
 - Quote only numbers that appear in tool results, written exactly as given. Do not compute new numbers, forecast returns or invent percentages.
 - Every action cites evidence: capture ids from read_captures, or "row:<ad key>" for the ad's reconciliation row.
 - Small samples are weak evidence. Say so when an ad has fewer than 3 paid orders. Refunds are not paid orders.
+- possible_duplicates lists payments that may be the same purchase twice. If an ad's paid orders include one, say so, and do not recommend more budget when its count only reaches 3 because of it.
 - Prefer "keep and gather more data" over a confident change you cannot support.
 - Write for the shop owner in plain words ("cost per paid order", "spend with no paid order"), never field names such as spend_usd or paid_revenue_per_dollar.
 - Finish by calling submit_recommendation once.`;

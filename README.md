@@ -19,7 +19,8 @@ Paid Signal closes that loop on the PayPal developer platform:
    the reconciliation. Inside AG Studio, Claude can draft PayPal invoices for warm leads; sending one, refunding and
    approving are clicks a person makes.
 4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
-   by `event_id = paypal:<capture>`) and Google Ads offline conversion rows; refunds become retractions. The demo shows
+   by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund becomes a Google retraction or restatement and holds the Meta event back;
+   a possible duplicate payment is held back from both until it is refunded. The demo shows
    and downloads these payloads; it does not send them.
 
 Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev** · Test scenarios: https://paid-signal.thelongmarketing.workers.dev/scenarios.html (nine cases: duplicates, partial refunds, payments with no click, late payments; marked live in the sandbox or automated test)
@@ -43,7 +44,7 @@ No login is needed for any of this; only paying in the demo shop needs the sandb
 4. Press **Open the Studio assistant** and choose **Invoice warm leads**. Claude, running inside AG Studio's agent
    framework, lists leads who never paid and drafts PayPal invoices for those who showed intent. Send one from
    **Invoices**; when it is paid, the payment is attributed to the lead's ad.
-5. Refund a capture under **Payments** (a smaller amount makes it partial): the ad's numbers drop, and its Google row becomes a retraction or a restatement.
+5. Refund a capture under **Payments** (a smaller amount makes it partial): the ad's numbers drop, and its Google row becomes a retraction or a restatement. The seeded demo payments only preview a refund, so the demo stays intact through judging; pay in the demo shop first to refund a payment of your own for real.
 
 API checks without the UI: import [`postman/paid-signal.postman_collection.json`](postman/paid-signal.postman_collection.json) into Postman (read-only requests, 15 tests). To add Paid Signal to a real shop: [docs/INTEGRATE.md](docs/INTEGRATE.md).
 

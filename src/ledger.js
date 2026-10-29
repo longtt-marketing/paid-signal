@@ -117,15 +117,16 @@ export async function sha256(s) { return hex(await crypto.subtle.digest("SHA-256
  * Meta Conversions API Purchase events for paid captures. event_id is derived from the capture so a resend
  * deduplicates; fbc follows Meta's fb.1.<click ms>.<fbclid> format. Fully refunded captures are held back and listed.
  * @param {any[]} payments
- * @param {{ sourceUrl?: string }} [opts]
+ * @param {{ sourceUrl?: string, hold?: Set<string> }} [opts] hold: possible duplicates, kept back until refunded or reviewed
  */
-export async function metaEvents(payments, { sourceUrl } = {}) {
+export async function metaEvents(payments, { sourceUrl, hold } = {}) {
   const events = [], held = [];
   for (const p of payments) {
     const gross = cents(p.amount), back = cents(p.refunded_amount || 0);
     if (back >= gross) { held.push({ capture_id: p.capture_id, reason: "fully refunded" }); continue; }
     // PayPal still confirms the money, but with no ad click there is no ad to teach
     if (!p.click_id) { held.push({ capture_id: p.capture_id, reason: "no ad click" }); continue; }
+    if (hold?.has(p.capture_id)) { held.push({ capture_id: p.capture_id, reason: "possible duplicate" }); continue; }
     if (clickAge(p) > 28 * DAY) { held.push({ capture_id: p.capture_id, reason: "paid more than 28 days after the click" }); continue; }
     const user = {};
     if (p.source === "fb" && p.click_id) user.fbc = `fb.1.${p.clicked_at || Date.parse(p.captured_at)}.${p.click_id}`;
@@ -145,11 +146,16 @@ export async function metaEvents(payments, { sourceUrl } = {}) {
 // Google Ads wants "yyyy-mm-dd hh:mm:ss+hh:mm"; the ledger keeps ISO UTC
 const gTime = (iso) => String(iso).replace("T", " ").replace(/\.\d+/, "").replace(/Z$/, "+00:00");
 
-/** Google Ads offline conversion rows (by gclid) plus retractions for refunded captures. */
-export function googleRows(payments, conversionName = "PayPal paid order") {
+/**
+ * Google Ads offline conversion rows (by gclid) plus retractions for refunded captures.
+ * @param {any[]} payments
+ * @param {string} [conversionName]
+ * @param {{ hold?: Set<string> }} [opts] hold: possible duplicates, not uploaded while flagged
+ */
+export function googleRows(payments, conversionName = "PayPal paid order", { hold } = {}) {
   const conversions = [], adjustments = [];
   for (const p of payments) {
-    if (p.source !== "g" || !p.click_id || clickAge(p) > 90 * DAY) continue;
+    if (p.source !== "g" || !p.click_id || clickAge(p) > 90 * DAY || hold?.has(p.capture_id)) continue;
     const gross = cents(p.amount), back = cents(p.refunded_amount || 0);
     conversions.push({ gclid: p.click_id, conversion_name: conversionName, conversion_time: gTime(p.captured_at), value: dollars(gross), currency: p.currency || "USD", order_id: p.capture_id });
     if (back >= gross) adjustments.push({ order_id: p.capture_id, conversion_name: conversionName, adjustment_type: "RETRACTION", adjustment_time: gTime(p.refunded_at || p.captured_at) });

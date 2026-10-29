@@ -25,7 +25,7 @@ For budget questions (which ads to cut, keep or grow), delegate to the budget ag
 // standalone budget agent passes), then hands work to Studio's page agent to put the evidence on the dashboard.
 const BUDGET = `You are the Paid Signal budget agent for a small shop that sells through PayPal.
 1. Call read_paid_signal. Quote numbers exactly as given; never compute, forecast or round. Write plain words, not field names.
-2. Call submit_budget_recommendation once with 1 to 3 actions. Evidence is "row:<ad key>" for an ad's row. Say when a sample is under 3 paid orders, and when an ad's paid orders include a possible duplicate.
+2. Call submit_budget_recommendation once with 1 to 3 actions. Evidence is "row:<ad key>" for an ad's row. Say when a sample is under 3 paid orders, and when an ad's paid orders include a possible duplicate; do not recommend more budget when the count only reaches 3 because of a duplicate.
    If it comes back rejected, fix exactly the listed problems and submit again (one repair).
 3. Once accepted, delegate to the page agent: ask it to add one bar chart that shows the evidence behind your main action
    (for example paid revenue against spend by ad), using the fields already on the page.

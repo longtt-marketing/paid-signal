@@ -66,7 +66,7 @@ export default function App() {
   const refund = async (p) => {
     const left = (Number(p.amount) - Number(p.refunded_amount || 0)).toFixed(2);
     const v = window.prompt(`Refund how much of capture ${p.capture_id}? (sandbox)`, left); if (v === null) return;
-    try { await api("/api/refund", { capture_id: p.capture_id, amount: v }); } catch (e) { alert(e.message); } load(csvRef.current);
+    try { const d = await api("/api/refund", { capture_id: p.capture_id, amount: v }); if (d.preview) alert(d.message); } catch (e) { alert(e.message); } load(csvRef.current);
   };
   // a decision is recorded on the server (who decided is the visitor; what and when is kept with the evidence)
   const decide = async (i, verdict) => {
@@ -156,7 +156,7 @@ export default function App() {
 
         <section id="captures" className="card">
           <div className="row between"><h2>Payments</h2>{state && <span className="ok">{state.payments.length} in the ledger</span>}</div>
-          <p className="muted">Refund one: its ad drops. A Google click gets a retraction; a Meta event is held back.</p>
+          <p className="muted">Refund one: its ad drops. A Google click gets a retraction; a Meta event is held back. Seeded demo payments preview the refund; pay in the shop to refund for real.</p>
           {(state?.payments || []).slice().reverse().map((p) => (
             <div key={p.capture_id} className="cap">
               <span><b>{p.ad && p.ad !== "direct" ? adName(p.ad) : "No ad click"}</b>{dup[p.capture_id] && <em className="dup">Possible duplicate of {dup[p.capture_id]}</em>}<small className="mono">{p.capture_id} · ${p.amount}{Number(p.refunded_amount) > 0 ? ` · refunded $${p.refunded_amount}` : ""}{p.via === "invoice" ? " · invoice" : ""}</small></span>

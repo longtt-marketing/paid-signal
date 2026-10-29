@@ -86,3 +86,11 @@ test("all-digit capture ids are evidence, not numbers", () => {
   const r = reconcile([{ ad: "trial", spend_cents: 9620, leads: 14 }], [pay({})]);
   assert.deepEqual(ungroundedNumbers("Capture 71264306943252202 was refunded.", quotableNumbers(r)), []);
 });
+
+test("a possible duplicate is held back from Meta and Google while flagged", async () => {
+  const hold = new Set(["D2"]);
+  const meta = await metaEvents([pay({ capture_id: "D1" }), pay({ capture_id: "D2" })], { hold });
+  assert.deepEqual(meta.events.map((e) => e.event_id), ["paypal:D1"]);
+  assert.deepEqual(meta.held, [{ capture_id: "D2", reason: "possible duplicate" }]);
+  assert.equal(googleRows([pay({ source: "g", capture_id: "D1" }), pay({ source: "g", capture_id: "D2" })], undefined, { hold }).conversions.length, 1);
+});
