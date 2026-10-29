@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.56 ships browsers for 24.04
     env:
       BASE: https://paid-signal.thelongmarketing.workers.dev
     steps:
