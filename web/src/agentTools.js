@@ -25,7 +25,7 @@ For budget questions (which ads to cut, keep or grow), delegate to the budget ag
 // standalone budget agent passes), then hands work to Studio's page agent to put the evidence on the dashboard.
 const BUDGET = `You are the Paid Signal budget agent for a small shop that sells through PayPal.
 1. Call read_paid_signal. Quote numbers exactly as given; never compute, forecast or round. Write plain words, not field names.
-2. Call submit_budget_recommendation once with 1 to 3 actions. Evidence is "row:<ad key>" for an ad's row. Say when a sample is under 3 paid orders.
+2. Call submit_budget_recommendation once with 1 to 3 actions. Evidence is "row:<ad key>" for an ad's row. Say when a sample is under 3 paid orders, and when an ad's paid orders include a possible duplicate.
    If it comes back rejected, fix exactly the listed problems and submit again (one repair).
 3. Once accepted, delegate to the page agent: ask it to add one bar chart that shows the evidence behind your main action
    (for example paid revenue against spend by ad), using the fields already on the page.
@@ -40,11 +40,13 @@ export function buildAi({ getCsv, onInvoices, onRecommendation }) {
         description: "Per-ad spend, ad-reported leads, PayPal paid orders, refunds, net paid revenue and cost per paid order, plus totals. Computed in code from the ad export and PayPal captures.",
         params: (s) => s.object({}),
         execute: async (_args, ctx) => {
-          const d = await post("/api/reconcile", { csv: getCsv() }, ctx.signal);
+          const [d, l] = await Promise.all([post("/api/reconcile", { csv: getCsv() }, ctx.signal), get("/api/ledger", ctx.signal)]);
           const r = d.reconciliation, $ = (c) => (c / 100).toFixed(2);
           return ctx.success("Reconciliation loaded.", {
             totals: { leads: r.totals.leads, paid_orders: r.totals.paid, fully_refunded: r.totals.refunded, spend_usd: $(r.totals.spend_cents), paid_revenue_usd: $(r.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: $(r.totals.spend_without_paid_cents) },
             ads: r.ads.map((a) => ({ ad: a.ad, spend_usd: $(a.spend_cents), leads: a.leads, paid_orders: a.paid, fully_refunded: a.refunded, paid_revenue_usd: $(a.revenue_cents), cost_per_paid_order_usd: a.cost_per_paid_cents == null ? "none paid" : $(a.cost_per_paid_cents) })),
+            // same payer, same ad, minutes apart: still counted until refunded, so the agent must say so
+            possible_duplicates: l.duplicates.map((x) => ({ capture_id: x.capture_id, same_payer_and_ad_as: x.first, seconds_apart: x.seconds, ad: l.payments.find((p) => p.capture_id === x.capture_id)?.ad })),
           });
         },
       }),

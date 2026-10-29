@@ -46,12 +46,13 @@ test("Meta events: fbc format, deterministic event_id, refunded held back, hashe
   assert.equal(events[0].event_id, "paypal:C1");
   assert.equal(events[0].user_data.fbc, "fb.1.1793178000000.abc");
   assert.match(events[0].user_data.em[0], /^[0-9a-f]{64}$/);
-  assert.deepEqual(held.map((h) => h.reason), ["fully refunded", "no click id or email to match"]);
+  assert.deepEqual(held.map((h) => h.reason), ["fully refunded", "no ad click"]);
 });
 
 test("Google rows: retraction for a full refund, restatement for a partial one", () => {
   const { conversions, adjustments } = googleRows([pay({ source: "g", capture_id: "G1", refunded_amount: "49.00" }), pay({ source: "g", capture_id: "G2", refunded_amount: "10" }), pay({})]);
   assert.equal(conversions.length, 2);
+  assert.match(conversions[0].conversion_time, /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\+00:00$/);
   assert.deepEqual(adjustments.map((a) => [a.order_id, a.adjustment_type, a.adjusted_value]), [["G1", "RETRACTION", undefined], ["G2", "RESTATEMENT", "39.00"]]);
 });
 

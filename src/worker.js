@@ -21,7 +21,7 @@ async function listPayments(env) {
 }
 
 /** Store what the capture proves: amount, status, the click that led to it. The payer email is kept only as a hash. */
-async function recordCapture(env, order) {
+async function recordCapture(env, order, userAgent) {
   const pu = order.purchase_units?.[0] || {};
   const cap = pu.payments?.captures?.[0];
   if (!cap) return null;
@@ -33,9 +33,10 @@ async function recordCapture(env, order) {
     captured_at: cap.create_time || new Date().toISOString(), refunded_amount: "0.00",
     payer_email_sha256: email ? await sha(email.trim().toLowerCase()) : null,
   };
+  if (userAgent) record.user_agent = userAgent.slice(0, 300); // the buyer's browser, for Meta's website events
   // a replayed capture must not wipe refunds already recorded against it
   const prev = await env.LEDGER.get(`pay:${cap.id}`, "json");
-  if (prev) { record.refunded_amount = prev.refunded_amount; record.status = prev.status; if (prev.refunded_at) record.refunded_at = prev.refunded_at; }
+  if (prev) { record.user_agent ??= prev.user_agent; record.refunded_amount = prev.refunded_amount; record.status = prev.status; if (prev.refunded_at) record.refunded_at = prev.refunded_at; }
   await env.LEDGER.put(`pay:${cap.id}`, JSON.stringify(record));
   return record;
 }
@@ -52,8 +53,8 @@ async function applyRefund(env, captureId, refundedValue, when) {
 }
 
 // metaEvents hashes the email itself; here only the stored hash exists, so pass it through as an already-hashed field.
-async function metaFromLedger(payments) {
-  return metaEvents(payments.map((p) => ({ ...p, payer_email: null })));
+async function metaFromLedger(payments, sourceUrl) {
+  return metaEvents(payments.map((p) => ({ ...p, payer_email: null })), { sourceUrl });
 }
 
 async function listPrefix(env, prefix) {
@@ -130,7 +131,7 @@ export default {
         const { order_id } = await request.json();
         if (!/^[A-Z0-9]{10,24}$/.test(String(order_id))) return json({ error: "Bad order id." }, 400);
         const order = await pp.captureOrder(order_id, `cap-${order_id}`);
-        const record = await recordCapture(env, order);
+        const record = await recordCapture(env, order, request.headers.get("user-agent"));
         return json({ status: order.status, payment: record });
       }
 
@@ -179,8 +180,9 @@ export default {
       // Webhooks are the main path, but the sandbox does not always emit INVOICING.INVOICE.PAID: ask PayPal about every
       // sent invoice and record the ones it says are paid (recordInvoicePayment is idempotent per payment id).
       if (url.pathname === "/api/invoices/sync" && request.method === "POST") {
-        const stop = await guard(env, request, "sync", 30, 300); if (stop) return json({ error: stop }, 429);
         const open = (await listPrefix(env, "inv:")).filter((i) => i.status === "SENT" || i.status === "PARTIALLY_PAID");
+        if (!open.length) return json({ checked: 0, paid: 0, invoices: await listPrefix(env, "inv:") });
+        const stop = await guard(env, request, "sync", 30, 300); if (stop) return json({ error: stop }, 429);
         let paid = 0;
         for (const i of open) { const inv = await pp.getInvoice(i.id); if (inv.status === "PAID" || inv.status === "PARTIALLY_PAID") { await recordInvoicePayment(env, inv); paid++; } }
         return json({ checked: open.length, paid, invoices: await listPrefix(env, "inv:") });
@@ -279,7 +281,7 @@ export default {
         const parsed = parseAdCsv(csv);
         const payments = await listPayments(env);
         const rec = reconcile(parsed.rows, payments);
-        return json({ reconciliation: rec, csv_errors: parsed.errors, meta: await metaFromLedger(payments), google: googleRows(payments) });
+        return json({ reconciliation: rec, csv_errors: parsed.errors, meta: await metaFromLedger(payments, `${url.origin}/shop.html`), google: googleRows(payments) });
       }
 
       // The same gate for the budget agent that runs inside AG Studio: its recommendation is accepted only if every

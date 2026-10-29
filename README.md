@@ -42,7 +42,7 @@ No login is needed for any of this; only paying in the demo shop needs the sandb
    and an Approve / Dismiss.
 4. Press **Open the Studio assistant** and choose **Invoice warm leads**. Claude, running inside AG Studio's agent
    framework, lists leads who never paid and drafts PayPal invoices for those who showed intent. Send one from
-   **PayPal invoices**; when it is paid, the payment is attributed to the lead's ad.
+   **Invoices**; when it is paid, the payment is attributed to the lead's ad.
 5. Refund a capture under **Payments** (a smaller amount makes it partial): the ad's numbers drop, and its Google row becomes a retraction or a restatement.
 
 API checks without the UI: import [`postman/paid-signal.postman_collection.json`](postman/paid-signal.postman_collection.json) into Postman (read-only requests, 15 tests). To add Paid Signal to a real shop: [docs/INTEGRATE.md](docs/INTEGRATE.md).
@@ -76,8 +76,9 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
 ## AG Studio
 
 `web/` is a React app on AG Studio: data sources for ads and PayPal captures joined on the ad key, calculated measures
-(cost per paid order, paid revenue per ad dollar), a themed report, and a custom widget, **Claimed vs confirmed**
-(`web/src/ClaimWidget.jsx`), that reads through Studio's widget API so page filters and cross-filters apply to it.
+(cost per paid order, paid revenue per ad dollar), a themed report, and two custom widgets, **Claimed vs confirmed**
+(`web/src/ClaimWidget.jsx`) and a **payment timeline** (`web/src/TimelineWidget.jsx`: paid, partly refunded and refunded
+payments per ad), that read through Studio's widget API so page filters and cross-filters apply to them.
 
 ## Architecture
 

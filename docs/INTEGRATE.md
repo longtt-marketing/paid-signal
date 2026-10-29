@@ -51,6 +51,8 @@ Export ad name, amount spent and results from Meta Ads Manager or Google Ads as 
 
 - Paid orders and net revenue per ad, refunds and duplicates handled.
 - Meta Conversions API `Purchase` events (deduplicated by `paypal:<capture>`) and Google offline conversion rows,
-  ready to send with your own tokens. This demo previews them and does not send them.
+  built to the documented formats (Meta: hashed email, `fbc`, `event_source_url`, and `client_user_agent` stored at
+  capture; Google: `yyyy-mm-dd hh:mm:ss+00:00` times). This demo previews them and does not send them; check them in
+  Meta's Test Events tool and Google's offline conversion upload before going live.
 - A budget agent whose numbers are checked against the reconciliation, and a Studio assistant that drafts PayPal
   invoices for warm leads, which a person sends.

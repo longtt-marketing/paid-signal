@@ -26,6 +26,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [invoices, setInvoices] = useState([]);
   const [license, setLicense] = useState(undefined);
+  const [syncNote, setSyncNote] = useState("");
   useEffect(() => { api("/api/config").then((c) => setLicense(c.ag_studio_license || null)).catch(() => setLicense(null)); }, []);
   const csvRef = useRef("");
   csvRef.current = csv;
@@ -59,7 +60,7 @@ export default function App() {
   };
   const openAssistant = () => { const a = studio.current?.api; if (!a) return; const s = a.getState(); a.setState({ ...s, panels: { ...(s.panels || {}), ai: { collapsed: false } } }); };
   // webhooks first; this asks PayPal about sent invoices too, since the sandbox does not always emit INVOICING.INVOICE.PAID
-  const syncInvoices = useCallback(async () => { try { const d = await api("/api/invoices/sync", {}); if (d.paid && csvRef.current) load(csvRef.current); } catch {} loadInvoices(); }, [load, loadInvoices]);
+  const syncInvoices = useCallback(async () => { setSyncNote(""); try { const d = await api("/api/invoices/sync", {}); if (d.paid && csvRef.current) load(csvRef.current); } catch (e) { setSyncNote(e.message); } loadInvoices(); }, [load, loadInvoices]);
   useEffect(() => { syncInvoices(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // full by default; a smaller amount is a partial refund (Google gets a restatement instead of a retraction)
   const refund = async (p) => {
@@ -118,7 +119,7 @@ export default function App() {
       <aside className="aside">
         <section id="actions" className="card">
           <div className="row between"><h2>Agent</h2>{agent.status === "done" && <span className={agent.grounded ? "ok" : "warn"}>{agent.grounded ? "Numbers checked" : "Number check flagged"}</span>}</div>
-          {agent.status === "idle" && <p className="muted">Claude proposes budget changes. Every number is checked in code; nothing changes until you approve.</p>}
+          {agent.status === "idle" && <p className="muted">Claude proposes budget changes. Every number is checked in code; the agent never changes a budget, you approve and it is logged.</p>}
           {agent.status === "running" && <p className="muted">Reading the ledger…</p>}
           {agent.status === "error" && <p className="err">{agent.error}</p>}
           {agent.recommendation && <p className="headline">{agent.recommendation.headline}</p>}
@@ -140,6 +141,7 @@ export default function App() {
 
         <section id="invoices" className="card">
           <div className="row between"><h2>Invoices</h2><button className="mini" onClick={syncInvoices}>Refresh</button></div>
+          {syncNote && <p className="note" role="status">Could not re-check sent invoices with PayPal: {syncNote}</p>}
           <p className="muted">Drafted by the Studio assistant, with the ad click inside. Nothing is sent until you press Send.</p>
           {invoices.length === 0 && <p className="note">No drafts yet. Ask the Studio assistant: "Invoice warm leads".</p>}
           {invoices.map((i) => (
@@ -154,8 +156,8 @@ export default function App() {
 
         <section id="captures" className="card">
           <div className="row between"><h2>Payments</h2>{state && <span className="ok">{state.payments.length} in the ledger</span>}</div>
-          <p className="muted">Refund one: its ad drops and Google gets a retraction.</p>
-          {(state?.payments || []).slice().reverse().slice(0, 6).map((p) => (
+          <p className="muted">Refund one: its ad drops. A Google click gets a retraction; a Meta event is held back.</p>
+          {(state?.payments || []).slice().reverse().map((p) => (
             <div key={p.capture_id} className="cap">
               <span><b>{p.ad && p.ad !== "direct" ? adName(p.ad) : "No ad click"}</b>{dup[p.capture_id] && <em className="dup">Possible duplicate of {dup[p.capture_id]}</em>}<small className="mono">{p.capture_id} · ${p.amount}{Number(p.refunded_amount) > 0 ? ` · refunded $${p.refunded_amount}` : ""}{p.via === "invoice" ? " · invoice" : ""}</small></span>
               {p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED" ? <button className="mini" onClick={() => refund(p)}>Refund</button> : <span className="tag">Refunded</span>}
