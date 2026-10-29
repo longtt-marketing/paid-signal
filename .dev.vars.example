@@ -4,3 +4,7 @@ PAYPAL_CLIENT_SECRET=
 PAYPAL_WEBHOOK_ID=
 ANTHROPIC_API_KEY=
 ANTHROPIC_WORKSPACE_ID=
+# Optional, for scripts/meta-test-event.mjs (a Meta dataset you own, its Conversions API token, and its Test Events code)
+META_DATASET_ID=
+META_CAPI_TOKEN=
+META_TEST_CODE=
