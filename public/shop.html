@@ -66,11 +66,14 @@ const $ = (s) => document.querySelector(s);
 const q = new URLSearchParams(location.search);
 // keep the click for this visit: an ad platform puts fbclid or gclid on the landing URL
 const click = q.get("fbclid") ? { source: "fb", click_id: q.get("fbclid") } : q.get("gclid") ? { source: "g", click_id: q.get("gclid") } : null;
-if (click) sessionStorage.setItem("ps-click", JSON.stringify({ ...click, ad: q.get("ad") || "direct", clicked_at: Date.now() }));
-const saved = JSON.parse(sessionStorage.getItem("ps-click") || "null");
 const AD = { trial_video: "Trial class", free_guide: "Free guide", parent_carousel: "Testimonial", holiday_static: "Holiday camp" };
+// only known ad keys and plain click ids are kept; everything shown is escaped
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const okId = (v) => /^[A-Za-z0-9_-]{1,64}$/.test(v || "");
+if (click && okId(click.click_id)) sessionStorage.setItem("ps-click", JSON.stringify({ ...click, ad: AD[q.get("ad")] ? q.get("ad") : "direct", clicked_at: Date.now() }));
+const saved = JSON.parse(sessionStorage.getItem("ps-click") || "null");
 const SRC = { fb: "Meta", g: "Google" };
-if (saved) { $("#click").classList.remove("none"); $("#click span").innerHTML = `<b>Ad click attached</b> · ${AD[saved.ad] || saved.ad} · ${SRC[saved.source] || saved.source}`; }
+if (saved) { $("#click").classList.remove("none"); $("#click span").innerHTML = `<b>Ad click attached</b> · ${esc(AD[saved.ad] || "No ad")} · ${esc(SRC[saved.source] || "direct")}`; }
 
 async function capture(orderID) {
   $("#msg").textContent = "Capturing the payment…";
@@ -82,8 +85,8 @@ async function capture(orderID) {
   $("#shop").hidden = true;
   const r = $("#receipt"); r.hidden = false;
   r.innerHTML = `<span class="tick"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a7a48" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
-    <div><h1>Paid $${p.amount}</h1><p class="sub">Robotics trial class · booked</p></div>
-    <div class="rows"><div><span>PayPal capture</span><b>${p.capture_id}</b></div><div><span>Counted for</span><b>${AD[p.ad] || p.ad} · ${SRC[p.source] || "direct"}</b></div></div>
+    <div><h1>Paid $${esc(p.amount)}</h1><p class="sub">Robotics trial class · booked</p></div>
+    <div class="rows"><div><span>PayPal capture</span><b>${esc(p.capture_id)}</b></div><div><span>Counted for</span><b>${esc(AD[p.ad] || "No ad click")} · ${esc(SRC[p.source] || "direct")}</b></div></div>
     <a class="cta" href="/">Open the dashboard</a>`;
   sessionStorage.removeItem("ps-click"); sessionStorage.removeItem("ps-intent");
 }
@@ -103,7 +106,7 @@ s.onload = () => paypal.Buttons({
   style: { layout: "vertical", shape: "rect", label: "pay", height: 52 },
   createOrder: async () => (await createOrder()).id,
   onApprove: async ({ orderID }) => capture(orderID),
-  onError: (err) => { $("#msg").textContent = "PayPal could not complete this payment: " + (err?.message || err); },
+  onError: (err) => { $("#msg").textContent = "PayPal could not complete this payment. Try again, or use the full-page option."; },
 }).render("#paypal-buttons");
 document.head.append(s);
 </script>

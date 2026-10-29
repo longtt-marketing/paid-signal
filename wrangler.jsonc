@@ -9,6 +9,10 @@
   // Secrets (never in git): PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, ANTHROPIC_API_KEY, ANTHROPIC_WORKSPACE_ID, PAYPAL_WEBHOOK_ID
   // Anthropic refuses some Cloudflare locations near Vietnam; run near the US (as Taste Brief does).
   "placement": { "region": "aws:us-east-1" },
+  // per-visitor burst limit on every write (the daily limits live in KV)
+  "ratelimits": [{ "name": "BURST", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }],
+  // nightly refill of draft invoices so visitors always have one to approve
+  "triggers": { "crons": ["17 2 * * *"] },
   "kv_namespaces": [{ "binding": "LEDGER", "id": "ef49a92f962a448c9dc15cd3ee6a1f5e" }],
   "vars": { "AGENT_DAILY": "40" }
 }
