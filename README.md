@@ -8,6 +8,9 @@ Ad platforms optimise for what they can see: clicks, leads, chat taps. For a sma
 PayPal, the thing that matters, a payment, never reaches the ad platform. So budgets drift toward ads that produce
 leads nobody pays for.
 
+> "Ads Manager says a campaign brought plenty of enquiries, but only my payment history shows who actually paid, and the
+> two never line up." (a friend who runs an online shop and buys their own ads; paraphrased, shared with permission)
+
 Paid Signal closes that loop on the PayPal developer platform:
 
 1. **Click → order.** The ad click (`fbclid` / `gclid`, ad key, click time) is written into the PayPal order's
