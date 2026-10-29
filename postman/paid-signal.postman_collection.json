@@ -182,6 +182,93 @@
           }
         }
       ]
+    },
+    {
+      "name": "MCP: initialize",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"initialize\", \"params\": {\"protocolVersion\": \"2025-03-26\", \"capabilities\": {}, \"clientInfo\": {\"name\": \"postman\", \"version\": \"1\"}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/mcp",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "mcp"
+          ]
+        },
+        "description": "Paid Signal's MCP server (streamable HTTP, JSON responses). Read-only tools for any MCP client."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "pm.test('server is paid-signal with tools', () => { pm.expect(d.result.serverInfo.name).to.eql('paid-signal'); pm.expect(d.result.capabilities).to.have.property('tools'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "MCP: read_paid_signal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"jsonrpc\": \"2.0\", \"id\": 2, \"method\": \"tools/call\", \"params\": {\"name\": \"read_paid_signal\", \"arguments\": {}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/mcp",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "mcp"
+          ]
+        },
+        "description": "The same per-ad numbers the dashboard shows, through MCP."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const d = JSON.parse(pm.response.json().result.content[0].text);",
+              "pm.test('62 leads, paid orders never above leads', () => { pm.expect(d.totals.leads).to.eql(62); pm.expect(d.totals.paid_orders).to.be.at.most(d.totals.leads); });",
+              "pm.test('every ad row has cost per paid order or null', () => d.ads.forEach(a => pm.expect(a).to.have.property('cost_per_paid_order_usd')));"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

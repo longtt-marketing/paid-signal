@@ -16,8 +16,9 @@ Paid Signal closes that loop on the PayPal developer platform:
    `PAYMENT.CAPTURE.REFUNDED`, `INVOICING.INVOICE.PAID`) records it, attributed to the ad.
 3. **Money → decision.** An AG Studio dashboard puts what each ad *claims* (leads) next to what PayPal *confirms*
    (paid orders, net revenue). A Claude budget agent proposes changes; every number it writes is checked in code against
-   the reconciliation. Inside AG Studio, Claude can draft PayPal invoices for warm leads; sending one, refunding and
-   approving are clicks a person makes.
+   the reconciliation. Inside AG Studio, Claude can draft PayPal invoices for warm leads. A person approves a draft;
+   then a send agent (Claude with **PayPal's Agent Toolkit**) reads that invoice from PayPal, checks it and sends it.
+   Code pins the agent to the approved invoice. Budget changes and refunds stay clicks a person makes.
 4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
    by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund becomes a Google retraction or restatement and holds the Meta event back;
    a possible duplicate payment is held back from both until it is refunded. The demo shows
@@ -31,7 +32,9 @@ No login is needed for any of this; only paying in the demo shop needs the sandb
 
 1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): 62 leads claimed by the ads, the paid orders PayPal confirms, per ad.
 2. Open the Studio assistant and choose **Review ad budgets**: the Budget agent (a custom Studio agent on Claude) passes the evidence gate, its change lands in the approvals column, and it asks Studio's page agent to add the evidence chart.
-3. Open [Test scenarios](https://paid-signal.thelongmarketing.workers.dev/scenarios.html): nine cases and the measured proof (499 of 500 planted errors caught, 10 of 10 live agent runs grounded first time).
+3. Under **Invoices**, press **Approve** on a draft: the send agent (Claude + PayPal Agent Toolkit) checks it and sends it.
+4. Open [Test scenarios](https://paid-signal.thelongmarketing.workers.dev/scenarios.html): nine cases and the measured proof (499 of 500 planted errors caught, 10 of 10 live agent runs grounded first time).
+5. Point any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (read-only tools; see [MCP server](#mcp-server)).
 
 ## Try it in three minutes
 
@@ -42,17 +45,18 @@ No login is needed for any of this; only paying in the demo shop needs the sandb
 3. Press **Ask the agent**: Claude reads the reconciliation and captures and proposes changes, each with evidence ids
    and an Approve / Dismiss.
 4. Press **Open the Studio assistant** and choose **Invoice warm leads**. Claude, running inside AG Studio's agent
-   framework, lists leads who never paid and drafts PayPal invoices for those who showed intent. Send one from
-   **Invoices**; when it is paid, the payment is attributed to the lead's ad.
+   framework, lists leads who never paid and drafts PayPal invoices for those who showed intent. **Approve** one under
+   **Invoices**; the send agent sends it through the Agent Toolkit, and when it is paid the payment is attributed to the lead's ad.
 5. Refund a capture under **Payments** (a smaller amount makes it partial): the ad's numbers drop, and its Google row becomes a retraction or a restatement. The seeded demo payments only preview a refund, so the demo stays intact through judging; pay in the demo shop first to refund a payment of your own for real.
 
-API checks without the UI: import [`postman/paid-signal.postman_collection.json`](postman/paid-signal.postman_collection.json) into Postman (read-only requests, 15 tests). To add Paid Signal to a real shop: [docs/INTEGRATE.md](docs/INTEGRATE.md).
+API checks without the UI: import [`postman/paid-signal.postman_collection.json`](postman/paid-signal.postman_collection.json) into Postman (read-only requests, 20 tests, including the MCP server). To add Paid Signal to a real shop: [docs/INTEGRATE.md](docs/INTEGRATE.md).
 
 ## PayPal developer platform used
 
 | API | Where |
 | --- | --- |
-| Orders v2: create (with `custom_id`, `invoice_id`, `PayPal-Request-Id` idempotency), capture | `src/paypal.js`, `/api/checkout`, `/api/capture` |
+| **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): `get_invoice`, `send_invoice` for the send agent, allowlisted and pinned to the approved invoice | `src/sendAgent.js`, `/api/invoices/approve` |
+| Orders v2: create and read through **PayPal's server SDK** (`@paypal/paypal-server-sdk`, generated with APIMatic), with `custom_id`, `invoice_id`, `PayPal-Request-Id` idempotency; capture through REST | `src/paypalSdk.js`, `src/paypal.js`, `/api/checkout`, `/api/capture` |
 | Payments v2: refund a capture | `/api/refund` |
 | Invoicing v2: create draft (click in the private memo), send, get; sent invoices are re-checked with PayPal on Refresh, because the sandbox does not always emit `INVOICING.INVOICE.PAID` | `/api/invoices/*`, agent tool `draft_paypal_invoices` |
 | Webhooks: registered by `scripts/register-webhook.py`, **verify-webhook-signature** for every delivery | `/api/webhook` |
@@ -77,9 +81,17 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
 ## AG Studio
 
 `web/` is a React app on AG Studio: data sources for ads and PayPal captures joined on the ad key, calculated measures
-(cost per paid order, paid revenue per ad dollar), a themed report, and two custom widgets, **Claimed vs confirmed**
-(`web/src/ClaimWidget.jsx`) and a **payment timeline** (`web/src/TimelineWidget.jsx`: paid, partly refunded and refunded
-payments per ad), that read through Studio's widget API so page filters and cross-filters apply to them.
+(cost per paid order, paid revenue per ad dollar), a themed report, and three custom widgets, **Claimed vs confirmed**
+(`web/src/ClaimWidget.jsx`), a **payment timeline** (`web/src/TimelineWidget.jsx`: paid, partly refunded and refunded
+payments per ad) and **leads, PayPal invoices and paid orders per ad** (`web/src/FunnelWidget.jsx`), that read through
+Studio's widget API so page filters and cross-filters apply to them.
+
+## MCP server
+
+`POST /mcp` speaks the Model Context Protocol (streamable HTTP, JSON responses; `src/mcp.js`). Read-only tools:
+`read_paid_signal`, `list_unpaid_leads`, `list_payments`, `check_paypal_ledger`, the same numbers the dashboard shows.
+Claude used it through the Anthropic API's MCP connector: [`docs/proof/mcp-claude-run.md`](docs/proof/mcp-claude-run.md).
+For Claude Desktop: `npx mcp-remote https://paid-signal.thelongmarketing.workers.dev/mcp`.
 
 ## Architecture
 
@@ -98,7 +110,9 @@ web/     app source (Vite)
 
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
-npm test                              # ledger, attribution and agent-gate tests
+npm install                           # PayPal Agent Toolkit and server SDK for the Worker
+npm test                              # ledger, attribution, agent gate, send agent and MCP tests
+node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy
 ```

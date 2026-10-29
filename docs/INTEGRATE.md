@@ -55,4 +55,8 @@ Export ad name, amount spent and results from Meta Ads Manager or Google Ads as 
   capture; Google: `yyyy-mm-dd hh:mm:ss+00:00` times). This demo previews them and does not send them; check them in
   Meta's Test Events tool and Google's offline conversion upload before going live.
 - A budget agent whose numbers are checked against the reconciliation, and a Studio assistant that drafts PayPal
-  invoices for warm leads, which a person sends.
+  invoices for warm leads. A person approves each draft; the send agent (Claude with PayPal's Agent Toolkit, only
+  `get_invoice` and `send_invoice` enabled, pinned to that invoice) sends it. Put `/api/invoices/approve` behind your
+  own login before going live.
+- An MCP server at `/mcp`, so your own agents (Claude Desktop, or any MCP client) can ask which ads bring paying
+  customers: `read_paid_signal`, `list_unpaid_leads`, `list_payments`, `check_paypal_ledger`.

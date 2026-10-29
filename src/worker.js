@@ -1,8 +1,12 @@
 // Paid Signal Worker. Secrets: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, ANTHROPIC_API_KEY (+ ANTHROPIC_WORKSPACE_ID),
 // PAYPAL_WEBHOOK_ID once the webhook is registered. KV LEDGER holds sandbox captures (no raw email, only its hash).
 import { paypal } from "./paypal.js";
+import { ordersSdk } from "./paypalSdk.js";
+import { handleMcp } from "./mcp.js";
 import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates } from "./ledger.js";
 import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
+import { runSendAgent, SEND_SYSTEM, SEND_TOOLS } from "./sendAgent.js";
+import { PayPalAgentToolkit } from "@paypal/agent-toolkit/ai-sdk";
 
 // The demo shop sells one thing; the price is fixed server-side so a page cannot choose what it pays.
 const PRODUCT = { sku: "trial-class", name: "Robotics trial class (demo shop)", amount: "49.00", currency: "USD" };
@@ -50,6 +54,32 @@ async function applyRefund(env, captureId, refundedValue, when) {
   rec.refunded_at = when || new Date().toISOString();
   await env.LEDGER.put(`pay:${captureId}`, JSON.stringify(rec));
   return rec;
+}
+
+// MCP tools reuse the Worker's own read-only routes, so an MCP client sees exactly what the dashboard shows
+async function mcpTool(env, url, name, args) {
+  const get = async (path, body) => (await app.fetch(new Request(url.origin + path, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {}), env)).json();
+  if (name === "read_paid_signal") {
+    const csv = typeof args.csv === "string" && args.csv.trim() ? args.csv : await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text();
+    const [{ reconciliation: r, csv_errors }, ledger] = await Promise.all([get("/api/reconcile", { csv }), get("/api/ledger")]);
+    const $ = (c) => (c / 100).toFixed(2);
+    return {
+      totals: { leads: r.totals.leads, paid_orders: r.totals.paid, fully_refunded: r.totals.refunded, spend_usd: $(r.totals.spend_cents), paid_revenue_usd: $(r.totals.revenue_cents) },
+      ads: r.ads.map((a) => ({ ad: a.ad, spend_usd: $(a.spend_cents), leads: a.leads, paid_orders: a.paid, fully_refunded: a.refunded, paid_revenue_usd: $(a.revenue_cents), cost_per_paid_order_usd: a.cost_per_paid_cents == null ? null : $(a.cost_per_paid_cents) })),
+      possible_duplicates: ledger.duplicates, csv_errors,
+    };
+  }
+  if (name === "list_unpaid_leads") {
+    const [{ leads }, { invoices }] = await Promise.all([get("/api/leads"), get("/api/invoices")]);
+    return leads.map((l) => ({ lead: l.lead, ad: l.ad, asked_for: l.asked_for, invoice: invoices.find((i) => i.lead === l.lead)?.status || null }));
+  }
+  if (name === "list_payments") {
+    const { payments, duplicates } = await get("/api/ledger");
+    const dup = new Map(duplicates.map((d) => [d.capture_id, d.first]));
+    return payments.map((p) => ({ capture_id: p.capture_id, ad: p.ad, source: p.source, amount: p.amount, refunded: p.refunded_amount, captured_at: p.captured_at, possible_duplicate_of: dup.get(p.capture_id) || null }));
+  }
+  if (name === "check_paypal_ledger") return get("/api/paypal-check");
+  throw new Error(`Unknown tool ${name}`);
 }
 
 // a possible duplicate still counts as paid in the ledger, but is not reported to ad platforms until refunded or reviewed
@@ -111,10 +141,12 @@ async function quota(env, key, limit) {
   return true;
 }
 
-export default {
+const app = {
   async fetch(request, env) {
     const url = new URL(request.url);
     const pp = paypal({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET });
+    // order create and read go through PayPal's APIMatic-generated server SDK; the rest uses the small REST client
+    const orders = ordersSdk({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET });
     try {
       if (url.pathname === "/api/config") return json({ paypal_client_id: env.PAYPAL_CLIENT_ID, product: PRODUCT, environment: "sandbox", ag_studio_license: env.AG_STUDIO_LICENSE || null });
 
@@ -124,7 +156,7 @@ export default {
         const customId = packClick({ ad: b.ad || "direct", source, clickId: b.click_id || "", clickedAt: b.clicked_at || 0 });
         // one checkout intent per visit: a second click on Pay gets the same PayPal order back, so it cannot be charged twice
         const intent = /^[a-z0-9-]{8,40}$/.test(String(b.intent)) ? b.intent : crypto.randomUUID();
-        const order = await pp.createOrder({
+        const order = await orders.createOrder({
           amount: PRODUCT.amount, currency: PRODUCT.currency, description: PRODUCT.name, customId,
           invoiceId: `PS-${intent.replace(/-/g, "").slice(0, 16)}`, returnUrl: `${url.origin}/shop.html?done=1`, cancelUrl: `${url.origin}/shop.html`,
           requestId: `chk-${intent}`,
@@ -164,7 +196,7 @@ export default {
         const res = event.resource || {};
         if (event.event_type === "PAYMENT.CAPTURE.COMPLETED" && !(await env.LEDGER.get(`pay:${res.id}`))) {
           const orderId = res.supplementary_data?.related_ids?.order_id;
-          if (orderId) await recordCapture(env, await pp.getOrder(orderId));
+          if (orderId) await recordCapture(env, await orders.getOrder(orderId));
         }
         if (event.event_type === "INVOICING.INVOICE.PAID" && res.id) await recordInvoicePayment(env, await pp.getInvoice(res.id));
         if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
@@ -190,7 +222,10 @@ export default {
       if (url.pathname === "/api/invoices/sync" && request.method === "POST") {
         const open = (await listPrefix(env, "inv:")).filter((i) => i.status === "SENT" || i.status === "PARTIALLY_PAID");
         if (!open.length) return json({ checked: 0, paid: 0, invoices: await listPrefix(env, "inv:") });
-        const stop = await guard(env, request, "sync", 30, 300); if (stop) return json({ error: stop }, 429);
+        // one PayPal re-check per 5 minutes for everyone; page loads in between just read the ledger
+        const last = Number(await env.LEDGER.get("sync:last")) || 0;
+        if (Date.now() - last < 300000) return json({ checked: 0, paid: 0, recent: true, invoices: await listPrefix(env, "inv:") });
+        await env.LEDGER.put("sync:last", String(Date.now()));
         let paid = 0;
         for (const i of open) { const inv = await pp.getInvoice(i.id); if (inv.status === "PAID" || inv.status === "PARTIALLY_PAID") { await recordInvoicePayment(env, inv); paid++; } }
         return json({ checked: open.length, paid, invoices: await listPrefix(env, "inv:") });
@@ -227,6 +262,27 @@ export default {
         rec.status = fresh.status; rec.sent_at = new Date().toISOString(); rec.pay_url = (fresh.detail?.metadata?.recipient_view_url) || null;
         await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec));
         return json({ invoice: rec });
+      }
+
+      // A person approves a drafted invoice; the send agent (Claude with PayPal's Agent Toolkit) checks and sends that one.
+      if (url.pathname === "/api/invoices/approve" && request.method === "POST") {
+        const { id } = await request.json();
+        const rec = await env.LEDGER.get(`inv:${id}`, "json");
+        if (!rec) return json({ error: "Unknown invoice." }, 404);
+        if (rec.status !== "DRAFT") return json({ error: `Invoice is ${rec.status}, not a draft.` }, 400);
+        // its own small daily budget, so a busy budget agent never blocks approvals (each send is one short Claude run)
+        if (!(await quota(env, "send-agent", 30))) return json({ error: "The shared daily limit for agent sends is reached." }, 429);
+        const stop = await guard(env, request, "invoice sends", 6, 40); if (stop) return json({ error: stop }, 429);
+        const tools = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
+          configuration: { actions: { invoices: { get: true, send: true } }, context: { sandbox: true } } }).getTools();
+        const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: SEND_SYSTEM, tools: SEND_TOOLS });
+        const approvedAt = new Date().toISOString();
+        const agent = await runSendAgent({ llm, tools, approved: { id, lead: rec.lead, ad: rec.ad, amount: String(rec.amount || "49.00") } });
+        const fresh = await pp.getInvoice(id);
+        Object.assign(rec, { status: fresh.status, approved_at: approvedAt, pay_url: fresh.detail?.metadata?.recipient_view_url || rec.pay_url || null,
+          ...(agent.sent ? { sent_at: new Date().toISOString(), sent_by: "send agent (Claude + PayPal Agent Toolkit)" } : {}) });
+        await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec));
+        return json({ invoice: rec, agent });
       }
 
       // Cross-check the webhook ledger against PayPal's own transaction history.
@@ -314,6 +370,14 @@ export default {
         return json({ ...out, ms: Date.now() - started });
       }
 
+      if (url.pathname === "/mcp") {
+        if (request.method !== "POST") return new Response("Paid Signal MCP server: POST JSON-RPC here (streamable HTTP, JSON responses).", { status: 405, headers: { allow: "POST" } });
+        const body = await request.json();
+        const call = (name, args) => mcpTool(env, url, name, args);
+        const out = Array.isArray(body) ? (await Promise.all(body.map((m) => handleMcp(m, call)))).filter(Boolean) : await handleMcp(body, call);
+        return out === null || (Array.isArray(out) && !out.length) ? new Response(null, { status: 202 }) : json(out);
+      }
+
       if (url.pathname.startsWith("/api/")) return json({ error: "Not found" }, 404);
       return env.ASSETS.fetch(request);
     } catch (e) {
@@ -321,3 +385,4 @@ export default {
     }
   },
 };
+export default app;

@@ -1,6 +1,7 @@
 name: Live demo check
 # Judges test the live demo until judging ends, so check it every day: pages load, the ledger answers,
-# the reconciliation of the demo ad export returns 62 leads, and the PayPal cross-check responds.
+# the reconciliation of the demo ad export returns 62 leads, the PayPal cross-check responds, and a browser run
+# goes from an ad link to the dashboard widgets and the MCP server.
 on:
   schedule:
     - cron: "17 3 * * *"
@@ -24,3 +25,8 @@ jobs:
           curl -sf "$BASE/api/paypal-check" | jq -e '.status == "ok" or .status == "unavailable"'
       - name: Postman collection against the live demo
         run: npx --yes newman@6.2.1 run postman/paid-signal.postman_collection.json
+      - name: End to end in a browser (ad link, shop order, dashboard widgets, refund preview, MCP)
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          node scripts/e2e.mjs

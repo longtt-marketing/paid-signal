@@ -15,10 +15,11 @@ const f = (id, name, format, hide) => ({ id, name, format, ...(hide ? { hide } :
 const sum = (id) => ({ id, aggregation: "sum" });
 
 /** Two tables joined on the ad key: what each ad claims, and what PayPal captured for it. */
-export function buildData(rec, payments) {
+export function buildData(rec, payments, invoices = []) {
   const ads = rec.ads.map((r) => ({
     ad: r.ad, name: adName(r.ad), spend: r.spend_cents / 100, leads: r.leads, payers: r.paid, refunds: r.refunded,
     revenue: r.revenue_cents / 100, noPayer: r.paid === 0 ? r.spend_cents / 100 : 0,
+    invoiced: invoices.filter((i) => i.ad === r.ad && i.status !== "CANCELLED").length,
   }));
   const known = new Set(rec.ads.map((r) => r.ad));
   const caps = payments.map((p) => {
@@ -36,7 +37,7 @@ export function buildData(rec, payments) {
       {
         id: "ads", name: "Ads", description: "One row per ad from the ad platform export.", data: ads,
         fields: [f("ad", "Ad key", "textFormat", true), f("name", "Ad", "textFormat"), f("spend", "Spend", "currencyFormat"), f("leads", "Leads (ad-reported)", "integerFormat"),
-          f("payers", "Paid orders (PayPal)", "integerFormat"), f("refunds", "Refunded captures", "integerFormat"), f("revenue", "Paid revenue", "currencyFormat"), f("noPayer", "Spend with no paid order", "currencyFormat")],
+          f("payers", "Paid orders (PayPal)", "integerFormat"), f("refunds", "Refunded captures", "integerFormat"), f("revenue", "Paid revenue", "currencyFormat"), f("noPayer", "Spend with no paid order", "currencyFormat"), f("invoiced", "Leads invoiced (PayPal)", "integerFormat")],
       },
       {
         id: "captures", name: "PayPal captures", description: "One row per PayPal capture, attributed to an ad by click id.", data: caps,
@@ -78,8 +79,9 @@ export const initialReport = {
           sort: [{ field: { id: "mSpend" }, direction: "desc" }],
           format: { title: { enabled: true, text: "Per ad" }, style: { headerRow: { wrapText: true } } },
         },
+        funnel: { type: "lead-funnel", dataMapping: { category: [{ id: "ads.name" }], leads: [sum("ads.leads")], invoiced: [sum("ads.invoiced")], paid: [sum("ads.payers")] }, format: { title: { enabled: true, text: "Leads, PayPal invoices and paid orders, per ad" } } },
       },
-      widgetLayout: { leads: at(0, 0, 6, 7), payers: at(6, 0, 6, 7), rpd: at(12, 0, 6, 7), nopayer: at(18, 0, 6, 7), claim: at(0, 7, 24, 13), table: at(0, 20, 24, 18) },
+      widgetLayout: { leads: at(0, 0, 6, 7), payers: at(6, 0, 6, 7), rpd: at(12, 0, 6, 7), nopayer: at(18, 0, 6, 7), claim: at(0, 7, 24, 13), table: at(0, 20, 24, 18), funnel: at(0, 38, 24, 13) },
     },
     {
       id: "captures", name: "PayPal captures",

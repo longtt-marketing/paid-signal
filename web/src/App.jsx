@@ -5,6 +5,7 @@ import { buildAi } from "./agentTools.js";
 import { buildData, initialReport, theme, adName } from "./studio.js";
 import { claimWidgetDefinition } from "./ClaimWidget.jsx";
 import { timelineWidgetDefinition } from "./TimelineWidget.jsx";
+import { funnelWidgetDefinition } from "./FunnelWidget.jsx";
 
 async function api(path, body) {
   const res = await fetch(path, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {});
@@ -35,7 +36,14 @@ export default function App() {
   // the budget agent inside AG Studio lands its gated recommendation in the same approvals column
   const onRecommendation = useCallback((r) => { setAgent({ status: "done", ...r }); setDecisions({}); }, []);
   const ai = useMemo(() => buildAi({ getCsv: () => csvRef.current, onInvoices: loadInvoices, onRecommendation }), [loadInvoices, onRecommendation]);
-  const send = async (id) => { try { await api("/api/invoices/send", { id }); } catch (e) { alert(e.message); } loadInvoices(); };
+  // the person approves; the send agent (Claude + PayPal Agent Toolkit) checks that draft and sends it, nothing else
+  const [sending, setSending] = useState({});
+  const send = async (id) => {
+    setSending((s) => ({ ...s, [id]: "Agent checking and sending…" }));
+    try { const d = await api("/api/invoices/approve", { id }); setSending((s) => ({ ...s, [id]: d.agent.summary || (d.agent.sent ? "Sent." : "Not sent.") })); }
+    catch (e) { setSending((s) => ({ ...s, [id]: e.message })); }
+    loadInvoices();
+  };
 
   const load = useCallback(async (text) => {
     setError("");
@@ -47,9 +55,9 @@ export default function App() {
 
   useEffect(() => { fetch("/data/demo-ads.csv").then((r) => r.text()).then((t) => { setCsv(t); load(t); }); }, [load]);
 
-  const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments) : undefined), [state]);
+  const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments, invoices) : undefined), [state, invoices]);
   const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() }), [state]);
-  const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline"] }] }), []);
+  const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition, funnelWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline", "lead-funnel"] }] }), []);
 
   const go = (id) => { setPage(id); const a = studio.current?.api; if (a) a.setState({ ...a.getState(), selectedPageId: id }); };
 
@@ -153,12 +161,12 @@ export default function App() {
         <section id="invoices" className="card">
           <div className="row between"><h2>Invoices</h2><button className="mini" onClick={syncInvoices}>Refresh</button></div>
           {syncNote && <p className="note" role="status">Could not re-check sent invoices with PayPal: {syncNote}</p>}
-          <p className="muted">Drafted by the Studio assistant, with the ad click inside. Nothing is sent until you press Send.</p>
+          <p className="muted">Drafted by the Studio assistant, with the ad click inside. Nothing is sent until you approve; then the send agent (Claude with PayPal's Agent Toolkit) checks that draft and sends it.</p>
           {invoices.length === 0 && <p className="note">No drafts yet. Ask the Studio assistant: "Invoice warm leads".</p>}
           {invoices.map((i) => (
             <div key={i.id} className="cap inv">
-              <span><b>{i.lead.replace(" (fictional)", "")}</b><small>{adName(i.ad)} · ${i.amount}</small></span>
-              {i.status === "DRAFT" ? <button className="mini primary" onClick={() => send(i.id)}>Send</button>
+              <span><b>{i.lead.replace(" (fictional)", "")}</b><small>{adName(i.ad)} · ${i.amount}{i.sent_by ? " · sent by the agent" : ""}</small>{sending[i.id] && <small className="agent-say" role="status">{sending[i.id]}</small>}</span>
+              {i.status === "DRAFT" ? <button className="mini primary" disabled={sending[i.id] === "Agent checking and sending…"} onClick={() => send(i.id)}>Approve</button>
                 : i.status === "PAID" ? <span className="ok">Paid</span>
                 : i.pay_url ? <a href={i.pay_url} target="_blank" rel="noopener">Sent ↗</a> : <span className="note">{i.status}</span>}
             </div>

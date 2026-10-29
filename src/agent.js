@@ -101,13 +101,14 @@ export async function runAgent({ llm, rec, payments, maxTurns = 8 }) {
 }
 
 /** Anthropic Messages API adapter; tool results are sent back as tool_result blocks. */
-export function anthropicLLM({ apiKey, workspaceId, model = "claude-sonnet-5-5", fetchImpl = fetch, timeoutMs = 60000 }) {
+/** @param {{ apiKey: string, workspaceId?: string, model?: string, fetchImpl?: typeof fetch, timeoutMs?: number, system?: string, tools?: any[] }} opts */
+export function anthropicLLM({ apiKey, workspaceId, model = "claude-sonnet-5-5", fetchImpl = fetch, timeoutMs = 60000, system = SYSTEM, tools = TOOLS }) {
   return async (messages) => {
     const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
       method: "POST", signal: AbortSignal.timeout(timeoutMs),
       headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json", ...(workspaceId ? { "anthropic-workspace-id": workspaceId } : {}) },
       body: JSON.stringify({
-        model, max_tokens: 4000, system: SYSTEM, tools: TOOLS,
+        model, max_tokens: 4000, system, tools,
         messages: messages.map((m) => m.role === "tool" ? { role: "user", content: m.results.map((r) => ({ type: "tool_result", tool_use_id: r.id, content: r.content })) } : m),
       }),
     });
