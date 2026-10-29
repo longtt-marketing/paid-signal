@@ -2,7 +2,7 @@
 // PAYPAL_WEBHOOK_ID once the webhook is registered. KV LEDGER holds sandbox captures (no raw email, only its hash).
 import { paypal } from "./paypal.js";
 import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates } from "./ledger.js";
-import { runAgent, anthropicLLM } from "./agent.js";
+import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
 
 // The demo shop sells one thing; the price is fixed server-side so a page cannot choose what it pays.
 const PRODUCT = { sku: "trial-class", name: "Robotics trial class (demo shop)", amount: "49.00", currency: "USD" };
@@ -280,6 +280,17 @@ export default {
         const payments = await listPayments(env);
         const rec = reconcile(parsed.rows, payments);
         return json({ reconciliation: rec, csv_errors: parsed.errors, meta: await metaFromLedger(payments), google: googleRows(payments) });
+      }
+
+      // The same gate for the budget agent that runs inside AG Studio: its recommendation is accepted only if every
+      // number and evidence id comes from the reconciliation; otherwise the problems go back to it for one repair.
+      if (url.pathname === "/api/agent/check" && request.method === "POST") {
+        const { csv, recommendation } = await request.json();
+        const payments = await listPayments(env);
+        const rec = reconcile(parseAdCsv(csv).rows, payments);
+        const out = { headline: String(recommendation?.headline || ""), caveats: String(recommendation?.caveats || ""), actions: (recommendation?.actions || []).slice(0, 4) };
+        const problems = checkRecommendation(rec, payments, out);
+        return json({ grounded: problems.length === 0, problems, recommendation: out });
       }
 
       if (url.pathname === "/api/agent" && request.method === "POST") {

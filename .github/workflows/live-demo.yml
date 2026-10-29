@@ -1,0 +1,26 @@
+name: Live demo check
+# Judges test the live demo until judging ends, so check it every day: pages load, the ledger answers,
+# the reconciliation of the demo ad export returns 62 leads, and the PayPal cross-check responds.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      BASE: https://paid-signal.thelongmarketing.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pages load
+        run: |
+          for p in / /shop.html /scenarios.html; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE$p"); echo "$p $code"; test "$code" = 200
+          done
+      - name: Ledger and reconciliation answer
+        run: |
+          curl -sf "$BASE/api/ledger" | jq -e '.payments | length > 0'
+          jq -Rs '{csv: .}' public/data/demo-ads.csv | curl -sf -X POST -H 'content-type: application/json' --data @- "$BASE/api/reconcile" | jq -e '.reconciliation.totals.leads == 62'
+          curl -sf "$BASE/api/paypal-check" | jq -e '.status == "ok" or .status == "unavailable"'
+      - name: Postman collection against the live demo
+        run: npx --yes newman@6.2.1 run postman/paid-signal.postman_collection.json

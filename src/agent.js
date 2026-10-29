@@ -1,6 +1,6 @@
 // The budget agent: Claude reads the reconciliation through tools and proposes changes. Code computed every number;
 // the agent may only quote them. A gate rejects ungrounded numbers or evidence ids, allows one repair, then flags.
-import { dollars, quotableNumbers, ungroundedNumbers } from "./ledger.js";
+import { dollars, quotableNumbers, ungroundedNumbers, possibleDuplicates } from "./ledger.js";
 
 export const SYSTEM = `You are a performance-marketing analyst for a small business that sells through PayPal.
 Ad platforms report leads; PayPal reports who actually paid. Your job: find where ad spend is not producing paid orders and propose budget changes.
@@ -37,7 +37,7 @@ export const TOOLS = [
   },
 ];
 
-export function reconciliationView(rec) {
+export function reconciliationView(rec, payments = []) {
   return {
     totals: { leads: rec.totals.leads, paid_orders: rec.totals.paid, fully_refunded: rec.totals.refunded, spend_usd: dollars(rec.totals.spend_cents), paid_revenue_usd: dollars(rec.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: dollars(rec.totals.spend_without_paid_cents) },
     ads: rec.ads.map((r) => ({
@@ -46,6 +46,8 @@ export function reconciliationView(rec) {
       lead_to_paid: r.lead_to_paid === null ? "no leads" : Math.round(r.lead_to_paid * 100) + "%", paid_revenue_per_dollar: r.roas === null ? "no spend" : r.roas.toFixed(2),
     })),
     unmatched_captures: rec.unmatched_captures,
+    // computed in code (refunded pairs included), so the agent can quote the gap instead of working it out from capture times
+    possible_duplicates: possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => ({ capture_id: d.capture_id, same_payer_and_ad_as: d.first, seconds_apart: d.seconds })),
   };
 }
 
@@ -56,7 +58,7 @@ export function checkRecommendation(rec, payments, out) {
   const ads = new Set(rec.ads.map((r) => r.ad));
   const ids = new Set(payments.map((p) => p.capture_id));
   // the "fewer than 3 paid orders" rule, and what read_captures shows: amounts and capture dates/times
-  const extra = [3, ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00", ...(String(p.captured_at).match(/\d+/g) || [])])];
+  const extra = [3, ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00", ...(String(p.captured_at).match(/\d+/g) || [])]), ...possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => d.seconds)];
   const texts = [out.headline, out.caveats, ...(out.actions || []).map((a) => a.reason)];
   for (const t of texts) for (const n of ungroundedNumbers(t, allowed, extra)) problems.push(`Number "${n}" is not in the tool results.`);
   // the owner reads this: tool field names (spend_usd, paid_revenue_per_dollar) must become plain words; ad keys may stay
@@ -71,6 +73,7 @@ export function checkRecommendation(rec, payments, out) {
 
 export async function runAgent({ llm, rec, payments, maxTurns = 8 }) {
   const trace = [];
+  /** @type {Array<{ role: string, content?: any, results?: Array<{ id: string, content: string }> }>} */
   const messages = [{ role: "user", content: "Review this shop's last ad period and recommend budget changes." }];
   let repaired = false;
   for (let turn = 0; turn < maxTurns; turn++) {
@@ -79,13 +82,13 @@ export async function runAgent({ llm, rec, payments, maxTurns = 8 }) {
     if (!calls.length) { messages.push({ role: "user", content: "Call submit_recommendation to finish." }); continue; }
     const results = [];
     for (const c of calls) {
-      if (c.name === "read_reconciliation") { trace.push({ tool: c.name }); results.push({ id: c.id, content: JSON.stringify(reconciliationView(rec)) }); }
+      if (c.name === "read_reconciliation") { trace.push({ tool: c.name }); results.push({ id: c.id, content: JSON.stringify(reconciliationView(rec, payments)) }); }
       else if (c.name === "read_captures") {
         const list = payments.filter((p) => p.ad === c.input.ad).map((p) => ({ capture_id: p.capture_id, amount_usd: p.amount, status: p.status, refunded_usd: p.refunded_amount || "0.00", captured_at: p.captured_at }));
         trace.push({ tool: c.name, ad: c.input.ad, n: list.length }); results.push({ id: c.id, content: JSON.stringify(list) });
       } else if (c.name === "submit_recommendation") {
         const problems = checkRecommendation(rec, payments, c.input);
-        trace.push({ tool: c.name, problems: problems.length });
+        trace.push({ tool: c.name, problems: problems.length, ...(problems.length ? { why: problems.slice(0, 4) } : {}) });
         if (!problems.length || repaired) return { recommendation: c.input, grounded: !problems.length, problems, trace };
         repaired = true;
         results.push({ id: c.id, content: `Rejected by the evidence check: ${problems.join(" ")} Fix only these and call submit_recommendation again.` });

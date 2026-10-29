@@ -1,0 +1,113 @@
+{
+ "date": "2026-10-29",
+ "model": "claude-sonnet-5-5",
+ "payments": 8,
+ "summary": {
+  "runs": 10,
+  "first_pass": 10,
+  "grounded_after_one_repair": 10,
+  "flagged": 0
+ },
+ "runs": [
+  {
+   "run": 1,
+   "grounded": true,
+   "first_pass": true,
+   "submissions": [
+    0
+   ],
+   "rejected_for": [],
+   "seconds": 14.792
+  },
+  {
+   "run": 2,
+   "grounded": true,
+   "first_pass": true,
+   "submissions": [
+    0
+   ],
+   "rejected_for": [],
+   "seconds": 15.039
+  },
+  {
+   "run": 3,
+   "grounded": true,
+   "first_pass": true,
+   "submissions": [
+    0
+   ],
+   "rejected_for": [],
+   "seconds": 17.187
+  },
+  {
+   "run": 4,
+   "grounded": true,
+   "first_pass": true,
+   "submissions": [
+    0
+   ],
+   "rejected_for": [],
+   "seconds": 14.722
+  },
+  {
+   "run": 5,
+   "grounded": true,
+   "first_pass": true,
+   "submissions": [
+    0
+   ],
+   "rejected_for": [],
+   "seconds": 15.605
+  },
+  {
+   "run": 6,
+   "grounded": true,
+   "first_pass": true,
+   "submissions": [
+    0
+   ],
+   "rejected_for": [],
+   "seconds": 15.216
+  },
+  {
+   "run": 7,
+   "grounded": true,
+   "first_pass": true,
+   "submissions": [
+    0
+   ],
+   "rejected_for": [],
+   "seconds": 14.803
+  },
+  {
+   "run": 8,
+   "grounded": true,
+   "first_pass": true,
+   "submissions": [
+    0
+   ],
+   "rejected_for": [],
+   "seconds": 13.668
+  },
+  {
+   "run": 9,
+   "grounded": true,
+   "first_pass": true,
+   "submissions": [
+    0
+   ],
+   "rejected_for": [],
+   "seconds": 14.002
+  },
+  {
+   "run": 10,
+   "grounded": true,
+   "first_pass": true,
+   "submissions": [
+    0
+   ],
+   "rejected_for": [],
+   "seconds": 14.146
+  }
+ ]
+}

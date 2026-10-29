@@ -73,6 +73,8 @@ export function quotableNumbers(rec) {
   const out = new Set();
   const add = (v) => { if (v !== null && v !== undefined && v !== "") out.add(String(v)); };
   const t = rec.totals;
+  // counts the agent can see in the table: how many ads, how many captures
+  add(rec.ads.length); add(rec.ads.reduce((n, r) => n + r.captures.length, 0));
   [t.leads, t.paid, t.refunded, dollars(t.spend_cents), dollars(t.revenue_cents), dollars(t.spend_without_paid_cents)].forEach(add);
   for (const r of rec.ads) {
     [r.leads, r.paid, r.refunded, r.captures.length, dollars(r.spend_cents), dollars(r.revenue_cents)].forEach(add);
@@ -87,7 +89,7 @@ export function quotableNumbers(rec) {
 export function ungroundedNumbers(text, allowed, extra = []) {
   const ok = new Set([...allowed, ...extra].map((s) => String(s).replace(/[$,]/g, "")));
   // ids such as capture 59A98014DG653005N are evidence, not quantities: drop them before extracting numbers
-  const clean = String(text ?? "").replace(/\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9-]{10,}\b/g, " ");
+  const clean = String(text ?? "").replace(/\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9-]{10,}\b/g, " ").replace(/\b\d{12,}\b/g, " "); // all-digit capture ids too
   const found = clean.match(/\$?\d[\d,]*(?:\.\d+)?%?/g) || [];
   return found.map((s) => s.replace(/[$,]/g, "")).filter((n) => !ok.has(n) && !ok.has(n.replace(/\.00$/, "")));
 }

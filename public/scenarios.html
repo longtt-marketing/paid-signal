@@ -32,6 +32,10 @@ h2{margin:0;font-size:17px;font-weight:600;line-height:1.35}
 .ev{margin:6px 0 0;font-size:13px;color:var(--faint);overflow-wrap:anywhere}
 .st{display:flex;justify-content:flex-end}
 .foot{margin:0;font-size:14px;color:var(--faint)}
+.proof{display:flex;flex-direction:column;gap:16px}.ph{margin:12px 0 0;font-size:24px;font-weight:700;letter-spacing:-.02em}
+.stats{display:flex;flex-wrap:wrap;gap:14px}.stat{flex:1 1 260px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:8px}
+.stat b{font-size:40px;font-weight:700;letter-spacing:-.02em;color:var(--paid)}.stat span{font-size:15px;color:var(--ink)}.stat small{font-size:13px;color:var(--faint)}
+code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(--chip);padding:1px 6px;border-radius:6px}
 @media (max-width:760px){li{grid-template-columns:28px minmax(0,1fr);gap:8px 14px}.does,.st{grid-column:2}.st{justify-content:flex-start}}
 </style>
 </head>
@@ -54,6 +58,15 @@ h2{margin:0;font-size:17px;font-weight:600;line-height:1.35}
     <li><span class="n">8</span><div><h2>Paid long after the click</h2><p class="ev">test/ledger.test.js · attribution windows</p></div><p class="does">The revenue stays in the ledger, but no Meta event after 28 days and no Google row after 90 days.</p><div class="st"><span class="badge test"><i></i>Test</span></div></li>
     <li><span class="n">9</span><div><h2>Agent writes a number it was not given</h2><p class="ev">test/agent.test.js</p></div><p class="does">The code gate rejects it, allows one repair, then flags the recommendation. Approve and Dismiss are logged on the server with their evidence.</p><div class="st"><span class="badge test"><i></i>Test</span></div></li>
   </ol>
+  <section class="proof" aria-labelledby="proof">
+    <h2 id="proof" class="ph">Proof, measured</h2>
+    <div class="stats">
+      <div class="stat"><b>499 / 500</b><span>planted errors caught by the evidence gate: invented numbers and percentages, fake capture ids, unknown ads, raw field names</span><small>The one miss was an invented "30" that equals a value the agent is shown (a capture time).</small></div>
+      <div class="stat"><b>0 / 500</b><span>grounded recommendations wrongly rejected</span><small>Built only from numbers the reconciliation produced.</small></div>
+      <div class="stat"><b>10 / 10</b><span>live budget-agent runs on Claude passed the gate on the first submission</span><small>Before the duplicate gaps were computed in code, 1 of 10 did: the agent worked out "12 seconds" itself and was sent back.</small></div>
+    </div>
+    <p class="foot">Reproduce: <code>node scripts/eval-gate.mjs</code> and <code>node scripts/eval-agent.mjs 10</code>. Results: <a href="https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof">docs/proof</a>.</p>
+  </section>
   <p class="foot">The ad export and leads are fictional demo data. PayPal calls are real sandbox calls. Meta and Google payloads are previews; nothing is sent.</p>
 </main>
 </body>

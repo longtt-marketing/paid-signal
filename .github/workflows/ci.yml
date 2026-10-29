@@ -1,0 +1,16 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ledger, attribution and agent-gate tests
+        run: npm test
+      - name: Type-check the money code (JSDoc, no build step)
+        run: npx --yes -p typescript@5.6.3 tsc --noEmit --allowJs --checkJs --target es2022 --module es2022 --moduleResolution bundler --lib es2022,dom src/ledger.js src/agent.js

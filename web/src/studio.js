@@ -24,7 +24,7 @@ export function buildData(rec, payments) {
   const caps = payments.map((p) => {
     const gross = Number(p.amount), back = Number(p.refunded_amount || 0);
     return {
-      id: p.capture_id, ad: known.has(p.ad) ? p.ad : "(not in export)", status: p.status, source: p.source === "fb" ? "Meta click" : p.source === "g" ? "Google click" : "Other",
+      id: p.capture_id, ad: known.has(p.ad) ? p.ad : "(not in export)", adName: known.has(p.ad) ? adName(p.ad) : "No ad click", status: p.status, source: p.source === "fb" ? "Meta click" : p.source === "g" ? "Google click" : "Other",
       gross, refunded: back, net: Math.max(0, gross - back), paid: back >= gross ? 0 : 1, date: String(p.captured_at).slice(0, 10), capturedAt: p.captured_at,
     };
   });
@@ -40,8 +40,8 @@ export function buildData(rec, payments) {
       },
       {
         id: "captures", name: "PayPal captures", description: "One row per PayPal capture, attributed to an ad by click id.", data: caps,
-        fields: [f("id", "Capture", "textFormat"), f("ad", "Ad key", "textFormat", true), f("status", "Status", "textFormat"), f("source", "Click source", "textFormat"),
-          f("gross", "Captured", "currencyFormat"), f("refunded", "Refunded", "currencyFormat"), f("net", "Net paid", "currencyFormat"), f("paid", "Is paid", "integerFormat"), f("date", "Capture date", "dateFormat")],
+        fields: [f("id", "Capture", "textFormat"), f("ad", "Ad key", "textFormat", true), f("adName", "Ad", "textFormat"), f("status", "Status", "textFormat"), f("source", "Click source", "textFormat"),
+          f("gross", "Captured", "currencyFormat"), f("refunded", "Refunded", "currencyFormat"), f("net", "Net paid", "currencyFormat"), f("paid", "Is paid", "integerFormat"), f("date", "Capture date", "dateFormat"), f("capturedAt", "Captured at", "textFormat")],
       },
     ],
     relations: [{ id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],
@@ -86,14 +86,15 @@ export const initialReport = {
       widgets: {
         net: kpi("Net paid", sum("captures.net")),
         refunded: kpi("Refunded", sum("captures.refunded")),
+        timeline: { type: "payment-timeline", dataMapping: { lane: [{ id: "captures.adName" }], time: [{ id: "captures.capturedAt" }], id: [{ id: "captures.id" }], status: [{ id: "captures.status" }] }, format: { title: { enabled: true, text: "Every payment over time, by ad" } } },
         list: {
           type: "grid",
-          dataMapping: { cols: [{ id: "captures.date" }, { id: "captures.id" }, { id: "ads.name" }, { id: "captures.source" }, { id: "captures.status" }, sum("captures.gross"), sum("captures.refunded"), sum("captures.net")] },
+          dataMapping: { cols: [{ id: "captures.date" }, { id: "captures.id" }, { id: "captures.adName" }, { id: "captures.source" }, { id: "captures.status" }, sum("captures.gross"), sum("captures.refunded"), sum("captures.net")] },
           sort: [{ field: { id: "captures.date" }, direction: "desc" }],
           format: { title: { enabled: true, text: "Every capture, attributed by click id" } },
         },
       },
-      widgetLayout: { net: at(0, 0, 12, 7), refunded: at(12, 0, 12, 7), list: at(0, 7, 24, 20) },
+      widgetLayout: { net: at(0, 0, 12, 7), refunded: at(12, 0, 12, 7), timeline: at(0, 7, 24, 14), list: at(0, 21, 24, 20) },
     },
   ],
 };

@@ -1,0 +1,30 @@
+{
+ "date": "2026-10-29",
+ "payments": 8,
+ "planted": {
+  "invented_number": {
+   "tried": 100,
+   "caught": 99
+  },
+  "invented_percent": {
+   "tried": 100,
+   "caught": 100
+  },
+  "fake_evidence_id": {
+   "tried": 100,
+   "caught": 100
+  },
+  "unknown_ad": {
+   "tried": 100,
+   "caught": 100
+  },
+  "raw_field_name": {
+   "tried": 100,
+   "caught": 100
+  }
+ },
+ "grounded": {
+  "tried": 500,
+  "falsely_rejected": 0
+ }
+}

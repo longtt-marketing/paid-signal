@@ -1,5 +1,7 @@
 # Paid Signal
 
+[![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
+
 **Teach your ads what a paid customer looks like.**
 
 Ad platforms optimise for what they can see: clicks, leads, chat taps. For a small business that gets paid through
@@ -22,6 +24,14 @@ Paid Signal closes that loop on the PayPal developer platform:
 
 Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev** · Test scenarios: https://paid-signal.thelongmarketing.workers.dev/scenarios.html (nine cases: duplicates, partial refunds, payments with no click, late payments; marked live in the sandbox or automated test)
 
+## Judge it in 60 seconds
+
+No login is needed for any of this; only paying in the demo shop needs the sandbox buyer from the testing notes.
+
+1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): 62 leads claimed by the ads, the paid orders PayPal confirms, per ad.
+2. Open the Studio assistant and choose **Review ad budgets**: the Budget agent (a custom Studio agent on Claude) passes the evidence gate, its change lands in the approvals column, and it asks Studio's page agent to add the evidence chart.
+3. Open [Test scenarios](https://paid-signal.thelongmarketing.workers.dev/scenarios.html): nine cases and the measured proof (499 of 500 planted errors caught, 10 of 10 live agent runs grounded first time).
+
 ## Try it in three minutes
 
 1. Open the demo. The dashboard reconciles a demo ad export (fictional shop, labelled) against **real PayPal sandbox
@@ -33,7 +43,9 @@ Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
 4. Press **Open the Studio assistant** and choose **Invoice warm leads**. Claude, running inside AG Studio's agent
    framework, lists leads who never paid and drafts PayPal invoices for those who showed intent. Send one from
    **PayPal invoices**; when it is paid, the payment is attributed to the lead's ad.
-5. Refund a capture in **Captures & refunds**: the ad's numbers drop and its Google row becomes a retraction.
+5. Refund a capture under **Payments** (a smaller amount makes it partial): the ad's numbers drop, and its Google row becomes a retraction or a restatement.
+
+API checks without the UI: import [`postman/paid-signal.postman_collection.json`](postman/paid-signal.postman_collection.json) into Postman (read-only requests, 15 tests). To add Paid Signal to a real shop: [docs/INTEGRATE.md](docs/INTEGRATE.md).
 
 ## PayPal developer platform used
 
@@ -50,12 +62,16 @@ Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
 
 - **Budget agent** (`src/agent.js`): Claude with tool use (`read_reconciliation`, `read_captures`,
   `submit_recommendation`). A code gate rejects any number that is not in the reconciliation and any evidence id that
-  does not exist, allows one repair, then flags. Tested in `test/agent.test.js`. (The Studio assistant below has no
-  such gate; its tools return computed numbers and it is instructed to quote them.)
+  does not exist, allows one repair, then flags. Tested in `test/agent.test.js`; measured in [`docs/proof`](docs/proof)
+  (`scripts/eval-gate.mjs`, `scripts/eval-agent.mjs`).
+- **Budget agent inside AG Studio** (`web/src/agentTools.js`): a custom Studio agent. Studio's lead agent delegates budget
+  questions to it; it reads the ledger, submits through the same gate (`/api/agent/check`), and delegates to Studio's
+  built-in page agent to add the evidence chart. Its accepted change lands in the approvals column.
 - **Studio assistant** (`web/src/claudeAdapter.js`, `web/src/agentTools.js`): AG Studio's Studio Agent Framework with
   a custom `AgLlmAdapter` for Claude (the Anthropic key stays in the Worker proxy). Studio's five built-in agents run on
   Claude; the lead agent gains four Paid Signal tools: `read_paid_signal`, `list_unpaid_leads`,
-  `draft_paypal_invoices`, `check_paypal_ledger`.
+  `draft_paypal_invoices`, `check_paypal_ledger`. The lead's own free text is not gated; its tools return numbers
+  computed in code.
 
 ## AG Studio
 

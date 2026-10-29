@@ -80,3 +80,8 @@ test("attribution windows: no Meta event 28+ days after the click, no Google row
   assert.equal(googleRows([late(91, { source: "g" })]).conversions.length, 0);
   assert.equal(googleRows([late(60, { source: "g" })]).conversions.length, 1);
 });
+
+test("all-digit capture ids are evidence, not numbers", () => {
+  const r = reconcile([{ ad: "trial", spend_cents: 9620, leads: 14 }], [pay({})]);
+  assert.deepEqual(ungroundedNumbers("Capture 71264306943252202 was refunded.", quotableNumbers(r)), []);
+});

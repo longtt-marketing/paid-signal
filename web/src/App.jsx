@@ -4,6 +4,7 @@ import { AgStudioAiModule } from "ag-studio";
 import { buildAi } from "./agentTools.js";
 import { buildData, initialReport, theme, adName } from "./studio.js";
 import { claimWidgetDefinition } from "./ClaimWidget.jsx";
+import { timelineWidgetDefinition } from "./TimelineWidget.jsx";
 
 async function api(path, body) {
   const res = await fetch(path, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {});
@@ -30,7 +31,9 @@ export default function App() {
   csvRef.current = csv;
   const loadInvoices = useCallback(() => api("/api/invoices").then((d) => setInvoices(d.invoices.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))))).catch(() => {}), []);
   useEffect(() => { loadInvoices(); }, [loadInvoices]);
-  const ai = useMemo(() => buildAi({ getCsv: () => csvRef.current, onInvoices: loadInvoices }), [loadInvoices]);
+  // the budget agent inside AG Studio lands its gated recommendation in the same approvals column
+  const onRecommendation = useCallback((r) => { setAgent({ status: "done", ...r }); setDecisions({}); }, []);
+  const ai = useMemo(() => buildAi({ getCsv: () => csvRef.current, onInvoices: loadInvoices, onRecommendation }), [loadInvoices, onRecommendation]);
   const send = async (id) => { try { await api("/api/invoices/send", { id }); } catch (e) { alert(e.message); } loadInvoices(); };
 
   const load = useCallback(async (text) => {
@@ -45,7 +48,7 @@ export default function App() {
 
   const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments) : undefined), [state]);
   const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() }), [state]);
-  const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed"] }] }), []);
+  const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline"] }] }), []);
 
   const go = (id) => { setPage(id); const a = studio.current?.api; if (a) a.setState({ ...a.getState(), selectedPageId: id }); };
 
@@ -129,6 +132,7 @@ export default function App() {
                 : <div className="row"><button className="primary" onClick={() => decide(i, "approved")}>Approve</button><button onClick={() => decide(i, "dismissed")}>Dismiss</button></div>}
             </div>
           ))}
+          {agent.source && <p className="trace">From the {agent.source}</p>}
           {agent.trace && <p className="trace">{agent.trace.map((s) => s.tool + (s.ad ? `(${s.ad})` : "")).join(" → ")} · {(agent.ms / 1000).toFixed(1)} s</p>}
           <button className="go" disabled={agent.status === "running"} onClick={ask}>{agent.status === "done" ? "Ask again" : "Ask the agent"}</button>
           <button onClick={openAssistant}>Open the Studio assistant</button>
@@ -162,7 +166,7 @@ export default function App() {
         <section id="signal" className="card">
           <div className="row between"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Purchase events</span>}</div>
           <p className="muted">Meta Purchase events and Google offline conversions, deduplicated by capture. Preview only.</p>
-          {state && <pre>{JSON.stringify(state.meta.events[0] || { note: "No paid capture with a click id yet." }, null, 2)}</pre>}
+          {state && <pre tabIndex={0} aria-label="Meta Purchase event preview">{JSON.stringify(state.meta.events[0] || { note: "No paid capture with a click id yet." }, null, 2)}</pre>}
           {state?.meta.held.length > 0 && <p className="note">Held back from Meta: {state.meta.held.map((h) => `${h.capture_id} (${h.reason})`).join(", ")}</p>}
           {state && <div className="gsig">
             <b>Google offline conversions · {state.google.conversions.length}</b>

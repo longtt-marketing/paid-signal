@@ -1,0 +1,187 @@
+{
+  "info": {
+    "name": "Paid Signal (PayPal sandbox demo)",
+    "description": "Read-only requests against the live Paid Signal demo, each with tests. Write actions (refunds, invoice drafts and sends) are left out on purpose: use the dashboard for those.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://paid-signal.thelongmarketing.workers.dev"
+    }
+  ],
+  "item": [
+    {
+      "name": "Ledger: PayPal payments recorded per ad",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/ledger",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "ledger"
+          ]
+        },
+        "description": "Captures recorded from PayPal's capture response and signature-verified webhooks. Payer emails are stored only as SHA-256 hashes."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "pm.test('every payment carries an ad and a capture id', () => d.payments.forEach(p => { pm.expect(p.capture_id).to.be.a('string'); pm.expect(p).to.have.property('ad'); }));",
+              "pm.test('money is a two-decimal string', () => d.payments.forEach(p => pm.expect(p.amount).to.match(/^\\d+\\.\\d{2}$/)));",
+              "pm.test('possible duplicates are listed', () => pm.expect(d.duplicates).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reconcile the demo ad export",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "content-type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/reconcile",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "reconcile"
+          ]
+        },
+        "description": "Ad export (ad, spend, leads) joined with PayPal captures by the click id packed into each order's custom_id. Amounts in cents.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"csv\": \"ad,spend,leads\\ntrial_video,96.20,14\\nfree_guide,118.40,31\\nparent_carousel,71.90,11\\nholiday_static,40.00,6\\n\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const r = pm.response.json().reconciliation;",
+              "pm.test('62 ad-reported leads', () => pm.expect(r.totals.leads).to.eql(62));",
+              "pm.test('paid orders never exceed leads per ad', () => r.ads.forEach(a => pm.expect(a.paid).to.be.at.most(a.leads)));",
+              "pm.test('Meta and Google payloads are prepared', () => { const d = pm.response.json(); pm.expect(d.meta.events).to.be.an('array'); pm.expect(d.google.conversions).to.be.an('array'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leads and invoices",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/invoices",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "invoices"
+          ]
+        },
+        "description": "PayPal invoices drafted by the Studio agent. Drafts are never sent without a person pressing Send."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('invoices carry a status', () => pm.response.json().invoices.forEach(i => pm.expect(['DRAFT','SENT','PAID','PARTIALLY_PAID','CANCELLED']).to.include(i.status)));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cross-check with PayPal Transaction Search",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/paypal-check",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "paypal-check"
+          ]
+        },
+        "description": "Compares the ledger with PayPal's own history: matched, after the report's last refresh, missing, or in PayPal but not in the ledger."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "pm.test('reports ok or unavailable, never a guess', () => pm.expect(['ok','unavailable']).to.include(d.status));",
+              "if (d.status === 'ok') pm.test('says how current the PayPal report is', () => pm.expect(d).to.have.property('report_current_to'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Approval log",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/decisions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "decisions"
+          ]
+        },
+        "description": "Approve and Dismiss on agent recommendations, logged on the server with their evidence."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('each decision keeps its evidence', () => pm.response.json().decisions.forEach(d => pm.expect(d.evidence).to.be.an('array')));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
