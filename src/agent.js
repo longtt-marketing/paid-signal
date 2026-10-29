@@ -59,6 +59,9 @@ export function checkRecommendation(rec, payments, out) {
   const extra = [3, ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00", ...(String(p.captured_at).match(/\d+/g) || [])])];
   const texts = [out.headline, out.caveats, ...(out.actions || []).map((a) => a.reason)];
   for (const t of texts) for (const n of ungroundedNumbers(t, allowed, extra)) problems.push(`Number "${n}" is not in the tool results.`);
+  // the owner reads this: tool field names (spend_usd, paid_revenue_per_dollar) must become plain words; ad keys may stay
+  const fields = new Set([...texts.join(" ").matchAll(/\b[a-z]+(?:_[a-z]+)+\b/g)].map((m) => m[0]).filter((w) => !ads.has(w)));
+  for (const f of fields) problems.push(`"${f}" is a field name; write it in plain words.`);
   for (const a of out.actions || []) {
     if (!ads.has(a.ad)) problems.push(`Ad "${a.ad}" is not in the reconciliation.`);
     for (const e of a.evidence || []) if (!(e.startsWith("row:") ? ads.has(e.slice(4)) : ids.has(e))) problems.push(`Evidence "${e}" does not exist.`);

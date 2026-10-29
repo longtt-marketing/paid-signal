@@ -45,3 +45,9 @@ test("numbers read_captures returns (amount, capture time) are grounded; invente
   assert.deepEqual(checkRecommendation(rec, payments, out), []);
   assert.equal(checkRecommendation(rec, payments, { ...out, headline: "trial will earn $49.50." }).length, 1);
 });
+
+test("tool field names are sent back for plain words; ad keys are fine", () => {
+  const out = { headline: "guide has 0 paid orders; spend_usd is 118.40.", actions: [{ ad: "guide", change: "reduce", reason: "31 leads.", evidence: ["row:guide"] }] };
+  assert.deepEqual(checkRecommendation(rec, payments, out), ['"spend_usd" is a field name; write it in plain words.']);
+  assert.deepEqual(checkRecommendation(rec, payments, { ...out, headline: "guide has 0 paid orders and spent 118.40." }), []);
+});
