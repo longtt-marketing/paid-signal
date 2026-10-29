@@ -109,6 +109,17 @@ export default function App() {
           </details>
         </header>
         {error && <p className="err">{error}</p>}
+        {/* phones get the per-ad answer first; AG Studio's grid layout needs a wider screen */}
+        {state && <section className="phone-sum" aria-label="Per ad, claimed vs paid">
+          {state.reconciliation.ads.map((a) => (
+            <div key={a.ad} className="ps-row">
+              <b>{adName(a.ad)}</b>
+              <span>{a.leads} leads → <em>{a.paid} paid</em></span>
+              <small>{usd(a.revenue_cents)} paid revenue · {a.cost_per_paid_cents == null ? "no paid order" : `${usd(a.cost_per_paid_cents)} per paid order`}</small>
+            </div>
+          ))}
+          <p className="note">The AG Studio dashboard and its agents are below; they read best on a wider screen.</p>
+        </section>}
         <div className="studio">
           {license !== undefined && <AgStudioProvider modules={[AgStudioAiModule]} licenseKey={license || undefined}>
             <AgStudio ref={studio} data={data} context={context} initialState={initialReport} widgets={widgets} theme={theme} mode="view" ai={ai} panels={PANELS} onApiReady={(e) => { window.__studio = e.api; }} style={{ width: "100%", height: "100%" }} />

@@ -26,6 +26,7 @@ h2{margin:0;font-size:16px}
 .csv[open]{position:relative}.csv[open]>:not(summary){margin-top:8px}
 .csv textarea{display:block;width:320px;min-height:120px;font:400 13px/1.5 var(--code);border:1px solid var(--line);border-radius:8px;padding:10px;background:#fbfaf7}
 .studio{flex:1;min-height:640px;min-width:0;max-width:100%;overflow:hidden}
+.phone-sum{display:none}
 .aside{background:var(--card);border-left:1px solid var(--line);padding:20px 16px;display:flex;flex-direction:column;gap:14px;overflow:auto}
 .card{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row.between{justify-content:space-between}
@@ -53,7 +54,7 @@ code{font-family:var(--code);font-size:12px}
 .claim-v{font:500 13px var(--mono);text-align:right}.claim-v.gap{color:var(--gap)}
 .claim-key{margin-top:auto;display:flex;gap:16px;font-size:12px;color:var(--faint)}.claim-key i{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:middle;margin-right:4px}
 @media (max-width:1180px){.shell{grid-template-columns:1fr;height:auto}.side{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line);padding:12px}.brand{padding:0 8px}.nav{width:auto}.side-foot{display:none}.aside{border-left:0;border-top:1px solid var(--line)}.studio{min-height:980px}}
-@media (max-width:640px){.head{padding:16px}.csv textarea{width:100%}.claim-row{grid-template-columns:1fr 70px}.claim-bars{grid-column:1/-1;grid-row:2}}
+@media (max-width:640px){.phone-sum{display:flex;flex-direction:column;gap:10px;padding:0 16px 16px}.ps-row{display:flex;flex-direction:column;gap:2px;background:var(--card,#fff);border:1px solid var(--line);border-radius:14px;padding:12px 14px}.ps-row span{font-size:15px}.ps-row em{font-style:normal;color:var(--paid,#1a7a48);font-weight:600}.ps-row small{color:var(--mute,#4a4f5a)}.head{padding:16px}.csv textarea{width:100%}.claim-row{grid-template-columns:1fr 70px}.claim-bars{grid-column:1/-1;grid-row:2}}
 
 button.mini{min-height:36px;padding:0 14px;font-size:13px}
 .mono{font-family:var(--mono);font-size:12px!important}
