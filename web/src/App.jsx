@@ -54,6 +54,9 @@ export default function App() {
     catch (e) { setAgent({ status: "error", error: e.message }); }
   };
   const openAssistant = () => { const a = studio.current?.api; if (!a) return; const s = a.getState(); a.setState({ ...s, panels: { ...(s.panels || {}), ai: { collapsed: false } } }); };
+  // webhooks first; this asks PayPal about sent invoices too, since the sandbox does not always emit INVOICING.INVOICE.PAID
+  const syncInvoices = useCallback(async () => { try { const d = await api("/api/invoices/sync", {}); if (d.paid && csvRef.current) load(csvRef.current); } catch {} loadInvoices(); }, [load, loadInvoices]);
+  useEffect(() => { syncInvoices(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const refund = async (id) => { if (!window.confirm(`Refund sandbox capture ${id} in full?`)) return; try { await api("/api/refund", { capture_id: id }); } catch (e) { alert(e.message); } load(csvRef.current); };
   const decide = (i, verdict) => setDecisions((d) => ({ ...d, [i]: verdict }));
 
@@ -119,7 +122,7 @@ export default function App() {
         </section>
 
         <section id="invoices" className="card">
-          <div className="row between"><h2>PayPal invoices</h2><button className="mini" onClick={loadInvoices}>Refresh</button></div>
+          <div className="row between"><h2>PayPal invoices</h2><button className="mini" onClick={syncInvoices}>Refresh</button></div>
           <p className="muted">Drafted by the Studio agent for leads who showed intent. Each carries the ad click, so a paid invoice counts for that ad. Nothing is sent until you press Send.</p>
           {invoices.length === 0 && <p className="note">No drafts yet. Ask the Studio assistant: "Invoice warm leads".</p>}
           {invoices.map((i) => (
@@ -135,7 +138,7 @@ export default function App() {
 
         <section id="captures" className="card">
           <div className="row between"><h2>PayPal captures</h2>{state && <span className="ok">{state.payments.length} in the ledger</span>}</div>
-          <p className="muted">Recorded from PayPal's signature-verified webhooks. Refund one to see the ad's numbers drop and its Google row become a retraction (sandbox, limited per visitor).</p>
+          <p className="muted">Recorded from PayPal's signature-verified webhooks, with sent invoices also checked with PayPal. Refund one to see the ad's numbers drop and its Google row become a retraction (sandbox, limited per visitor).</p>
           {(state?.payments || []).slice().reverse().slice(0, 6).map((p) => (
             <div key={p.capture_id} className="cap">
               <span><b>{adName(p.ad)}</b><small className="mono">{p.capture_id} · ${p.amount}{Number(p.refunded_amount) > 0 ? ` · refunded $${p.refunded_amount}` : ""}{p.via === "invoice" ? " · via invoice" : ""}</small></span>

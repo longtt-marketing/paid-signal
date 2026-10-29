@@ -83,7 +83,7 @@ async function recordInvoicePayment(env, invoice) {
     const id = t.payment_id; if (!id || (await env.LEDGER.get(`pay:${id}`))) continue;
     await env.LEDGER.put(`pay:${id}`, JSON.stringify({
       capture_id: id, order_id: invoice.id, status: "COMPLETED", amount: t.amount?.value, currency: t.amount?.currency_code || "USD",
-      ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt, captured_at: t.payment_date ? `${t.payment_date}T00:00:00Z` : new Date().toISOString(),
+      ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt, captured_at: t.payment_date_time || (t.payment_date ? `${t.payment_date}T00:00:00Z` : new Date().toISOString()),
       refunded_amount: "0.00", payer_email_sha256: null, via: "invoice",
     }));
   }
@@ -172,6 +172,16 @@ export default {
       if (url.pathname === "/api/leads") return json({ leads: await demoLeads(env, url) });
 
       if (url.pathname === "/api/invoices" && request.method === "GET") return json({ invoices: await listPrefix(env, "inv:") });
+
+      // Webhooks are the main path, but the sandbox does not always emit INVOICING.INVOICE.PAID: ask PayPal about every
+      // sent invoice and record the ones it says are paid (recordInvoicePayment is idempotent per payment id).
+      if (url.pathname === "/api/invoices/sync" && request.method === "POST") {
+        const stop = await guard(env, request, "sync", 30, 300); if (stop) return json({ error: stop }, 429);
+        const open = (await listPrefix(env, "inv:")).filter((i) => i.status === "SENT" || i.status === "PARTIALLY_PAID");
+        let paid = 0;
+        for (const i of open) { const inv = await pp.getInvoice(i.id); if (inv.status === "PAID" || inv.status === "PARTIALLY_PAID") { await recordInvoicePayment(env, inv); paid++; } }
+        return json({ checked: open.length, paid, invoices: await listPrefix(env, "inv:") });
+      }
 
       if (url.pathname === "/api/invoices/draft" && request.method === "POST") {
         const { leads: ids = [] } = await request.json();

@@ -41,7 +41,7 @@ Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
 | --- | --- |
 | Orders v2: create (with `custom_id`, `invoice_id`, `PayPal-Request-Id` idempotency), capture | `src/paypal.js`, `/api/checkout`, `/api/capture` |
 | Payments v2: refund a capture | `/api/refund` |
-| Invoicing v2: create draft (click in the private memo), send, get | `/api/invoices/*`, agent tool `draft_paypal_invoices` |
+| Invoicing v2: create draft (click in the private memo), send, get; sent invoices are re-checked with PayPal on Refresh, because the sandbox does not always emit `INVOICING.INVOICE.PAID` | `/api/invoices/*`, agent tool `draft_paypal_invoices` |
 | Webhooks: registered by `scripts/register-webhook.py`, **verify-webhook-signature** for every delivery | `/api/webhook` |
 | Reporting: Transaction Search, to cross-check the webhook ledger (wired up; reports "unavailable" until PayPal grants the app the reporting scope) | `/api/paypal-check`, agent tool `check_paypal_ledger` |
 | JavaScript SDK buttons, plus a full-page approval fallback | `public/shop.html` |
