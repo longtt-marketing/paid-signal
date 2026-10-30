@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paid Signal: proof</title>
+<meta name="description" content="What Paid Signal measured: live PayPal and Meta checks, held-out agent evals, the evidence gate under attack, tests and speed.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f4f3ee;--card:#fff;--ink:#0e1116;--mute:#474c57;--faint:#666b78;--line:#e2dfd6;--line2:#ece9e1;--chip:#f1efe8;--paid:#137a45;--paid-bg:#e6f4ec;--bad:#8c1d18;--bad-bg:#fdecea;--blue:#1d4f91;--blue-bg:#e5edf8;--go:#2fbf71}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 "Inter Tight",system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--ink)}a:hover{color:var(--paid)}:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 28px;border-bottom:1px solid var(--line);background:var(--paper)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--ink);text-decoration:none}
+.mark{width:28px;height:28px;border-radius:8px;background:var(--ink);display:grid;place-items:center}.mark i{width:10px;height:10px;border-radius:50%;background:var(--go)}
+.top nav{display:flex;gap:18px;flex-wrap:wrap}.top nav a{text-decoration:none;font-size:15px;color:var(--mute)}.top nav a:hover{color:var(--ink)}
+main{max-width:1080px;margin:0 auto;padding:48px 24px 96px;display:flex;flex-direction:column;gap:36px}
+h1{margin:0;font-size:clamp(32px,4.5vw,46px);line-height:1.05;font-weight:700;letter-spacing:-.03em}
+.lede{margin:12px 0 0;font-size:18px;color:var(--mute);max-width:62ch}
+h2{margin:0 0 4px;font-size:22px;letter-spacing:-.02em}
+.sub{margin:0 0 14px;color:var(--faint);font-size:14px;max-width:70ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:6px}
+.stat b{font-size:38px;font-weight:700;letter-spacing:-.02em;color:var(--paid);line-height:1.1}.stat b.bad{color:var(--bad)}.stat b.blue{color:var(--blue)}
+.stat span{font-size:15px}.stat small{font-size:13px;color:var(--faint)}
+.live{display:inline-flex;align-items:center;gap:7px;font:600 12px "Inter Tight",sans-serif;color:var(--paid);background:var(--paid-bg);padding:4px 10px;border-radius:999px;margin-left:8px;vertical-align:4px}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--go)}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;font-size:14px}
+th,td{text-align:left;padding:11px 14px;border-top:1px solid var(--line2);vertical-align:top}th{font-size:12px;color:var(--faint);font-weight:600;border-top:0;background:#faf9f5}
+td.n{text-align:right;white-space:nowrap;font-weight:600}
+.scroll{overflow-x:auto}
+code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(--chip);padding:1px 6px;border-radius:6px}
+.foot{margin:0;font-size:14px;color:var(--faint)}
+@media (max-width:640px){.top{padding:14px 16px}main{padding:32px 16px 64px}.stat b{font-size:32px}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav><a href="/">Dashboard</a><a href="/shop.html?ad=trial_video&amp;fbclid=IwARproof">Demo shop</a><a href="/scenarios.html">Scenarios</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></nav></header>
+<main>
+  <div>
+    <h1>Proof</h1>
+    <p class="lede">What we measured, how, and what failed. Every number below comes from a script in the repo or from the live sandbox, and the agents are scored on cases they were never tuned on.</p>
+  </div>
+
+  <section aria-labelledby="live">
+    <h2 id="live">Live right now <span class="live"><i></i>read on page load</span></h2>
+    <p class="sub">Read from the running app when you opened this page.</p>
+    <div class="grid">
+      <div class="stat"><b id="pp">…</b><span>ledger payments found in PayPal's own Transaction Search</span><small id="pp-note">Asking PayPal…</small></div>
+      <div class="stat"><b class="blue" id="meta">…</b><span>paid orders Meta's Conversions API received (test events)</span><small id="meta-note">New payments are sent the moment PayPal confirms them; held captures are never sent.</small></div>
+      <div class="stat"><b id="held">…</b><span>possible duplicates held out of paid orders and ad platforms</span><small>Same payer, same ad, minutes apart.</small></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="revenue">
+    <h2 id="revenue">Revenue agent, held-out leads</h2>
+    <p class="sub">30 labelled leads written before any run and never used to tune the prompt: 12 ready to book, 10 not ready, 8 prompt injections of different kinds. The real agent and model, two runs. Prices and recipients are set by code either way.</p>
+    <div class="grid">
+      <div class="stat"><b>24 / 24</b><span>bookings invoiced with the right items and quantities</span><small>Including two- and three-child bookings and camp places; code applies the sibling price.</small></div>
+      <div class="stat"><b>20 / 20</b><span>not-ready leads left alone</span><small>Price questions, browsing, an empty message.</small></div>
+      <div class="stat"><b>0 / 16</b><span>prompt injections that got an invoice</span><small>15 of 16 also flagged as injections; the other was skipped. Code would refuse a changed price or recipient anyway.</small></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="gate">
+    <h2 id="gate">Evidence gate, under attack</h2>
+    <p class="sub">The budget agent may only quote numbers the reconciliation produced. 100 recommendations per attack, each with one planted error, on the live ledger.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Planted error</th><th>Caught</th></tr></thead>
+      <tbody>
+        <tr><td>Invented number</td><td class="n">100 / 100</td></tr>
+        <tr><td>Invented number that also appears in a payment's timestamp <small>(a gap a judge found on 30 Oct: the old gate caught 0 / 100)</small></td><td class="n">100 / 100</td></tr>
+        <tr><td>Invented percentage</td><td class="n">100 / 100</td></tr>
+        <tr><td>Fake capture id as evidence</td><td class="n">100 / 100</td></tr>
+        <tr><td>Unknown ad</td><td class="n">100 / 100</td></tr>
+        <tr><td>Raw field name instead of plain words</td><td class="n">100 / 100</td></tr>
+        <tr><td>Grounded recommendations wrongly rejected</td><td class="n">0 / 500</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="agents">
+    <h2 id="agents">The other agents</h2>
+    <div class="grid">
+      <div class="stat"><b>9 / 10</b><span>live budget-agent runs passed the gate on the first submission</span><small>10 / 10 after one repair. The one rejection: it wrote a raw field name.</small></div>
+      <div class="stat"><b>4 / 4</b><span>bad sends the send agent's code refuses</span><small>Not a draft, wrong amount, wrong currency, or PayPal did not return the invoice. Unit-tested; the model cannot override it.</small></div>
+      <div class="stat"><b>1 answer</b><span>from Claude as an outside MCP client</span><small>Named the cheapest ad, warned it rests on one order, and found the held duplicate. <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-run.md">Transcript</a>.</small></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="quality">
+    <h2 id="quality">Tests and speed</h2>
+    <div class="grid">
+      <div class="stat"><b>55</b><span>unit tests on money rules, the gate, the three agents, MCP and every AG Studio tool name</span><small>CI on every push.</small></div>
+      <div class="stat"><b>13 + 20</b><span>browser checks and Postman assertions against the live app</span><small>The browser checks run daily.</small></div>
+      <div class="stat"><b>2.3 s</b><span>to a usable dashboard on a throttled phone (4G, 4x CPU)</span><small>From 18 s with one bundle; measured with Playwright on 29 Oct. A cold first visit can take longer.</small></div>
+    </div>
+  </section>
+
+  <p class="foot">Reproduce: <code>node scripts/eval-revenue.mjs 2</code>, <code>node scripts/eval-gate.mjs</code>, <code>node scripts/eval-agent.mjs 10</code>, <code>npm test</code>. Raw results: <a href="https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof">docs/proof</a>. The ad export and leads are fictional demo data; PayPal calls are real sandbox calls; Meta events go to a real Meta dataset as test events.</p>
+</main>
+<script src="/proof.js" defer></script>
+</body>
+</html>

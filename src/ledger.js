@@ -96,7 +96,12 @@ export function quotableNumbers(rec) {
 export function ungroundedNumbers(text, allowed, extra = []) {
   const ok = new Set([...allowed, ...extra].map((s) => String(s).replace(/[$,]/g, "")));
   // ids such as capture 59A98014DG653005N are evidence, not quantities: drop them before extracting numbers
-  const clean = String(text ?? "").replace(/\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9-]{10,}\b/g, " ").replace(/\b\d{12,}\b/g, " "); // all-digit capture ids too
+  const clean = String(text ?? "").replace(/\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9-]{10,}\b/g, " ").replace(/\b\d{12,}\b/g, " ") // all-digit capture ids too
+    // dates and clock times say when, not how much: 2026-10-28, 10:49(:51)(Z), Oct 28 / 28 October, 28th
+    .replace(/\b\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?Z?)?\b/g, " ").replace(/\b\d{1,2}:\d{2}(?::\d{2})?\s*(?:Z|UTC|am|pm)?\b/gi, " ")
+    .replace(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?\b/gi, " ")
+    .replace(/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?(?:\s+\d{4})?\b/gi, " ")
+    .replace(/\b\d{1,2}(?:st|nd|rd|th)\b/g, " ");
   const found = clean.match(/\$?\d[\d,]*(?:\.\d+)?%?/g) || [];
   return found.map((s) => s.replace(/[$,]/g, "")).filter((n) => !ok.has(n) && !ok.has(n.replace(/\.00$/, "")));
 }

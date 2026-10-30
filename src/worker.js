@@ -6,6 +6,7 @@ import { handleMcp } from "./mcp.js";
 import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates } from "./ledger.js";
 import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
 import { runSendAgent, SEND_SYSTEM, SEND_TOOLS } from "./sendAgent.js";
+import { parseCsv, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS } from "./revenue.js";
 import { PayPalAgentToolkit } from "@paypal/agent-toolkit/ai-sdk";
 
 // The demo shop sells one thing; the price is fixed server-side so a page cannot choose what it pays.
@@ -57,6 +58,34 @@ async function recordCapture(env, order, userAgent) {
   if (prev) { record.user_agent ??= prev.user_agent; record.refunded_amount = prev.refunded_amount; record.status = prev.status; if (prev.refunded_at) record.refunded_at = prev.refunded_at; }
   await env.LEDGER.put(`pay:${cap.id}`, JSON.stringify(record)); await forget("pay:");
   return record;
+}
+
+/**
+ * The moment PayPal confirms a payment, its Purchase event goes to the shop's Meta dataset. In this demo the dataset is a
+ * test one (test_event_code), so Events Manager shows the event live and it never counts toward real ads. Meta's answer
+ * is kept with the payment so the dashboard and the receipt can show it. A held capture (duplicate, no click) is not sent.
+ */
+async function sendToMeta(env, url, record) {
+  if (!record || !env.META_CAPI_TOKEN || !env.META_DATASET_ID || !env.META_TEST_CODE) return null;
+  const sent = await env.LEDGER.get(`meta:${record.capture_id}`, "json");
+  if (sent) return sent;
+  const payments = await listPayments(env);
+  const { events, held } = await metaEvents([record], { sourceUrl: `${url.origin}/shop.html`, hold: heldDuplicates(payments) });
+  let out;
+  if (!events.length) out = { capture_id: record.capture_id, held: held[0]?.reason || "held", at: new Date().toISOString() };
+  else {
+    try {
+      const res = await fetch(`https://graph.facebook.com/v21.0/${env.META_DATASET_ID}/events`, {
+        method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(8000),
+        body: JSON.stringify({ data: events, test_event_code: env.META_TEST_CODE, access_token: env.META_CAPI_TOKEN }),
+      });
+      const j = await res.json().catch(() => ({}));
+      out = { capture_id: record.capture_id, event_id: events[0].event_id, value: events[0].custom_data.value, ok: res.ok, events_received: j.events_received ?? 0,
+        fbtrace_id: j.fbtrace_id || null, error: j.error ? String(j.error.message || "error").slice(0, 160) : null, test_event: true, at: new Date().toISOString() };
+    } catch (e) { out = { capture_id: record.capture_id, ok: false, error: "Meta did not answer in time.", at: new Date().toISOString() }; }
+  }
+  await env.LEDGER.put(`meta:${record.capture_id}`, JSON.stringify(out), { expirationTtl: 60 * 86400 }); await forget("meta:");
+  return out;
 }
 
 async function applyRefund(env, captureId, refundedValue, when) {
@@ -145,10 +174,7 @@ async function listPrefix(env, prefix) {
 }
 
 async function demoLeads(env, url) {
-  const text = await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-leads.csv`))).text();
-  const [head, ...rows] = text.replace(/\r/g, "").split("\n").filter(Boolean);
-  const keys = head.split(",");
-  return rows.map((r) => Object.fromEntries(r.split(",").map((v, i) => [keys[i], v.trim()])));
+  return parseCsv(await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-leads.csv`))).text());
 }
 
 /** A PayPal draft invoice for one demo lead, at the fixed price, with the lead's ad click in the private memo. */
@@ -163,7 +189,8 @@ async function draftInvoiceFor(env, pp, l) {
 
 /** An invoice paid through PayPal becomes a capture in the ledger, attributed by the click packed in its reference. */
 async function recordInvoicePayment(env, invoice) {
-  const click = unpackClick(invoice.detail?.memo || invoice.detail?.reference);
+  const kept = await env.LEDGER.get(`inv:${invoice.id}`, "json");
+  const click = unpackClick(invoice.detail?.memo || kept?.reference || invoice.detail?.reference);
   const txs = invoice.payments?.transactions || [];
   for (const t of txs) {
     const id = t.payment_id; if (!id || (await env.LEDGER.get(`pay:${id}`))) continue;
@@ -233,9 +260,10 @@ const app = {
       if (url.pathname === "/api/capture" && request.method === "POST") {
         const { order_id } = await request.json();
         if (!/^[A-Z0-9]{10,24}$/.test(String(order_id))) return json({ error: "Bad order id." }, 400);
-        const order = await pp.captureOrder(order_id, `cap-${order_id}`);
+        const order = await orders.captureOrder(order_id, `cap-${order_id}`);
         const record = await recordCapture(env, order, request.headers.get("user-agent"));
-        return json({ status: order.status, payment: record });
+        const meta = await sendToMeta(env, url, record);
+        return json({ status: order.status, payment: record, meta });
       }
 
       if (url.pathname === "/api/refund" && request.method === "POST") {
@@ -267,7 +295,7 @@ const app = {
         const res = event.resource || {};
         if (event.event_type === "PAYMENT.CAPTURE.COMPLETED" && !(await env.LEDGER.get(`pay:${res.id}`))) {
           const orderId = res.supplementary_data?.related_ids?.order_id;
-          if (orderId) await recordCapture(env, await orders.getOrder(orderId));
+          if (orderId) await sendToMeta(env, url, await recordCapture(env, await orders.getOrder(orderId)));
         }
         if (event.event_type === "INVOICING.INVOICE.PAID" && res.id) await recordInvoicePayment(env, await pp.getInvoice(res.id));
         if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
@@ -281,7 +309,10 @@ const app = {
         return json({ ok: true });
       }
 
-      if (url.pathname === "/api/ledger") { const payments = await listPayments(env); return json({ payments, duplicates: possibleDuplicates(payments) }); }
+      if (url.pathname === "/api/ledger") {
+        const [payments, meta] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
+        return json({ payments, duplicates: possibleDuplicates(payments), meta, meta_live: Boolean(env.META_CAPI_TOKEN && env.META_DATASET_ID) });
+      }
 
       // Leads the ad export counted but PayPal never saw pay. The agent may draft invoices for them; a person sends.
       if (url.pathname === "/api/leads") return json({ leads: await demoLeads(env, url) });
@@ -304,20 +335,33 @@ const app = {
         return json({ checked: open.length, paid, invoices: await cachedList(env, "inv:") });
       }
 
-      if (url.pathname === "/api/invoices/draft" && request.method === "POST") {
-        const { leads: ids = [] } = await request.json();
-        const leads = (await demoLeads(env, url)).filter((l) => ids.includes(l.lead));
-        if (!leads.length) return json({ error: "No matching leads. Use the exact lead names from the lead list." }, 400);
-        const stop = await guard(env, request, "invoices", 10, 60); if (stop) return json({ error: stop }, 429);
-        const existing = await listPrefix(env, "inv:");
-        const out = [];
-        for (const l of leads.slice(0, 6)) {
-          const dup = existing.find((i) => i.lead === l.lead && i.status !== "CANCELLED");
-          if (dup) { out.push({ ...dup, note: "already drafted" }); continue; }
-          out.push(await draftInvoiceFor(env, pp, l));
+      // The revenue agent reads what each unpaid lead wrote and proposes invoices; code prices and checks every proposal,
+      // and PayPal's Agent Toolkit creates the drafts. Nothing is sent: each draft waits in Approvals.
+      if (url.pathname === "/api/agent/revenue" && request.method === "POST") {
+        const stop = await guard(env, request, "revenue agent runs", 4, 40); if (stop) return json({ error: stop }, 429);
+        const t0 = Date.now();
+        const invoices = await listPrefix(env, "inv:");
+        const leads = (await demoLeads(env, url)).filter((l) => !invoices.some((i) => i.lead === l.lead && i.status === "PAID"));
+        const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });
+        const run = await runRevenueAgent({ llm, leads, invoices });
+        const toolkit = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
+          configuration: { actions: { invoices: { create: true } }, context: { sandbox: true } } }).getTools();
+        const drafts = [];
+        for (const p of run.proposals) {
+          const lead = leads.find((l) => l.lead === p.lead);
+          const params = { currency_code: "USD", reference: "Kite Robotics booking", note: p.note, invoicer_business_name: "Kite Robotics Club (demo)",
+            primary_recipients: [{ billing_info: { email_address: lead.email, name: { given_name: lead.lead.replace(/ \(.*\)$/, "") } } }],
+            items: p.lines.map((l) => ({ name: l.name, quantity: "1", unit_amount: { currency_code: "USD", value: l.unit } })) };
+          let out = {}; try { out = JSON.parse(String(await toolkit.create_invoice.execute(params))); } catch {}
+          const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
+          if (!/^INV2-[A-Z0-9-]+$/.test(id)) { drafts.push({ lead: p.lead, error: "PayPal did not create the draft." }); continue; }
+          const rec = { id, lead: lead.lead, ad: lead.ad, email: lead.email, amount: p.total, lines: p.lines, status: "DRAFT",
+            reference: packClick({ ad: lead.ad, source: lead.source, clickId: lead.click_id, clickedAt: 0 }), note: p.note, reason: p.reason,
+            drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() };
+          await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); drafts.push(rec);
         }
         await forget("inv:");
-        return json({ invoices: out });
+        return json({ drafts, skips: run.skips, refusals: run.refusals, summary: run.summary, trace: run.trace, ms: Date.now() - t0 });
       }
 
       // A person approves a drafted invoice; the send agent (Claude with PayPal's Agent Toolkit) checks and sends that one.
@@ -454,7 +498,12 @@ const app = {
 // Every night: keep a few drafts for visitors to approve. A warm lead whose invoice was sent but never paid gets a fresh draft.
 app.scheduled = async (_event, env) => {
   const pp = paypal({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET });
-  const invoices = await listPrefix(env, "inv:");
+  let invoices = await listPrefix(env, "inv:");
+  for (const i of invoices.filter((x) => x.status === "DRAFT" && x.drafted_by && Date.now() - Date.parse(x.created_at) > 20 * 3600000)) {
+    try { await pp.deleteDraftInvoice(i.id); } catch {}
+    await env.LEDGER.delete(`inv:${i.id}`);
+  }
+  invoices = await listPrefix(env, "inv:");
   let drafts = invoices.filter((i) => i.status === "DRAFT").length;
   if (drafts >= 3) return;
   const leads = await demoLeads(env, new URL("https://paid-signal.thelongmarketing.workers.dev/"));

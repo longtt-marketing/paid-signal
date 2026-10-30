@@ -75,6 +75,12 @@ const saved = JSON.parse(sessionStorage.getItem("ps-click") || "null");
 const SRC = { fb: "Meta", g: "Google" };
 if (saved) { $("#click").classList.remove("none"); $("#click span").innerHTML = `<b>Ad click attached</b> · ${esc(AD[saved.ad] || "No ad")} · ${esc(SRC[saved.source] || "direct")}`; }
 
+// what Meta answered when Paid Signal sent this purchase to the shop's (test) dataset, seconds ago
+function metaRow(m) {
+  if (!m) return "";
+  const v = m.held ? `Held back: ${esc(m.held)}` : m.ok ? `Received ${esc(m.events_received)} Purchase event · $${esc(m.value)} · test events` : `Not sent: ${esc(m.error || "error")}`;
+  return `<div><span>Meta Conversions API</span><b>${v}</b></div>`;
+}
 async function capture(orderID) {
   $("#msg").textContent = "Capturing the payment…";
   const res = await fetch("/api/capture", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ order_id: orderID }) });
@@ -86,7 +92,7 @@ async function capture(orderID) {
   const r = $("#receipt"); r.hidden = false;
   r.innerHTML = `<span class="tick"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a7a48" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
     <div><h1>Paid $${esc(p.amount)}</h1><p class="sub">Robotics trial class · booked</p></div>
-    <div class="rows"><div><span>PayPal capture</span><b>${esc(p.capture_id)}</b></div><div><span>Counted for</span><b>${esc(AD[p.ad] || "No ad click")} · ${esc(SRC[p.source] || "direct")}</b></div></div>
+    <div class="rows"><div><span>PayPal capture</span><b>${esc(p.capture_id)}</b></div><div><span>Counted for</span><b>${esc(AD[p.ad] || "No ad click")} · ${esc(SRC[p.source] || "direct")}</b></div>${metaRow(data.meta)}</div>
     <a class="cta" href="/">Open the dashboard</a>`;
   sessionStorage.removeItem("ps-click"); sessionStorage.removeItem("ps-intent");
 }

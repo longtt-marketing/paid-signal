@@ -22,14 +22,16 @@ try {
   ok("PayPal order created with the click in custom_id", /^[A-Z0-9]{10,24}$/.test(order.id || "") && order.custom_id?.includes("c=IwARe2e"), order.id);
 
   // 2. the dashboard answers before AG Studio loads; Studio arrives as its own chunk when scrolled to
-  const scripts = [];
-  page.on("request", (r) => { if (r.resourceType() === "script") scripts.push(r.url()); });
+  // the desk paints without AG Studio; Studio's chunk is only prefetched once the page has loaded and the browser is idle
+  const early = []; let loaded = false;
+  page.on("request", (r) => { if (r.resourceType() === "script" && !loaded) early.push(r.url()); });
+  page.once("load", () => { loaded = true; });
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
   await page.waitForSelector("#captures .cap", { timeout: 30000 });
-  ok("dashboard renders without loading AG Studio", !scripts.some((u) => u.includes("StudioPanel")), `${scripts.length} scripts`);
-  await page.locator("#studio").scrollIntoViewIfNeeded();
+  ok("dashboard renders without loading AG Studio", !early.some((u) => u.includes("StudioPanel")), `${early.length} scripts before load`);
+  await page.goto(`${BASE}/#report`, { waitUntil: "networkidle" });
   await page.waitForSelector(".funnel", { timeout: 60000 });
-  ok("AG Studio loads when scrolled to", scripts.some((u) => u.includes("StudioPanel")));
+  ok("the report view opens AG Studio full screen", (await page.locator(".studio").boundingBox()).height > 500);
   const head = await page.textContent("h1");
   ok("headline compares leads with PayPal paid orders", /Ads report \d+ leads\. PayPal confirms \d+ paid orders?\./.test(head), head);
   await page.waitForFunction(() => document.querySelectorAll(".claim-row").length >= 4 && document.querySelectorAll(".fn-row").length >= 4, null, { timeout: 30000 }).catch(() => {});

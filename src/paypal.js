@@ -76,6 +76,8 @@ export function paypal({ clientId, secret, base = "https://api-m.sandbox.paypal.
     },
     sendInvoice: (id) => call(`/v2/invoicing/invoices/${encodeURIComponent(id)}/send`, { requestId: crypto.randomUUID(), body: { send_to_recipient: true, send_to_invoicer: false } }),
     getInvoice: (id) => call(`/v2/invoicing/invoices/${encodeURIComponent(id)}`, { method: "GET" }),
+    /** Only a draft can be deleted; used to clear stale demo drafts nightly. */
+    deleteDraftInvoice: (id) => call(`/v2/invoicing/invoices/${encodeURIComponent(id)}`, { method: "DELETE" }),
     /** Transaction Search (needs the feature enabled on the app); at most 31 days per call, new items can lag up to 3 hours. */
     searchTransactions: (start, end) => call(`/v1/reporting/transactions?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}&fields=transaction_info&page_size=500`, { method: "GET" }),
     listWebhooks: () => call("/v1/notifications/webhooks", { method: "GET" }),

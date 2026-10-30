@@ -59,8 +59,9 @@ export function checkRecommendation(rec, payments, out) {
   const allowed = quotableNumbers(rec);
   const ads = new Set(rec.ads.map((r) => r.ad));
   const ids = new Set(payments.map((p) => p.capture_id));
-  // the "fewer than 3 paid orders" rule, and what read_captures shows: amounts and capture dates/times
-  const extra = [3, ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00", ...(String(p.captured_at).match(/\d+/g) || [])]), ...possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => d.seconds)];
+  // the "fewer than 3 paid orders" rule, and what read_captures shows: amounts and the duplicate gaps. Dates and times are
+  // taken out of the text before checking (ungroundedNumbers), so a timestamp's digits never make an invented number pass.
+  const extra = [3, ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00"]), ...possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => d.seconds)];
   const texts = [out.headline, out.caveats, ...(out.actions || []).map((a) => a.reason)];
   for (const t of texts) for (const n of ungroundedNumbers(t, allowed, extra)) problems.push(`Number "${n}" is not in the tool results.`);
   // the owner reads this: tool field names (spend_usd, paid_revenue_per_dollar) must become plain words; ad keys may stay

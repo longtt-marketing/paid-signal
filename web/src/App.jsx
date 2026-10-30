@@ -17,7 +17,7 @@ const short = (name) => adName(name).split(" · ")[0];
 const clock = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? "" : d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); };
 const AD_LINKS = [["trial_video", "fb"], ["free_guide", "fb"], ["parent_carousel", "fb"], ["holiday_static", "g"]];
 const adLink = (k, s) => `/shop.html?ad=${k}&${s === "fb" ? "fbclid=IwAR" : "gclid=Cj0K"}${Date.now().toString(36)}`;
-const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
 export default function App() {
   const studio = useRef(null);
@@ -33,6 +33,13 @@ export default function App() {
   const [sending, setSending] = useState({});
   const [studioOn, setStudioOn] = useState(() => /[?&](film|studio)=1/.test(location.search));
   const [toast, setToast] = useState("");
+  const [view, setView] = useState(() => (location.hash === "#report" ? "report" : "desk"));
+  useEffect(() => {
+    const on = () => setView(location.hash === "#report" ? "report" : "desk");
+    addEventListener("hashchange", on); return () => removeEventListener("hashchange", on);
+  }, []);
+  useEffect(() => { if (view === "report") { setStudioOn(true); scrollTo(0, 0); requestAnimationFrame(() => dispatchEvent(new Event("resize"))); } }, [view]);
+  const goDesk = (id) => { if (location.hash === "#report") history.pushState(null, "", location.pathname + location.search); setView("desk"); if (id) setTimeout(() => scrollToId(id), 60); };
   const csvRef = useRef("");
   csvRef.current = csv;
 
@@ -43,13 +50,20 @@ export default function App() {
     const r = studioBox.current?.getBoundingClientRect();
     if (r && r.top < innerHeight && r.bottom > 0) studioTop.current = r.top;
   }, []);
-  const loadInvoices = useCallback(() => api("/api/invoices").then((d) => pinStudio() || setInvoices(d.invoices.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))))).catch(() => {}), [pinStudio]);
+  const loadInvoices = useCallback(() => api("/api/invoices").then((d) => { pinStudio(); setInvoices((cur) => {
+    // KV listings can lag a write by seconds: keep drafts this page just made until the listing has them
+    const recent = (c) => Date.now() - Date.parse(c.sent_at || c.created_at) < 120000;
+    const fresh = cur.filter((c) => !d.invoices.some((x) => x.id === c.id) && recent(c));
+    // a send this page just made beats a listing that still says DRAFT
+    const merged = d.invoices.map((x) => { const c = cur.find((y) => y.id === x.id); return c && c.sent_at && !x.sent_at && recent(c) ? c : x; });
+    return [...fresh, ...merged].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  }); }).catch(() => {}), [pinStudio]);
   useEffect(() => { loadInvoices(); }, [loadInvoices]);
   const load = useCallback(async (text) => {
     setError("");
     try {
       const [rec, ledger] = await Promise.all([api("/api/reconcile", { csv: text }), api("/api/ledger")]);
-      setState({ ...rec, payments: ledger.payments, duplicates: ledger.duplicates });
+      setState({ ...rec, payments: ledger.payments, duplicates: ledger.duplicates, metaSends: ledger.meta || [], metaLive: ledger.meta_live });
     } catch (e) { setError(e.message); }
   }, []);
   useEffect(() => { fetch("/data/demo-ads.csv").then((r) => r.text()).then((t) => { setCsv(t); load(t); }); }, [load]);
@@ -64,34 +78,53 @@ export default function App() {
     if (Math.abs(d) > 1) window.scrollBy({ top: d, behavior: "instant" });
   }, [agent, invoices]);
 
-  // load AG Studio when its section comes near the viewport
   useEffect(() => {
-    // only once the ledger has rendered: before that the page is short and the Studio section sits in view
-    if (studioOn || !state || !studioBox.current) return;
-    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setStudioOn(true); io.disconnect(); } }, { rootMargin: "600px 0px" });
-    io.observe(studioBox.current);
-    return () => io.disconnect();
-  }, [studioOn, state]);
+    if (/[?&]film=1/.test(location.search)) return; // the film records a still ledger
+    const tick = () => { if (document.visibilityState === "visible" && csvRef.current) load(csvRef.current); };
+    const t = setInterval(tick, 15000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  useEffect(() => {
+    const prefetch = () => import("./StudioPanel.jsx");
+    const id = window.requestIdleCallback ? requestIdleCallback(prefetch, { timeout: 6000 }) : setTimeout(prefetch, 4000);
+    return () => (window.cancelIdleCallback ? cancelIdleCallback(id) : clearTimeout(id));
+  }, []);
+
   const toastTimer = useRef(0);
   const flash = useCallback((msg, go) => { clearTimeout(toastTimer.current); setToast({ msg, go }); toastTimer.current = setTimeout(() => setToast(""), go ? 9000 : 4200); }, []);
 
   // the budget agent inside AG Studio lands its gated recommendation in the same approvals inbox, and says so
   const onRecommendation = useCallback((r) => { pinStudio(); setAgent({ status: "done", ...r }); setDecisions({}); flash("The budget agent's change is waiting for your approval.", "approvals"); }, [flash, pinStudio]);
-  const onStudioInvoices = useCallback(() => { loadInvoices(); flash("New draft invoices are waiting for your approval.", "invoices"); }, [loadInvoices, flash]);
+
+  // the revenue agent decides who is ready to pay; code prices it; the Agent Toolkit drafts it; nothing is sent here
+  const [revenue, setRevenue] = useState({ status: "idle" });
+  const addDrafts = (drafts = []) => setInvoices((cur) => [...drafts.filter((d) => d.id && !cur.some((c) => c.id === d.id)), ...cur]);
+  const askRevenue = async () => {
+    setRevenue({ status: "running" }); scrollToId("approvals");
+    try { const d = await api("/api/agent/revenue", {}); setRevenue({ status: "done", ...d }); addDrafts(d.drafts); loadInvoices(); }
+    catch (e) { setRevenue({ status: "error", error: e.message }); }
+  };
+  // the Studio assistant runs the same revenue agent; its decisions land in Approvals, and a notice says so
+  const onStudioInvoices = useCallback((d) => { pinStudio(); if (d) { setRevenue({ status: "done", ...d }); addDrafts(d.drafts); } loadInvoices(); flash("The revenue agent's drafts are waiting for your approval.", "approvals"); }, [loadInvoices, flash, pinStudio]);
   const ask = async () => {
-    setAgent({ status: "running" }); scrollTo("approvals");
+    setAgent({ status: "running" }); scrollToId("approvals");
     try { const out = await api("/api/agent", { csv }); setAgent({ status: "done", ...out }); setDecisions({}); }
     catch (e) { setAgent({ status: "error", error: e.message }); }
   };
   const openAssistant = () => {
-    setStudioOn(true); scrollTo("studio");
+    setStudioOn(true); if (location.hash !== "#report") location.hash = "report";
     const tryOpen = (n) => { if (!studio.current?.openAssistant() && n > 0) setTimeout(() => tryOpen(n - 1), 400); };
     tryOpen(30);
   };
   // the person approves; the send agent (Claude + PayPal Agent Toolkit) checks that draft and sends it, nothing else
   const send = async (id) => {
     setSending((s) => ({ ...s, [id]: "Agent checking and sending…" }));
-    try { const d = await api("/api/invoices/approve", { id }); setSending((s) => ({ ...s, [id]: d.agent.summary || (d.agent.sent ? "Sent." : "Not sent.") })); }
+    try {
+      const d = await api("/api/invoices/approve", { id });
+      setSending((s) => ({ ...s, [id]: d.agent.summary || (d.agent.sent ? "Sent." : "Not sent.") }));
+      if (d.invoice) setInvoices((cur) => cur.map((i) => (i.id === id ? { ...i, ...d.invoice } : i)));
+    }
     catch (e) { setSending((s) => ({ ...s, [id]: e.message })); }
     loadInvoices();
   };
@@ -115,6 +148,8 @@ export default function App() {
   const ads = state?.reconciliation?.ads || [];
   const maxLeads = Math.max(1, ...ads.map((a) => a.leads));
   const dup = Object.fromEntries((state?.duplicates || []).map((d) => [d.capture_id, d.first]));
+  const metaSent = Object.fromEntries((state?.metaSends || []).map((m) => [m.capture_id, m]));
+  const lastMeta = [...(state?.metaSends || [])].filter((m) => m.ok && !m.backfill).sort((a, b) => String(b.at).localeCompare(String(a.at)))[0];
   const drafts = invoices.filter((i) => i.status === "DRAFT");
   const waiting = actions.filter((_, i) => !decisions[i]).length + drafts.length;
   const costPerPaid = t && t.paid ? usd(Math.round(t.spend_cents / t.paid)) : "none";
@@ -136,18 +171,19 @@ export default function App() {
   }, [state, invoices]);
 
   return (
-    <div className="app">
+    <div className={`app ${view === "report" ? "report" : ""}`}>
       <a className="skip" href="#main">Skip to the dashboard</a>
       <header className="top">
         <div className="top-in">
           <a className="brand" href="/"><span className="mark"><i /></span>Paid Signal</a>
           <nav className="tabs" aria-label="Sections">
-            <a href="#overview" className="on">Overview</a>
-            <a href="#approvals">Approvals {waiting > 0 && <span className="count">{waiting}</span>}</a>
-            <a href="#payments">Payments</a>
-            <a href="#signal">Ad signal</a>
-            <a href="#studio" onClick={() => setStudioOn(true)}>AG Studio</a>
+            <a href="#overview" className={view === "desk" ? "on" : ""} onClick={(e) => { e.preventDefault(); goDesk("overview"); }}>Overview</a>
+            <a href="#report" className={view === "report" ? "on" : ""}>Report · AG Studio</a>
+            <a href="#approvals" onClick={(e) => { e.preventDefault(); goDesk("approvals"); }}>Approvals {waiting > 0 && <span className="count">{waiting}</span>}</a>
+            <a href="#payments" onClick={(e) => { e.preventDefault(); goDesk("payments"); }}>Payments</a>
+            <a href="#signal" onClick={(e) => { e.preventDefault(); goDesk("signal"); }}>Ad signal</a>
             <a href="/scenarios.html">Scenarios</a>
+            <a href="/proof.html">Proof</a>
           </nav>
           <div className="top-end">
             <span className="live"><i />PayPal sandbox · live</span>
@@ -192,8 +228,8 @@ export default function App() {
         <section className="loop" aria-label="Try the loop">
           <article><span className="step">1</span><b>Pay from an ad click</b><p>Open an ad link and pay in the PayPal sandbox. The click rides in the order.</p><a className="btn" href={adLink("trial_video", "fb")}>Open an ad link</a></article>
           <article><span className="step">2</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button></article>
-          <article><span className="step">3</span><b>Approve, the agent sends</b><p>Approve a draft invoice. Claude sends it with PayPal's Agent Toolkit.</p><button className="btn" onClick={() => scrollTo("approvals")}>Go to approvals</button></article>
-          <article><span className="step">4</span><b>Teach the ad platform</b><p>Paid orders become Meta and Google conversions. Refunds pull them back.</p><button className="btn" onClick={() => scrollTo("signal")}>See the ad signal</button></article>
+          <article><span className="step">3</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
+          <article><span className="step">4</span><b>Teach the ad platform</b><p>Paid orders become Meta and Google conversions. Refunds pull them back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
         </section>
 
         <div className="cols">
@@ -220,7 +256,7 @@ export default function App() {
               <div id="captures" className="list">
                 {(state?.payments || []).slice().reverse().map((p) => (
                   <div key={p.capture_id} className="cap">
-                    <span><b>{p.ad && p.ad !== "direct" ? adName(p.ad) : "No ad click"}</b>{dup[p.capture_id] && <em className="dup">Possible duplicate of {dup[p.capture_id]}</em>}<small className="mono">{p.capture_id} · {money(p.amount)}{Number(p.refunded_amount) > 0 ? ` · refunded ${money(p.refunded_amount)}` : ""}{p.via === "invoice" ? " · invoice" : ""}</small></span>
+                    <span><b>{p.ad && p.ad !== "direct" ? adName(p.ad) : "No ad click"}{metaSent[p.capture_id]?.ok && <i className="meta-ok" title={`Meta received this Purchase (test events) ${clock(metaSent[p.capture_id].at)}`}>Meta ✓</i>}</b>{dup[p.capture_id] && <em className="dup">Possible duplicate of {dup[p.capture_id]}</em>}<small className="mono">{p.capture_id} · {money(p.amount)}{Number(p.refunded_amount) > 0 ? ` · refunded ${money(p.refunded_amount)}` : ""}{p.via === "invoice" ? " · invoice" : ""}</small></span>
                     {p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED" ? <button className="mini" onClick={() => refund(p)}>Refund</button> : <span className="tag">Refunded</span>}
                   </div>
                 ))}
@@ -230,6 +266,11 @@ export default function App() {
             <section id="signal" className="card">
               <div className="card-head"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Meta Purchase events · {state.google.conversions.length} Google rows</span>}</div>
               <p className="muted">Paid orders as Meta Conversions API events and Google offline conversions, deduplicated by capture. Sent to a real Meta test dataset: Meta processed them and dropped a resent copy by event id.</p>
+              {state?.metaLive && <div className="live-meta" role="status">
+                <span className="pulse" aria-hidden="true" />
+                {lastMeta ? <span><b>Live to Meta:</b> the last paid order (${lastMeta.value}) reached the shop's Meta dataset as a Purchase test event {clock(lastMeta.at)}; Meta answered events_received {lastMeta.events_received}.</span>
+                  : <span><b>Live to Meta:</b> pay in the demo shop and its Purchase event is sent to the shop's Meta dataset (test events) the moment PayPal confirms it.</span>}
+              </div>}
               <div className="sig">
                 {state && <pre tabIndex={0} aria-label="Meta Purchase event preview">{JSON.stringify(state.meta.events[0] || { note: "No paid capture with a click id yet." }, null, 2)}</pre>}
                 <div className="sig-side">
@@ -261,13 +302,32 @@ export default function App() {
                 {agent.source && <p className="trace">From the {agent.source}</p>}
                 {agent.trace && <p className="trace">{agent.trace.map((s) => s.tool + (s.ad ? `(${s.ad})` : "")).join(" → ")} · {(agent.ms / 1000).toFixed(1)} s</p>}
               </div>
+              <div id="revenue">
+                {revenue.status === "running" && <div className="skel" aria-live="polite"><i /><i /><i /><span>The revenue agent is reading what the leads wrote…</span></div>}
+                {revenue.status === "error" && <p className="err">{revenue.error}</p>}
+                {revenue.status === "done" && <>
+                  {(() => {
+                    const name = (l) => l.replace(" (fictional)", "");
+                    const flagged = revenue.skips.filter((s) => s.flag === "injection"), waiting = revenue.skips.filter((s) => s.flag === "not_ready"), done = revenue.skips.filter((s) => s.flag === "already_invoiced");
+                    const drafted = revenue.drafts.filter((d) => d.id);
+                    return <>
+                      <p className="headline">Revenue agent: {drafted.length} drafted · {flagged.length} flagged · {waiting.length} not ready{done.length ? ` · ${done.length} already invoiced` : ""}</p>
+                      {flagged.map((s, k) => <div key={`f${k}`} className="dec bad"><b>Flagged · {name(s.lead)} · not invoiced</b><small>{s.reason}</small></div>)}
+                      {revenue.refusals.map((r, k) => <div key={`r${k}`} className="dec bad"><b>Refused by code · {name(r.lead)}</b><small>{r.problems.join(" ")}</small></div>)}
+                      {drafted.map((d) => <div key={d.id} className="dec ok"><b>Drafted · {name(d.lead)} · ${d.amount}</b><small>{(d.lines || []).map((l) => l.name).join(" + ")}</small><small>{d.reason}</small></div>)}
+                      {waiting.map((s, k) => <div key={`w${k}`} className="dec"><b>Not ready · {name(s.lead)}</b><small>{s.reason}</small></div>)}
+                    </>;
+                  })()}
+                  <p className="trace">{revenue.trace.length} tool calls · {(revenue.ms / 1000).toFixed(1)} s · prices set by code · drafts created with PayPal's Agent Toolkit</p>
+                </>}
+              </div>
               <div id="invoices">
                 <div className="sub-head"><b>Invoices</b><button className="mini" onClick={syncInvoices}>Refresh</button></div>
                 {syncNote && <p className="note" role="status">Could not re-check sent invoices with PayPal: {syncNote}</p>}
                 {invoices.length === 0 && <p className="muted">No drafts yet. Open the Studio assistant and choose "Invoice warm leads".</p>}
                 {invoices.map((i) => (
                   <div key={i.id} className={`cap inv ${i.sent_by ? "agent" : ""}`}>
-                    <span><b>{i.lead.replace(" (fictional)", "")}</b><small>{short(i.ad)} · {money(i.amount)}{i.sent_by ? " · sent by the agent" : i.status === "DRAFT" ? " · draft" : ""}</small>{sending[i.id] && <small className="agent-say" role="status">{sending[i.id]}</small>}</span>
+                    <span><b>{i.lead.replace(" (fictional)", "")}</b><small>{short(i.ad)} · {money(i.amount)}{i.lines?.length > 1 ? ` · ${i.lines.length} children, sibling 20% off` : ""}{i.sent_by ? " · sent by the agent" : i.status === "DRAFT" ? (i.drafted_by ? " · drafted by the agent" : " · draft") : ""}</small>{sending[i.id] && <small className="agent-say" role="status">{sending[i.id]}</small>}</span>
                     {i.status === "DRAFT" ? <button className="mini go" disabled={sending[i.id] === "Agent checking and sending…"} onClick={() => send(i.id)}>Approve</button>
                       : i.status === "PAID" ? <span className="ok">Paid</span>
                       : i.pay_url ? <a href={i.pay_url} target="_blank" rel="noopener noreferrer">Sent ↗</a> : <span className="muted">{i.status}</span>}
@@ -302,17 +362,23 @@ export default function App() {
         </div>
 
         <section id="studio" className="card studio-card" ref={studioBox} aria-label="AG Studio">
-          <div className="card-head"><div><h2>Explore in AG Studio</h2><p className="muted">Three custom widgets, a custom budget agent and Studio's own agents, running on Claude.</p></div><button className="btn dark" onClick={openAssistant}>Open the Studio assistant</button></div>
+          <div className="card-head">
+            <div><h2>{view === "report" ? "Report · AG Studio" : "The full report, in AG Studio"}</h2><p className="muted">Three custom widgets, a custom budget agent and Studio's own agents, running on Claude.</p></div>
+            <div className="row">
+              {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {waiting > 0 && <span className="count">{waiting}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
+              <button className="btn dark" onClick={openAssistant}>Open the Studio assistant</button>
+            </div>
+          </div>
           <div className="studio">
             {studioOn && license !== undefined
               ? <Suspense fallback={<div className="studio-wait">Loading AG Studio…</div>}><StudioPanel ref={studio} state={state} invoices={invoices} license={license} csvRef={csvRef} onInvoices={onStudioInvoices} onRecommendation={onRecommendation} /></Suspense>
-              : <button className="studio-wait" onClick={() => setStudioOn(true)}>Load the AG Studio report</button>}
+              : <a className="studio-wait" href="#report">Open the AG Studio report</a>}
           </div>
         </section>
 
         <footer className="foot">Fictional shop and ad data · real PayPal sandbox calls · Claude agents · <a href="https://github.com/longtt-marketing/paid-signal">Code</a> · <a href="/scenarios.html">Test scenarios</a></footer>
       </main>
-      {toast && <div className="toast" role="status"><span>{toast.msg}</span>{toast.go && <button className="mini go" onClick={() => { scrollTo(toast.go); setToast(""); }}>Review</button>}</div>}
+      {toast && <div className="toast" role="status"><span>{toast.msg}</span>{toast.go && <button className="mini go" onClick={() => { goDesk(toast.go); setToast(""); }}>Review</button>}</div>}
     </div>
   );
 }

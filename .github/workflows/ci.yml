@@ -13,4 +13,4 @@ jobs:
       - name: Ledger, attribution, agent gate, send agent and MCP tests
         run: npm ci --prefix web --ignore-scripts --no-audit --no-fund && npm test
       - name: Type-check the money code (JSDoc, no build step)
-        run: npx --yes -p typescript@5.6.3 tsc --noEmit --allowJs --checkJs --target es2022 --module es2022 --moduleResolution bundler --lib es2022,dom src/ledger.js src/agent.js src/sendAgent.js src/mcp.js
+        run: npx --yes -p typescript@5.6.3 tsc --noEmit --allowJs --checkJs --target es2022 --module es2022 --moduleResolution bundler --lib es2022,dom src/ledger.js src/agent.js src/sendAgent.js src/mcp.js src/revenue.js

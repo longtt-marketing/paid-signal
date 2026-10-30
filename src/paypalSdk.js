@@ -1,4 +1,4 @@
-// Order create/read and refunds through PayPal's official server SDK (generated with APIMatic). Returns PayPal's own JSON (snake_case), so the
+// Order create, read and capture, and refunds, through PayPal's official server SDK (generated with APIMatic). Returns PayPal's own JSON (snake_case), so the
 // rest of the Worker reads it exactly as it reads the REST client in paypal.js.
 import { Client, Environment, OrdersController, PaymentsController, CheckoutPaymentIntent, PaypalExperienceUserAction, PaypalWalletContextShippingPreference } from "@paypal/paypal-server-sdk";
 
@@ -25,6 +25,8 @@ export function ordersSdk({ clientId, secret }) {
       },
     })),
     getOrder: (id) => run(orders.getOrder({ id })),
+    /** Capture an approved order; the same PayPal-Request-Id on a retry returns the first capture instead of charging twice. */
+    captureOrder: (id, requestId) => run(orders.captureOrder({ id, paypalRequestId: requestId, prefer: "return=representation" })),
     /** Full refund without an amount, partial with one. */
     refundCapture: (captureId, { amount, currency = "USD", requestId } = {}) => run(payments.refundCapturedPayment({
       captureId, paypalRequestId: requestId, prefer: "return=representation",

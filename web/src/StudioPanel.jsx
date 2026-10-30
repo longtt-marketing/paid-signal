@@ -1,17 +1,21 @@
 // AG Studio and its agents, loaded as a separate chunk: the dashboard answers first, Studio arrives when it is needed.
-import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { AgStudio, AgStudioProvider, createWidgets } from "ag-studio-react";
 import { AgStudioAiModule } from "ag-studio";
 import { buildAi } from "./agentTools.js";
-import { buildData, initialReport, theme } from "./studio.js";
+import { buildData, initialReport, phoneReport, phoneTheme, theme } from "./studio.js";
 import { claimWidgetDefinition } from "./ClaimWidget.jsx";
 import { timelineWidgetDefinition } from "./TimelineWidget.jsx";
 import { funnelWidgetDefinition } from "./FunnelWidget.jsx";
 
 const PANELS = { view: { right: ["ai", "filters"] }, edit: { right: ["ai", "edit", "data", "filters"] } };
+// a phone keeps only the assistant rail, so the report gets the width
+const PHONE_PANELS = { view: { right: ["ai"] }, edit: { right: ["ai", "edit"] } };
+const narrow = () => typeof matchMedia === "function" && matchMedia("(max-width: 760px)").matches;
 
 const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, csvRef, onInvoices, onRecommendation }, ref) {
   const studio = useRef(null);
+  const [phone] = useState(narrow); // chosen once at mount; Studio keeps its own layout state after that
   const ai = useMemo(() => buildAi({ getCsv: () => csvRef.current, onInvoices, onRecommendation }), [csvRef, onInvoices, onRecommendation]);
   const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments, invoices, state.duplicates) : undefined), [state, invoices]);
   const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() }), [state]);
@@ -22,7 +26,7 @@ const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, 
   }), []);
   return (
     <AgStudioProvider modules={[AgStudioAiModule]} licenseKey={license || undefined}>
-      <AgStudio ref={studio} data={data} context={context} initialState={initialReport} widgets={widgets} theme={theme} mode="view" ai={ai} panels={PANELS} onApiReady={(e) => { window.__studio = e.api; }} style={{ width: "100%", height: "100%" }} />
+      <AgStudio ref={studio} data={data} context={context} initialState={phone ? phoneReport : initialReport} widgets={widgets} theme={phone ? phoneTheme : theme} mode="view" ai={ai} panels={phone ? PHONE_PANELS : PANELS} onApiReady={(e) => { window.__studio = e.api; }} style={{ width: "100%", height: "100%" }} />
     </AgStudioProvider>
   );
 });

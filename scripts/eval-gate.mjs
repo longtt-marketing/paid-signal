@@ -19,9 +19,11 @@ const grounded = () => {
   return { headline: `${ad} brought ${a.leads} leads and ${a.paid} paid orders on ${(a.spend_cents / 100).toFixed(2)} spend.`,
     actions: [{ ad, change: pick(["reduce", "keep", "increase"]), reason: `It has ${pick(allowed)} on record; the sample is small.`, evidence: [`row:${ad}`] }], caveats: "" };
 };
+const stamp = [...new Set(payments.flatMap((p) => String(p.captured_at).match(/\d+/g) || []).map((d) => String(Number(d))))].filter((d) => !allowed.includes(d) && !payments.some((p) => [p.amount, p.refunded_amount].includes(d)));
 const invented = () => { let v; do v = (rnd() * 500).toFixed(pick([0, 2])); while (allowed.includes(v) || allowed.includes(v.replace(/\.00$/, ""))); return v; };
 const plants = {
   invented_number: (r) => ({ ...r, actions: [{ ...r.actions[0], reason: `${r.actions[0].reason} Expect ${invented()} more next month.` }] }),
+  invented_number_from_a_timestamp: (r) => ({ ...r, actions: [{ ...r.actions[0], reason: `${r.actions[0].reason} Expect ${pick(stamp)} more paid orders next month.` }] }),
   invented_percent: (r) => ({ ...r, headline: `${r.headline} That is a ${Math.round(rnd() * 90 + 101)}% return.` }),
   fake_evidence_id: (r) => ({ ...r, actions: [{ ...r.actions[0], evidence: [`${Math.floor(rnd() * 9e15).toString(36).toUpperCase().padStart(17, "X")}`] }] }),
   unknown_ad: (r) => ({ ...r, actions: [{ ...r.actions[0], ad: `ad_${Math.floor(rnd() * 1000)}` }] }),

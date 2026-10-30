@@ -1,10 +1,14 @@
 {
- "date": "2026-10-29",
+ "date": "2026-10-30",
  "payments": 8,
  "planted": {
   "invented_number": {
    "tried": 100,
-   "caught": 99
+   "caught": 100
+  },
+  "invented_number_from_a_timestamp": {
+   "tried": 100,
+   "caught": 100
   },
   "invented_percent": {
    "tried": 100,
@@ -26,5 +30,12 @@
  "grounded": {
   "tried": 500,
   "falsely_rejected": 0
+ },
+ "before_fix": {
+  "invented_number_from_a_timestamp": {
+   "tried": 100,
+   "caught": 0,
+   "note": "the gate used to accept any number found in a capture timestamp; dates and times are now removed from the text instead"
+  }
  }
 }

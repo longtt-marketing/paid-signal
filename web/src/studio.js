@@ -6,7 +6,9 @@ import { studioTheme } from "ag-studio";
 import { AD_NAMES, adName } from "./names.js";
 export { AD_NAMES, adName };
 
-const f = (id, name, format, hide) => ({ id, name, format, ...(hide ? { hide } : {}) });
+// money shows as $1,234.50 everywhere in Studio, the same as on the dashboard
+const USD = { format: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }) };
+const f = (id, name, format, hide) => ({ id, name, format, ...(format === "currencyFormat" ? { formatOptions: USD } : {}), ...(hide ? { hide } : {}) });
 const sum = (id) => ({ id, aggregation: "sum" });
 
 /** Two tables joined on the ad key: what each ad claims, and what PayPal captured for it. */
@@ -45,11 +47,11 @@ export function buildData(rec, payments, invoices = [], duplicates = []) {
     calendars: [{ id: "calendar", label: "Calendar", range: { from: { type: "date", value: dates[0] || today }, to: { type: "date", value: dates.at(-1) || today } }, fragments: ["month", "week", "day"] }],
     expressions: [
       // named measures, so the grid shows "Spend" rather than "Spend (sum)"
-      ...[["mSpend", "Spend", "ads.spend", "decimalFormat"], ["mLeads", "Leads", "ads.leads", "integerFormat"], ["mPaid", "Paid orders", "ads.payers", "integerFormat"],
-        ["mRefunds", "Refunds", "ads.refunds", "integerFormat"], ["mRevenue", "Revenue", "ads.revenue", "decimalFormat"]]
-        .map(([id, name, field, format]) => ({ id, name, format, isMeasure: true, expression: sum(field) })),
-      { id: "costPerPayer", name: "Cost / paid order", description: "Ad spend divided by PayPal paid orders.", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
-      { id: "revenuePerDollar", name: "Paid revenue per ad dollar", description: "PayPal net revenue divided by ad spend.", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.revenue"), sum("ads.spend")] } },
+      ...[["mSpend", "Spend", "ads.spend", "currencyFormat"], ["mLeads", "Leads", "ads.leads", "integerFormat"], ["mPaid", "Paid orders", "ads.payers", "integerFormat"],
+        ["mRefunds", "Refunds", "ads.refunds", "integerFormat"], ["mRevenue", "Revenue", "ads.revenue", "currencyFormat"]]
+        .map(([id, name, field, format]) => ({ id, name, format, ...(format === "currencyFormat" ? { formatOptions: USD } : {}), isMeasure: true, expression: sum(field) })),
+      { id: "costPerPayer", name: "Cost / paid order", description: "Ad spend divided by PayPal paid orders.", format: "currencyFormat", formatOptions: USD, isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
+      { id: "revenuePerDollar", name: "Paid revenue per $1 of ads", description: "PayPal net revenue divided by ad spend.", format: "currencyFormat", formatOptions: USD, isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.revenue"), sum("ads.spend")] } },
     ],
   };
 }
@@ -66,8 +68,8 @@ export const initialReport = {
       widgets: {
         leads: kpi("Leads (ads)", sum("ads.leads")),
         payers: kpi("Paid orders", sum("ads.payers")),
-        rpd: kpi("Revenue per ad $1", { id: "revenuePerDollar" }),
-        nopayer: kpi("Ad spend per paid order $", { id: "costPerPayer" }),
+        rpd: kpi("Paid revenue per $1 of ads", { id: "revenuePerDollar" }),
+        nopayer: kpi("Ad spend per paid order", { id: "costPerPayer" }),
         claim: { type: "claim-vs-confirmed", dataMapping: { category: [{ id: "ads.name" }], claimed: [sum("ads.leads")], confirmed: [sum("ads.payers")] }, format: { title: { enabled: true, text: "What each ad claims vs what PayPal confirms" } } },
         table: {
           type: "grid",
@@ -113,3 +115,17 @@ export const theme = studioTheme.withParams({
   chartFontFamily: v("sans"), chartTextColor: v("ink"), chartSubtleTextColor: v("faint"), chartAxisLineColor: v("line"), chartGridLineColor: v("line2"),
   chartPaletteFills1Color: "#1a7a48", chartPaletteStrokes1Color: "#1a7a48", chartPaletteFills2Color: "#c9cbd2", chartPaletteStrokes2Color: "#c9cbd2",
 });
+
+// On a phone the 24-column canvas is narrow: two KPI tiles per row, charts and grids full width, taller rows.
+export const phoneReport = {
+  ...initialReport,
+  pages: initialReport.pages.map((pg) => ({
+    ...pg,
+    ...(pg.id === "overview" ? { widgets: { ...pg.widgets, rpd: kpi("Revenue per $1", { id: "revenuePerDollar" }), nopayer: kpi("Per paid order", { id: "costPerPayer" }) } } : {}),
+    widgetLayout: pg.id === "overview"
+      ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), claim: at(0, 14, 24, 16), table: at(0, 30, 24, 20), funnel: at(0, 50, 24, 16) }
+      : { net: at(0, 0, 12, 7), refunded: at(12, 0, 12, 7), timeline: at(0, 7, 24, 16), list: at(0, 23, 24, 22) },
+  })),
+};
+// Studio's canvas is at least 720 px wide by default; on a phone it fits the screen instead
+export const phoneTheme = theme.withParams({ studioCanvasMinWidth: 300, studioCanvasPadding: 8 });

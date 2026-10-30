@@ -8,7 +8,7 @@ const post = async (path, body, signal) => { const r = await fetch(path, { metho
 
 export const PROMPT_STARTERS = [
   { label: "Which ads bring paid orders?", prompt: "Using the Paid Signal tools, which ads bring paying customers and which only bring leads? Quote the numbers exactly." },
-  { label: "Invoice warm leads", prompt: "List the leads that never paid, and draft PayPal invoices for the ones who asked about booking or price. Explain who you left out and why." },
+  { label: "Invoice warm leads", prompt: "Have the revenue agent read what the unpaid leads wrote and draft PayPal invoices for the ones ready to pay. Tell me who it invoiced, for how much, and who it skipped or flagged and why." },
   { label: "Review ad budgets", prompt: "Ask the budget agent which ads to cut or grow, and have it show the evidence on this page." },
   { label: "Chart paid revenue by ad", prompt: "Add a bar chart of paid revenue by ad to this page." },
   { label: "Check against PayPal", prompt: "Check the webhook ledger against PayPal's own transaction history and tell me if anything is missing." },
@@ -63,12 +63,14 @@ export function buildAi({ getCsv, onInvoices, onRecommendation }) {
       }),
       api.defineAiTool({
         name: "draft_paypal_invoices",
-        description: "Create PayPal DRAFT invoices for the named leads (exact names from list_unpaid_leads), each tagged with the lead's ad click so a payment is attributed to that ad. Drafts are not sent.",
-        params: (s) => s.object({ leads: s.array(s.string({ description: "Exact lead name." })), reason: s.string({ description: "Why these leads, in one sentence." }) }),
-        execute: async (args, ctx) => {
-          const d = await post("/api/invoices/draft", { leads: args.leads }, ctx.signal);
-          onInvoices?.();
-          return ctx.success(`Drafted ${d.invoices.length} PayPal invoice(s); the owner must send them from the approvals inbox.`, { invoices: d.invoices.map((i) => ({ id: i.id, lead: i.lead, ad: i.ad, status: i.status })) });
+        description: "Run the revenue agent: it reads what each unpaid lead wrote, decides who is ready to pay, and proposes items; code prices them from the price list and checks every rule, and PayPal's Agent Toolkit creates the DRAFT invoices. Nothing is sent: each draft waits for the owner's approval.",
+        params: (s) => s.object({ reason: s.string({ description: "Why run it now, in one sentence." }) }),
+        execute: async (_args, ctx) => {
+          const d = await post("/api/agent/revenue", {}, ctx.signal);
+          onInvoices?.(d);
+          return ctx.success(`${d.drafts.filter((x) => x.id).length} draft(s) created; ${d.skips.length} lead(s) skipped.`, {
+            drafted: d.drafts.map((x) => ({ lead: x.lead, total_usd: x.amount, lines: (x.lines || []).map((l) => l.name), reason: x.reason, error: x.error })),
+            skipped: d.skips, refused_by_code: d.refusals, agent_summary: d.summary });
         },
       }),
       api.defineAiTool({

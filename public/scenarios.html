@@ -40,7 +40,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 </style>
 </head>
 <body>
-<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav><a href="/">Dashboard</a><a href="/shop.html">Demo shop</a></nav></header>
+<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav><a href="/">Dashboard</a><a href="/shop.html">Demo shop</a><a href="/proof.html">Proof</a></nav></header>
 <main>
   <div>
     <h1>Test scenarios</h1>
@@ -60,12 +60,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   </ol>
   <section class="proof" aria-labelledby="proof">
     <h2 id="proof" class="ph">Proof, measured</h2>
-    <div class="stats">
-      <div class="stat"><b>499 / 500</b><span>planted errors caught by the evidence gate: invented numbers and percentages, fake capture ids, unknown ads, raw field names</span><small>The one miss was an invented "30" that equals a value the agent is shown (a capture time).</small></div>
-      <div class="stat"><b>0 / 500</b><span>grounded recommendations wrongly rejected</span><small>Built only from numbers the reconciliation produced.</small></div>
-      <div class="stat"><b>10 / 10</b><span>live budget-agent runs on Claude passed the gate on the first submission</span><small>Before the duplicate gaps were computed in code, only 1 of 10 passed first time: the agent worked out "12 seconds" itself and was sent back.</small></div>
-    </div>
-    <p class="foot">Reproduce: <code>node scripts/eval-gate.mjs</code> and <code>node scripts/eval-agent.mjs 10</code>. Results: <a href="https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof">docs/proof</a>.</p>
+    <p class="does">Held-out evals for the agents, the evidence gate under attack, live PayPal and Meta checks, tests and speed are on one page: <a href="/proof.html">Proof</a>.</p>
   </section>
   <p class="foot">The ad export and leads are fictional demo data. PayPal calls are real sandbox calls. Meta Purchase events were sent to a real Meta test dataset (processed, resends deduplicated by event_id); Google rows are previews.</p>
 </main>

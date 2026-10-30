@@ -94,10 +94,13 @@ table.grid{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 button.mini{min-height:36px;padding:0 14px;font-size:13px;flex:none}
 button.mini.go{background:var(--go);color:var(--go-ink);border-color:var(--go)}button.mini.go:hover:not(:disabled){filter:brightness(1.05)}
 .tag{font:600 12px var(--sans);color:var(--gap)}.tag.keep{color:var(--faint)}.tag.increase{color:var(--paid)}
+.meta-ok{font-style:normal;font:700 10px var(--sans);letter-spacing:.03em;color:#1d4f91;background:#e5edf8;padding:2px 6px;border-radius:5px;margin-left:8px;vertical-align:2px}
+.live-meta{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:#eef4fb;border:1px solid #cfe0f3;font-size:13px;color:#1d3557}
+.live-meta .pulse{flex:none;width:9px;height:9px;margin-top:5px;border-radius:50%;background:#1d4f91;animation:pulse 2.4s ease-out infinite}
 .sig{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px}
 .sig-side{display:flex;flex-direction:column;gap:12px}.sig-side>div{display:flex;flex-direction:column;gap:3px;padding:12px;border-radius:12px;background:var(--head)}
 .sig-side b{font-size:13px}.sig-side small{font-size:12px;color:var(--mute);overflow-wrap:anywhere}
-pre{margin:0;padding:12px;border-radius:12px;background:#f7f6f2;border:1px solid var(--line2);font:400 12px/1.5 var(--code);white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto}
+pre{margin:0;padding:12px;border-radius:12px;background:#f7f6f2;border:1px solid var(--line2);font:400 12px/1.5 var(--code);white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto}
 code{font-family:var(--code);font-size:12px}
 
 /* approvals */
@@ -112,6 +115,10 @@ code{font-family:var(--code);font-size:12px}
 .skel{display:flex;flex-direction:column;gap:8px}.skel i{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--head),#e7e4dc,var(--head));background-size:200% 100%;animation:shimmer 1.2s linear infinite}
 .skel i:nth-child(2){width:80%}.skel i:nth-child(3){width:60%}.skel span{font-size:13px;color:var(--faint)}
 @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+#revenue{display:flex;flex-direction:column;gap:8px}
+.dec{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:11px;background:var(--head);border-left:3px solid var(--claimed)}
+.dec b{font-size:13px}.dec small{font-size:12px;color:var(--mute)}
+.dec.ok{background:var(--paid-bg);border-left-color:var(--paid)}.dec.bad{background:#fdecea;border-left-color:#b3261e}.dec.bad b{color:#8c1d18}
 #invoices{display:flex;flex-direction:column}
 .sub-head{display:flex;justify-content:space-between;align-items:center;padding:6px 0 4px}.sub-head b{font-size:14px}
 .cap.inv.agent b::after{content:"Agent";margin-left:8px;font:700 10px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--link);background:#e5edf8;padding:2px 6px;border-radius:5px;vertical-align:2px}
@@ -128,6 +135,13 @@ code{font-family:var(--code);font-size:12px}
 .csv[open]{display:flex;flex-direction:column;gap:8px}
 .csv textarea{display:block;width:100%;min-height:120px;font:400 13px/1.5 var(--code);border:1px solid var(--line);border-radius:10px;padding:10px;background:#fbfaf7;resize:vertical}
 
+/* report view: AG Studio fills the screen; on the desk it is a short card (Studio stays mounted, only hidden) */
+.app:not(.report) .studio{display:none}
+.app:not(.report) .studio-card{padding-bottom:20px}
+.app.report .desk>:not(#studio){display:none}
+.app.report .desk{max-width:none;padding:12px 16px 16px}
+.app.report .studio-card{padding:14px 16px 0}
+.app.report .studio{height:calc(100vh - 150px);min-height:560px}
 /* studio */
 .studio-card{padding:20px 20px 0;overflow:hidden}
 .studio{height:760px;min-width:0;width:calc(100% + 40px);overflow:hidden;margin:0 -20px;border-top:1px solid var(--line)}
@@ -158,5 +172,7 @@ code{font-family:var(--code);font-size:12px}
   .studio-card{padding:16px 16px 0}.studio{height:900px;margin:0 -16px;width:calc(100% + 32px)}
   .claim-row{grid-template-columns:1fr 70px}.claim-bars{grid-column:1/-1;grid-row:2}.fn-row{grid-template-columns:1fr 90px}.fn-bars{grid-column:1/-1;grid-row:2}
   html{scroll-padding-top:120px}.toast{top:118px}
+  .app.report .desk{padding:8px 8px 8px}.app.report .studio-card{padding:10px 10px 0}.app.report .studio{margin:0 -10px;width:calc(100% + 20px);height:calc(100vh - 210px)}
+  .studio-card .card-head .muted{display:none}.studio-card .card-head .row .btn{min-height:38px;padding:0 12px;font-size:13px;margin-top:0}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}

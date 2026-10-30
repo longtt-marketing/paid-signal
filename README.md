@@ -40,7 +40,7 @@ No login is needed for any of this; only paying in the demo shop needs the sandb
 1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): 62 leads claimed by the ads, the paid orders PayPal confirms, per ad.
 2. Open the Studio assistant and choose **Review ad budgets**: the Budget agent (a custom Studio agent on Claude) passes the evidence gate, its change lands in **Approvals**, and it asks Studio's page agent to add the evidence chart.
 3. Under **Invoices**, press **Approve** on a draft: the send agent (Claude + PayPal Agent Toolkit) checks it and sends it.
-4. Open [Test scenarios](https://paid-signal.thelongmarketing.workers.dev/scenarios.html): nine cases and the measured proof (499 of 500 planted errors caught, 10 of 10 live agent runs grounded first time).
+4. Open [Proof](https://paid-signal.thelongmarketing.workers.dev/proof.html): held-out evals (the revenue agent invoiced 24 of 24 bookings correctly and 0 of 16 prompt injections), the evidence gate under attack (600 of 600 planted errors caught, 0 of 500 false rejections), live PayPal and Meta checks. [Test scenarios](https://paid-signal.thelongmarketing.workers.dev/scenarios.html) lists nine payment edge cases.
 5. Point any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (read-only tools; see [MCP server](#mcp-server)).
 
 ## Try it in three minutes
@@ -63,7 +63,7 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
 | API | Where |
 | --- | --- |
 | **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): `get_invoice`, `send_invoice` for the send agent, allowlisted and pinned to the approved invoice | `src/sendAgent.js`, `/api/invoices/approve` |
-| Orders v2: create and read through **PayPal's server SDK** (`@paypal/paypal-server-sdk`, generated with APIMatic), with `custom_id`, `invoice_id`, `PayPal-Request-Id` idempotency; capture through REST | `src/paypalSdk.js`, `src/paypal.js`, `/api/checkout`, `/api/capture` |
+| Orders v2: create, read and capture through **PayPal's server SDK** (`@paypal/paypal-server-sdk`, generated with APIMatic), with `custom_id`, `invoice_id`, `PayPal-Request-Id` idempotency | `src/paypalSdk.js`, `/api/checkout`, `/api/capture` |
 | Payments v2: refund a capture (full or partial), through the server SDK | `src/paypalSdk.js`, `/api/refund` |
 | Invoicing v2: create draft (click in the private memo), send, get; sent invoices are re-checked with PayPal on Refresh, because the sandbox does not always emit `INVOICING.INVOICE.PAID` | `/api/invoices/*`, agent tool `draft_paypal_invoices` |
 | Webhooks: registered by `scripts/register-webhook.py`, **verify-webhook-signature** for every delivery | `/api/webhook` |
@@ -127,7 +127,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 51 tests: money rules, gate, send agent, MCP, AG Studio tool names
+npm test                              # 55 tests: money rules, gate, the three agents, MCP, AG Studio tool names
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy
