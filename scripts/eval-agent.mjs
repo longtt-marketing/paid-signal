@@ -7,7 +7,7 @@ import { runAgent, anthropicLLM } from "../src/agent.js";
 
 const vars = Object.fromEntries(readFileSync(new URL("../.dev.vars", import.meta.url), "utf8").split(/\r?\n/)
   .map((l) => l.match(/^\s*([A-Z_]+)\s*=\s*"?([^"#]*)"?\s*$/)).filter(Boolean).map((m) => [m[1], m[2].trim()]));
-const { payments } = await (await fetch("https://paid-signal.thelongmarketing.workers.dev/api/ledger")).json();
+const payments = (await (await fetch("https://paid-signal.thelongmarketing.workers.dev/api/ledger")).json()).payments.map((p) => ({ ...p, payer_email_sha256: p.payer_key })); // the public ledger carries a salted payer key, not the email hash
 const rec = reconcile(parseAdCsv(readFileSync(new URL("../public/data/demo-ads.csv", import.meta.url), "utf8")).rows, payments);
 const llm = anthropicLLM({ apiKey: vars.ANTHROPIC_API_KEY, workspaceId: vars.ANTHROPIC_WORKSPACE_ID });
 const runs = [];

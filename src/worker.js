@@ -7,7 +7,9 @@ import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, 
 import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
 import { runSendAgent, SEND_SYSTEM, SEND_TOOLS } from "./sendAgent.js";
 import { parseCsv, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS } from "./revenue.js";
+import { runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "./chaseAgent.js";
 import { PayPalAgentToolkit } from "@paypal/agent-toolkit/ai-sdk";
+import { adName } from "../web/src/names.js";
 
 // The demo shop sells one thing; the price is fixed server-side so a page cannot choose what it pays.
 const PRODUCT = { sku: "trial-class", name: "Robotics trial class (demo shop)", amount: "49.00", currency: "USD" };
@@ -34,6 +36,13 @@ async function cachedList(env, prefix) {
   return out;
 }
 const forget = async (prefix) => { await globalThis.caches?.default?.delete(cacheKey(prefix)); };
+
+/** Keep the latest gate-checked budget recommendation; the owner's decisions refer to it by id. */
+async function saveRecommendation(env, recommendation, source) {
+  const saved = { id: `R-${Date.now().toString(36).toUpperCase()}`, at: new Date().toISOString(), source, recommendation };
+  await env.LEDGER.put("rec:latest", JSON.stringify(saved));
+  return saved;
+}
 
 async function listPayments(env) {
   return (await cachedList(env, "pay:")).sort((a, b) => String(a.captured_at).localeCompare(String(b.captured_at)));
@@ -174,11 +183,14 @@ async function mcpTool(env, url, name, args) {
     if (name === "propose_budget") {
       const rows = r.ads.map((a) => ({ ad: a.ad, spend: a.spend_cents / 100, paid: a.paid }));
       const budget = Number(args.budget_usd) > 0 ? Number(args.budget_usd) : rows.reduce((n, x) => n + x.spend, 0);
-      return { proposal: proposeSplit(rows, budget).map((x) => ({ ad: x.ad, now_usd: rows.find((y) => y.ad === x.ad).spend.toFixed(2), proposed_usd: x.budget.toFixed(2) })),
-        rule: "paid orders per dollar, at least 10% per ad", applied: false, how_to_apply: "A person approves budget changes in the Paid Signal dashboard; this tool changes nothing." };
+      const total = rows.reduce((n, x) => n + x.spend, 0) || 1;
+      const proposal = proposeSplit(rows, budget).map((x) => { const y = rows.find((z) => z.ad === x.ad); return { ad: x.ad, name: adName(x.ad), paid_orders: y.paid, now_usd: (budget * y.spend / total).toFixed(2), proposed_usd: x.budget.toFixed(2), why: x.reason }; });
+      return { proposal, rule: "paid orders per dollar, at least 10% per ad; an ad with fewer than 3 PayPal-confirmed paid orders keeps its share",
+        caveat: proposal.every((p) => p.now_usd === p.proposed_usd) ? "Not enough paid orders yet to move money: every ad keeps its share until at least two ads have 3 or more." : "Based on few orders; treat as a direction, not a forecast.",
+        applied: false, how_to_apply: "A person approves budget changes in the Paid Signal dashboard; this tool changes nothing." };
     }
     const capAd = Object.fromEntries(ledger.payments.map((p) => [p.capture_id, p.ad]));
-    return r.ads.map((a) => ({ ad: a.ad, leads_reported: a.leads, invoiced: invoices.filter((i) => i.ad === a.ad && i.status !== "CANCELLED").length, paid_orders: a.paid,
+    return r.ads.map((a) => ({ ad: a.ad, name: adName(a.ad), leads_reported: a.leads, invoiced: invoices.filter((i) => i.ad === a.ad && i.status !== "CANCELLED").length, paid_orders: a.paid,
       held_as_duplicate: a.held, fully_refunded: a.refunded, meta_purchase_events: meta.events.filter((e) => capAd[String(e.event_id).replace("paypal:", "")] === a.ad).length }));
   }
   if (name === "check_paypal_ledger") return get("/api/paypal-check");
@@ -343,7 +355,11 @@ const app = {
 
       if (url.pathname === "/api/ledger") {
         const [payments, meta] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
-        return json({ payments, duplicates: possibleDuplicates(payments), meta, meta_live: Boolean(env.META_CAPI_TOKEN && env.META_DATASET_ID) });
+        // the payer's email hash stays on the server (duplicate check, Meta match); the public ledger gets a salted key that
+        // only says "same payer" and cannot be checked against a guessed email
+        const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, ...p }) => ({ ...p, payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));
+        return json({ payments: keyed,
+          duplicates: possibleDuplicates(payments), meta, meta_live: Boolean(env.META_CAPI_TOKEN && env.META_DATASET_ID) });
       }
 
       // Leads the ad export counted but PayPal never saw pay. The agent may draft invoices for them; a person sends.
@@ -394,6 +410,26 @@ const app = {
         }
         await forget("inv:");
         return json({ drafts, skips: run.skips, refusals: run.refusals, summary: run.summary, trace: run.trace, ms: Date.now() - t0 });
+      }
+
+      // Sent invoices nobody has paid: the chase agent reads each with the Agent Toolkit, chooses whom to remind and writes
+      // the note; code allows only eligible invoices, at most 3 reminders, and no amount but the invoice's own.
+      if (url.pathname === "/api/agent/chase" && request.method === "POST") {
+        const stop = await guard(env, request, "chase agent runs", 3, 20); if (stop) return json({ error: stop }, 429);
+        const t0 = Date.now();
+        const eligible = eligibleForReminder(await listPrefix(env, "inv:"));
+        if (!eligible.length) return json({ reminded: [], summary: "No sent invoice is waiting long enough for a reminder.", trace: [], eligible: 0, ms: 0 });
+        const tools = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
+          configuration: { actions: { invoices: { get: true, sendReminder: true } }, context: { sandbox: true } } }).getTools();
+        const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: CHASE_SYSTEM, tools: CHASE_TOOLS });
+        const run = await runChaseAgent({ llm, tools, eligible, leads: await demoLeads(env, url) });
+        const at = new Date().toISOString();
+        for (const r of run.reminded) {
+          const rec = await env.LEDGER.get(`inv:${r.id}`, "json");
+          if (rec) await env.LEDGER.put(`inv:${r.id}`, JSON.stringify({ ...rec, reminded_at: at, reminder: { subject: r.subject, note: r.note, by: "chase agent (Claude + PayPal Agent Toolkit)" } }));
+        }
+        if (run.reminded.length) await forget("inv:");
+        return json({ ...run, eligible: eligible.length, ms: Date.now() - t0 });
       }
 
       // A person approves a drafted invoice; the send agent (Claude with PayPal's Agent Toolkit) checks and sends that one.
@@ -449,11 +485,19 @@ const app = {
         const b = await request.json();
         if (!["approved", "dismissed"].includes(b.verdict) || !AD_KEYS.has(b.ad)) return json({ error: "A verdict on one of the demo's ads is required." }, 400);
         const at = new Date().toISOString(), id = `D-${Date.now().toString(36).toUpperCase()}`;
-        const rec = { id, at, ad: String(b.ad).slice(0, 60), change: String(b.change || "").slice(0, 20), verdict: b.verdict, reason: String(b.reason || "").slice(0, 600), evidence: (b.evidence || []).slice(0, 8).map((e) => String(e).slice(0, 40)) };
+        const rec = { id, at, ad: String(b.ad).slice(0, 60), change: String(b.change || "").slice(0, 20), verdict: b.verdict, reason: String(b.reason || "").slice(0, 600), evidence: (b.evidence || []).slice(0, 8).map((e) => String(e).slice(0, 40)),
+          rec_id: /^R-[A-Z0-9]{4,16}$/.test(String(b.rec_id)) ? b.rec_id : null, index: Number.isInteger(b.index) && b.index >= 0 && b.index < 4 ? b.index : null };
         await env.LEDGER.put(`dec:${at}:${id}`, JSON.stringify(rec), { expirationTtl: 2592000 }); await forget("dec:");
         return json(rec);
       }
       if (url.pathname === "/api/decisions") return json({ decisions: (await cachedList(env, "dec:")).reverse().slice(0, 50) });
+
+      // The latest recommendation that passed the evidence gate, with the owner's decisions on it, so Approvals survives a reload.
+      if (url.pathname === "/api/recommendation") {
+        const latest = await env.LEDGER.get("rec:latest", "json");
+        const decisions = latest ? (await cachedList(env, "dec:")).filter((d) => d.rec_id === latest.id) : [];
+        return json({ latest, decisions });
+      }
 
       // The browser-side Studio agent framework talks to Claude through this proxy; the key never leaves the Worker.
       if (url.pathname === "/api/ai/turn" && request.method === "POST") {
@@ -498,7 +542,8 @@ const app = {
         const rec = reconcile(parseAdCsv(csv).rows, payments);
         const out = { headline: String(recommendation?.headline || ""), caveats: String(recommendation?.caveats || ""), actions: (recommendation?.actions || []).slice(0, 4) };
         const problems = checkRecommendation(rec, payments, out);
-        return json({ grounded: problems.length === 0, problems, recommendation: out });
+        const saved = problems.length ? null : await saveRecommendation(env, out, "AG Studio budget agent");
+        return json({ grounded: problems.length === 0, problems, recommendation: out, rec_id: saved?.id || null });
       }
 
       if (url.pathname === "/api/agent" && request.method === "POST") {
@@ -509,7 +554,8 @@ const app = {
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined });
         const started = Date.now();
         const out = await runAgent({ llm, rec, payments });
-        return json({ ...out, ms: Date.now() - started });
+        const saved = out.recommendation && out.grounded ? await saveRecommendation(env, out.recommendation, "budget agent") : null;
+        return json({ ...out, rec_id: saved?.id || null, ms: Date.now() - started });
       }
 
       if (url.pathname === "/mcp") {

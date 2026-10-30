@@ -1,5 +1,6 @@
 // The budget agent: Claude reads the reconciliation through tools and proposes changes. Code computed every number;
 // the agent may only quote them. A gate rejects ungrounded numbers or evidence ids, allows one repair, then flags.
+import { adName } from "../web/src/names.js";
 import { dollars, quotableNumbers, ungroundedNumbers, possibleDuplicates } from "./ledger.js";
 import { checkCall, validate } from "./schema.js";
 
@@ -13,6 +14,8 @@ Rules:
 - possible_duplicates lists payments that may be the same purchase twice. Those with held: true are already held out of paid_orders and revenue (held_as_possible_duplicate); held: false means the first of the pair was refunded, so this one counts. If an ad has one held, say so: if it is a real second purchase, that ad has one more paid order.
 - Prefer "keep and gather more data" over a confident change you cannot support.
 - Write for the shop owner in plain words ("cost per paid order", "spend with no paid order"), never field names such as spend_usd or paid_revenue_per_dollar.
+- In the headline, reasons and caveats call an ad by its name (the "name" field, e.g. "Holiday camp · static"), never its key; the key goes only in "ad" and in evidence.
+- Paid revenue is already net of refunds; never suggest a refund may not be taken out. Paid revenue minus ad spend is not profit (product cost is unknown): never call it profit. Write money as $118.40.
 - Finish by calling submit_recommendation once.`;
 
 export const TOOLS = [
@@ -44,7 +47,7 @@ export function reconciliationView(rec, payments = []) {
   return {
     totals: { leads: rec.totals.leads, paid_orders: rec.totals.paid, fully_refunded: rec.totals.refunded, held_as_possible_duplicate: rec.totals.held, spend_usd: dollars(rec.totals.spend_cents), paid_revenue_usd: dollars(rec.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: dollars(rec.totals.spend_without_paid_cents), paid_revenue_minus_ad_spend_usd: dollars(rec.totals.net_cents) },
     ads: rec.ads.map((r) => ({
-      ad: r.ad, spend_usd: dollars(r.spend_cents), leads: r.leads, paid_orders: r.paid, fully_refunded: r.refunded, held_as_possible_duplicate: r.held, paid_revenue_usd: dollars(r.revenue_cents),
+      ad: r.ad, name: adName(r.ad), spend_usd: dollars(r.spend_cents), leads: r.leads, paid_orders: r.paid, fully_refunded: r.refunded, held_as_possible_duplicate: r.held, paid_revenue_usd: dollars(r.revenue_cents),
       cost_per_paid_order_usd: r.cost_per_paid_cents === null ? "none paid" : dollars(r.cost_per_paid_cents),
       lead_to_paid: r.lead_to_paid === null ? "no leads" : Math.round(r.lead_to_paid * 100) + "%", paid_revenue_per_dollar: r.roas === null ? "no spend" : r.roas.toFixed(2),
       paid_revenue_minus_ad_spend_usd: dollars(r.net_cents),
@@ -68,9 +71,9 @@ export function checkRecommendation(rec, payments, out) {
   const extra = [3, ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00"]), ...possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => d.seconds)];
   const texts = [out.headline, out.caveats, ...(out.actions || []).map((a) => a.reason)];
   for (const t of texts) for (const n of ungroundedNumbers(t, allowed, extra)) problems.push(`Number "${n}" is not in the tool results.`);
-  // the owner reads this: tool field names (spend_usd, paid_revenue_per_dollar) must become plain words; ad keys may stay
-  const fields = new Set([...texts.join(" ").matchAll(/\b[a-z]+(?:_[a-z]+)+\b/g)].map((m) => m[0]).filter((w) => !ads.has(w)));
-  for (const f of fields) problems.push(`"${f}" is a field name; write it in plain words.`);
+  // the owner reads this: tool field names (spend_usd, paid_revenue_per_dollar) must become plain words, ad keys the ad's name
+  const fields = new Set([...texts.join(" ").matchAll(/\b[a-z]+(?:_[a-z]+)+\b/g)].map((m) => m[0]));
+  for (const f of fields) problems.push(ads.has(f) ? `"${f}" is an ad key; call the ad "${adName(f)}".` : `"${f}" is a field name; write it in plain words.`);
   for (const a of out.actions || []) {
     if (!ads.has(a.ad)) problems.push(`Ad "${a.ad}" is not in the reconciliation.`);
     for (const e of a.evidence || []) if (!(e.startsWith("row:") ? ads.has(e.slice(4)) : ids.has(e))) problems.push(`Evidence "${e}" does not exist.`);

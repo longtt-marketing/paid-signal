@@ -153,10 +153,20 @@ test("send agent: a toolkit error is reported as not sent", async () => {
 
 test("budget split by paid orders: shares sum to the budget, every ad keeps at least 10%, the best payer gets the most", async () => {
   const { proposeSplit } = await import("../src/ledger.js");
-  const out = proposeSplit([{ ad: "guide", spend: 118.4, paid: 1 }, { ad: "trial", spend: 96.2, paid: 2 }, { ad: "carousel", spend: 71.9, paid: 2 }, { ad: "camp", spend: 40, paid: 1 }], 326.5);
+  const out = proposeSplit([{ ad: "guide", spend: 118.4, paid: 3 }, { ad: "trial", spend: 96.2, paid: 4 }, { ad: "carousel", spend: 71.9, paid: 6 }, { ad: "camp", spend: 40, paid: 3 }], 326.5);
   assert.ok(Math.abs(out.reduce((n, x) => n + x.budget, 0) - 326.5) < 0.05);
   assert.ok(out.every((x) => x.share >= 0.1));
   assert.equal(out.sort((a, b) => b.share - a.share)[0].ad, "carousel");
+});
+
+test("budget split: an ad with fewer than 3 paid orders keeps its share; with fewer than two such ads nothing moves", async () => {
+  const { proposeSplit } = await import("../src/ledger.js");
+  const demo = proposeSplit([{ ad: "guide", spend: 118.4, paid: 1 }, { ad: "trial", spend: 96.2, paid: 2 }, { ad: "carousel", spend: 71.9, paid: 2 }, { ad: "camp", spend: 40, paid: 1 }], 326.5);
+  assert.deepEqual(demo.map((x) => x.budget), [118.4, 96.2, 71.9, 40]);
+  assert.match(demo[3].reason, /fewer than 3/);
+  const mixed = proposeSplit([{ ad: "a", spend: 100, paid: 1 }, { ad: "b", spend: 100, paid: 3 }, { ad: "c", spend: 100, paid: 9 }], 300);
+  assert.equal(mixed[0].budget, 100); // kept
+  assert.ok(Math.abs(mixed[1].budget + mixed[2].budget - 200) < 0.05 && mixed[2].budget > mixed[1].budget);
 });
 
 test("Meta: no made-up click time; an invoice payment is matched on the lead's hashed email, or held if there is nothing to match", async () => {
@@ -178,4 +188,11 @@ test("each ad shows paid revenue minus its spend, refunds out, and the agent may
   assert.equal(rec.totals.net_cents, -2405);
   const ok = quotableNumbers(rec);
   assert.ok(ok.has("50.00") && ok.has("25.95") && ok.has("24.05"));
+});
+
+test("gate: an ad key in text the owner reads is refused and the ad's name is suggested", () => {
+  const rec = reconcile([{ ad: "free_guide", spend_cents: 11840, leads: 31 }], [pay({ ad: "free_guide" })]);
+  const problems = checkRecommendation(rec, [pay({ ad: "free_guide" })], { headline: "Cut free_guide.", caveats: "", actions: [{ ad: "free_guide", change: "reduce", reason: "Free guide · lead form brings leads that rarely pay.", evidence: ["row:free_guide"] }] });
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /Free guide · lead form/);
 });

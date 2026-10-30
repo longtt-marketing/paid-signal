@@ -111,16 +111,26 @@ export function ungroundedNumbers(text, allowed, extra = []) {
 
 /**
  * Next period's budget split by PayPal-confirmed paid orders per dollar (with a small prior so one order is not certainty),
- * keeping at least `floor` of the budget on every ad so a slow ad still gets measured. The same rule the budget simulation
- * tests against splitting by leads (scripts/eval-budget-sim.mjs).
- * @param {Array<{ ad: string, spend: number, paid: number }>} rows
+ * keeping at least `floor` of the budget on every ad so a slow ad still gets measured. An ad with fewer than `minPaid` paid
+ * orders keeps its current share: one or two orders are not evidence enough to move money. Only the budget of ads that
+ * have enough evidence moves, between those ads. The same rule the budget simulation tests (scripts/eval-budget-sim.mjs).
+ * @param {Array<{ ad: string, spend: number, paid: number, share?: number }>} rows  share: current share, else spend / total
  * @param {number} budget
  */
-export function proposeSplit(rows, budget, floor = 0.1) {
-  const score = rows.map((r) => (r.paid + 0.5) / (r.spend + 10));
+export function proposeSplit(rows, budget, floor = 0.1, minPaid = 3) {
+  const total = rows.reduce((n, r) => n + r.spend, 0) || 1;
+  const now = rows.map((r) => (r.share ?? r.spend / total));
+  const ready = rows.map((r) => r.paid >= minPaid);
+  const n = ready.filter(Boolean).length;
+  const pool = now.reduce((a, s, i) => a + (ready[i] ? s : 0), 0);
+  const score = rows.map((r, i) => (ready[i] ? (r.paid + 0.5) / (r.spend + 10) : 0));
   const sum = score.reduce((a, b) => a + b, 0) || 1;
-  return rows.map((r, i) => ({ ad: r.ad, share: floor + (1 - floor * rows.length) * (score[i] / sum) }))
-    .map((x) => ({ ...x, budget: Math.round(budget * x.share * 100) / 100 }));
+  const movable = n >= 2 && pool - floor * n > 0;
+  return rows.map((r, i) => ({
+    ad: r.ad,
+    share: movable && ready[i] ? floor + (pool - floor * n) * (score[i] / sum) : now[i],
+    reason: !ready[i] ? `kept: ${r.paid} paid order${r.paid === 1 ? "" : "s"}, fewer than ${minPaid}` : movable ? "moved by paid orders per dollar" : `kept: fewer than 2 ads have ${minPaid}+ paid orders`,
+  })).map((x) => ({ ...x, budget: Math.round(budget * x.share * 100) / 100 }));
 }
 
 /** Two live captures from the same payer for the same ad within `windowMs` look like a double click at checkout. */

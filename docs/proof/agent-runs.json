@@ -1,7 +1,7 @@
 {
  "date": "2026-10-30",
  "model": "claude-sonnet-5-5",
- "payments": 8,
+ "payments": 9,
  "summary": {
   "runs": 10,
   "first_pass": 9,
@@ -17,7 +17,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.437
+   "seconds": 13.601
   },
   {
    "run": 2,
@@ -27,17 +27,20 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.272
+   "seconds": 14.18
   },
   {
    "run": 3,
    "grounded": true,
-   "first_pass": true,
+   "first_pass": false,
    "submissions": [
+    1,
     0
    ],
-   "rejected_for": [],
-   "seconds": 14.211
+   "rejected_for": [
+    "\"paid_revenue_minus_ad_spend\" is a field name; write it in plain words."
+   ],
+   "seconds": 21.545
   },
   {
    "run": 4,
@@ -47,7 +50,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 14.409
+   "seconds": 15.887
   },
   {
    "run": 5,
@@ -57,7 +60,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 14.804
+   "seconds": 17.105
   },
   {
    "run": 6,
@@ -67,7 +70,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.65
+   "seconds": 13.405
   },
   {
    "run": 7,
@@ -77,7 +80,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.522
+   "seconds": 14.075
   },
   {
    "run": 8,
@@ -87,7 +90,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 15.112
+   "seconds": 12.617
   },
   {
    "run": 9,
@@ -97,20 +100,17 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.687
+   "seconds": 13.872
   },
   {
    "run": 10,
    "grounded": true,
-   "first_pass": false,
+   "first_pass": true,
    "submissions": [
-    1,
     0
    ],
-   "rejected_for": [
-    "\"lead_to_paid\" is a field name; write it in plain words."
-   ],
-   "seconds": 19.738
+   "rejected_for": [],
+   "seconds": 13.558
   }
  ]
 }

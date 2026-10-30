@@ -6,39 +6,68 @@
  "runs": 2000,
  "weekly_budget": 326.5,
  "order_value": 47.5,
- "truth": [
+ "evidence": "6 paid orders across 4 ads; each run draws every ad's true paid rate from Beta(paid+1, leads-paid+1), so the range is wide on purpose",
+ "observed_week": {
+  "spend": 326.5,
+  "paid_orders": 6,
+  "revenue": 285,
+  "revenue_minus_ad_spend": -41.5
+ },
+ "observed": [
   {
    "ad": "trial_video",
    "cost_per_lead": 6.87,
-   "lead_to_paid": 0.167
+   "leads": 14,
+   "paid": 2
   },
   {
    "ad": "free_guide",
    "cost_per_lead": 3.82,
-   "lead_to_paid": 0.047
+   "leads": 31,
+   "paid": 1
   },
   {
    "ad": "parent_carousel",
    "cost_per_lead": 6.54,
-   "lead_to_paid": 0.208
+   "leads": 11,
+   "paid": 2
   },
   {
    "ad": "holiday_static",
    "cost_per_lead": 6.67,
-   "lead_to_paid": 0.214
+   "leads": 6,
+   "paid": 1
   }
  ],
+ "keep_split": {
+  "paid_orders": 69.4,
+  "revenue_minus_ad_spend": {
+   "mean": 685,
+   "p10": -475,
+   "p90": 1900
+  }
+ },
  "by_leads": {
-  "paid_orders": 64.2,
-  "revenue": 3050,
-  "profit": 438
+  "paid_orders": 72.8,
+  "revenue_minus_ad_spend": {
+   "mean": 847,
+   "p10": -379,
+   "p90": 2233
+  }
  },
  "by_paid_orders": {
-  "paid_orders": 69.5,
-  "revenue": 3302,
-  "profit": 690
+  "paid_orders": 79.9,
+  "revenue_minus_ad_spend": {
+   "mean": 1181,
+   "p10": -284,
+   "p90": 2708
+  }
  },
- "extra_revenue_over_8_weeks": 252,
- "paid_orders_more_in_runs": "1434 of 2000",
- "ties": 45
+ "paid_minus_leads": {
+  "mean": 334,
+  "p10": -427,
+  "p90": 1187
+ },
+ "paid_orders_beat_leads_in": "1365 of 2000",
+ "paid_orders_beat_keeping_in": "1567 of 2000"
 }

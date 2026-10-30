@@ -69,6 +69,14 @@ export default function App() {
     } catch (e) { setError(e.message); }
   }, []);
   useEffect(() => { fetch("/data/demo-ads.csv").then((r) => r.text()).then((t) => { setCsv(t); load(t); }); }, [load]);
+  // the last checked recommendation and the decisions on it come back after a reload
+  useEffect(() => {
+    fetch("/api/recommendation").then((r) => r.json()).then(({ latest, decisions: ds }) => {
+      if (!latest) return;
+      setAgent((a) => (a.status === "idle" ? { status: "done", grounded: true, recommendation: latest.recommendation, source: latest.source, rec_id: latest.id, at: latest.at } : a));
+      setDecisions((s) => (Object.keys(s).length ? s : Object.fromEntries(ds.filter((d) => d.index != null).map((d) => [d.index, { verdict: d.verdict, id: d.id, at: d.at }]))));
+    }).catch(() => {});
+  }, []);
   // webhooks first; this asks PayPal about sent invoices too, since the sandbox does not always emit INVOICING.INVOICE.PAID
   const syncInvoices = useCallback(async () => { setSyncNote(""); try { const d = await api("/api/invoices/sync", {}); if (d.paid && csvRef.current) load(csvRef.current); } catch (e) { setSyncNote(e.message); } loadInvoices(); }, [load, loadInvoices]);
   useEffect(() => { syncInvoices(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -101,6 +109,13 @@ export default function App() {
 
   // the revenue agent decides who is ready to pay; code prices it; the Agent Toolkit drafts it; nothing is sent here
   const [revenue, setRevenue] = useState({ status: "idle" });
+  const [chase, setChase] = useState({ status: "idle" });
+  // sent but unpaid: the chase agent reads each with PayPal's Agent Toolkit, picks whom to remind and writes the note
+  const askChase = async () => {
+    setChase({ status: "running" });
+    try { const d = await api("/api/agent/chase", {}); setChase({ status: "done", ...d }); loadInvoices(); }
+    catch (e) { setChase({ status: "error", error: e.message }); }
+  };
   const addDrafts = (drafts = []) => setInvoices((cur) => [...drafts.filter((d) => d.id && !cur.some((c) => c.id === d.id)), ...cur]);
   const askRevenue = async () => {
     setRevenue({ status: "running" }); scrollToId("approvals");
@@ -142,7 +157,7 @@ export default function App() {
   const actions = agent.recommendation?.actions || [];
   const decide = async (i, verdict) => {
     const a = actions[i];
-    try { const d = await api("/api/decisions", { ad: a.ad, change: a.change, verdict, reason: a.reason, evidence: a.evidence }); setDecisions((s) => ({ ...s, [i]: { verdict, id: d.id, at: d.at } })); }
+    try { const d = await api("/api/decisions", { ad: a.ad, change: a.change, verdict, reason: a.reason, evidence: a.evidence, rec_id: agent.rec_id, index: i }); setDecisions((s) => ({ ...s, [i]: { verdict, id: d.id, at: d.at } })); }
     catch (e) { flash(e.message); }
   };
 
@@ -213,7 +228,7 @@ export default function App() {
           </div>
           <div className="hero-bars">
             <div className="hb-head"><b>From the ad report, through PayPal, back to Meta</b></div>
-            {state ? <FlowChart ads={ads} invoices={invoices} payments={state.payments} events={state.meta?.events} worst={worst} /> : <p className="ghost">Loading the ledger…</p>}
+            {state ? <FlowChart ads={ads} payments={state.payments} sends={state.metaSends} held={(state.duplicates || []).map((d) => d.capture_id)} worst={worst} /> : <p className="ghost">Loading the ledger…</p>}
             <div className="legend"><span><i className="l" />what the ads report</span><span><i className="p" />what PayPal confirms</span><span><i className="m" />what Meta learns</span></div>
           </div>
         </section>
@@ -221,8 +236,8 @@ export default function App() {
 
         <section className="loop" aria-label="Try the loop">
           <article><span className="step">1</span><b>Pay from an ad click</b><p>Open an ad link and pay in the PayPal sandbox. The click rides in the order.</p><a className="btn" href={adLink("trial_video", "fb")}>Open an ad link</a></article>
-          <article><span className="step">2</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button></article>
-          <article><span className="step">3</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
+          <article><span className="step">2</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
+          <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button></article>
           <article><span className="step">4</span><b>Teach the ad platform</b><p>Paid orders become Meta and Google conversions. Refunds pull them back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
         </section>
 
@@ -235,10 +250,10 @@ export default function App() {
                   <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Paid revenue after refunds, minus this ad's spend. Product cost is not included.">After ad spend</th><th>Per paid order</th></tr></thead>
                   <tbody>
                     {byCost.map((a) => (
-                      <tr key={a.ad}><td>{adName(a.ad)}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td>{a.paid}{a.held > 0 && <small className="held"> +{a.held} held</small>}</td><td>{usd(a.revenue_cents)}</td><td className={a.net_cents < 0 ? "neg" : "pos"}>{signed(a.net_cents)}</td>
+                      <tr key={a.ad}><td>{adName(a.ad)}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td>{a.paid}{a.held > 0 && <small className="held"> +{a.held} held</small>}</td><td>{usd(a.revenue_cents)}</td><td className={a.net_cents < 0 ? "neg" : a.net_cents > 0 ? "pos" : ""}>{signed(a.net_cents)}</td>
                         <td>{a.cost_per_paid_cents == null ? <span className="pill warn">no paid order</span> : <span className={`pill ${a.ad === best ? "good" : a.ad === worst ? "warn" : ""}`}>{usd(a.cost_per_paid_cents)}</span>}</td></tr>
                     ))}
-                    {t && <tr className="total"><td>Total</td><td>{usd(t.spend_cents)}</td><td>{t.leads}</td><td>{t.paid}</td><td>{usd(t.revenue_cents)}</td><td className={t.net_cents < 0 ? "neg" : "pos"}>{signed(t.net_cents)}</td><td>{costPerPaid}</td></tr>}
+                    {t && <tr className="total"><td>Total</td><td>{usd(t.spend_cents)}</td><td>{t.leads}</td><td>{t.paid}</td><td>{usd(t.revenue_cents)}</td><td className={t.net_cents < 0 ? "neg" : t.net_cents > 0 ? "pos" : ""}>{signed(t.net_cents)}</td><td>{costPerPaid}</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -316,12 +331,15 @@ export default function App() {
                 </>}
               </div>
               <div id="invoices">
-                <div className="sub-head"><b>Invoices</b><button className="mini" onClick={syncInvoices}>Refresh</button></div>
+                <div className="sub-head"><b>Invoices</b><span className="row">{invoices.some((i) => i.status === "SENT" || i.status === "UNPAID") && <button className="mini" disabled={chase.status === "running"} onClick={askChase}>{chase.status === "running" ? "Chasing…" : "Chase unpaid"}</button>}<button className="mini" onClick={syncInvoices}>Refresh</button></span></div>
+                {chase.status === "error" && <p className="err">{chase.error}</p>}
+                {chase.status === "done" && <div className="dec ok"><b>Chase agent: {chase.reminded.length} reminded{chase.eligible != null ? ` of ${chase.eligible} waiting` : ""}</b><small>{chase.summary}</small>
+                  <small className="trace">{chase.trace.map((s) => s.refused ? `${s.tool} refused` : s.tool).join(" → ")}{chase.ms ? ` · ${(chase.ms / 1000).toFixed(1)} s` : ""} · reminders sent with PayPal's Agent Toolkit</small></div>}
                 {syncNote && <p className="note" role="status">Could not re-check sent invoices with PayPal: {syncNote}</p>}
                 {invoices.length === 0 && <p className="muted">No drafts yet. Open the Studio assistant and choose "Invoice warm leads".</p>}
                 {invoices.map((i) => (
                   <div key={i.id} className={`cap inv ${i.sent_by ? "agent" : ""}`}>
-                    <span><b>{i.lead.replace(" (fictional)", "")}</b><small>{short(i.ad)} · {money(i.amount)}{i.lines?.length > 1 ? ` · ${i.lines.length} children, sibling 20% off` : ""}{i.sent_by ? " · sent by the agent" : i.status === "DRAFT" ? (i.drafted_by ? " · drafted by the agent" : " · draft") : ""}</small>{sending[i.id] && <small className="agent-say" role="status">{sending[i.id]}</small>}</span>
+                    <span><b>{i.lead.replace(" (fictional)", "")}</b><small>{short(i.ad)} · {money(i.amount)}{i.lines?.length > 1 ? ` · ${i.lines.length} children, sibling 20% off` : ""}{i.sent_by ? " · sent by the agent" : i.status === "DRAFT" ? (i.drafted_by ? " · drafted by the agent" : " · draft") : ""}{i.reminded_at && i.status !== "PAID" ? ` · reminded ${clock(i.reminded_at)}` : ""}</small>{i.reminder && i.status !== "PAID" && <small className="agent-say" title={i.reminder.subject}>“{i.reminder.note}”</small>}{sending[i.id] && <small className="agent-say" role="status">{sending[i.id]}</small>}</span>
                     {i.status === "DRAFT" ? <button className="mini go" disabled={sending[i.id] === "Agent checking and sending…"} onClick={() => send(i.id)}>Approve</button>
                       : i.status === "PAID" ? <span className="ok">Paid</span>
                       : i.pay_url ? <a href={i.pay_url} target="_blank" rel="noopener noreferrer">Sent ↗</a> : <span className="muted">{i.status}</span>}

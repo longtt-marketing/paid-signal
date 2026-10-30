@@ -2,12 +2,13 @@
 // name into otherwise grounded recommendations and count how many the gate catches; also feed it grounded
 // recommendations built only from tool numbers and count false rejections. Seeded, so the result is reproducible.
 // Usage: node scripts/eval-gate.mjs > docs/proof/gate.json
+import { adName } from "../web/src/names.js";
 import { readFileSync } from "node:fs";
 import { parseAdCsv, reconcile, quotableNumbers } from "../src/ledger.js";
 import { checkRecommendation } from "../src/agent.js";
 
 const BASE = "https://paid-signal.thelongmarketing.workers.dev";
-const { payments } = await (await fetch(`${BASE}/api/ledger`)).json();
+const payments = (await (await fetch(`${BASE}/api/ledger`)).json()).payments.map((p) => ({ ...p, payer_email_sha256: p.payer_key })); // the public ledger carries a salted payer key, not the email hash
 const rec = reconcile(parseAdCsv(readFileSync(new URL("../public/data/demo-ads.csv", import.meta.url), "utf8")).rows, payments);
 const allowed = [...quotableNumbers(rec)];
 const ads = rec.ads.map((a) => a.ad);
@@ -16,7 +17,7 @@ let seed = 7; const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) 
 const pick = (xs) => xs[Math.floor(rnd() * xs.length)];
 const grounded = () => {
   const ad = pick(ads); const a = rec.ads.find((r) => r.ad === ad);
-  return { headline: `${ad} brought ${a.leads} leads and ${a.paid} paid orders on ${(a.spend_cents / 100).toFixed(2)} spend.`,
+  return { headline: `${adName(ad)} brought ${a.leads} leads and ${a.paid} paid orders on ${(a.spend_cents / 100).toFixed(2)} spend.`,
     actions: [{ ad, change: pick(["reduce", "keep", "increase"]), reason: `It has ${pick(allowed)} on record; the sample is small.`, evidence: [`row:${ad}`] }], caveats: "" };
 };
 const stamp = [...new Set(payments.flatMap((p) => String(p.captured_at).match(/\d+/g) || []).map((d) => String(Number(d))))].filter((d) => !allowed.includes(d) && !payments.some((p) => [p.amount, p.refunded_amount].includes(d)));
@@ -28,6 +29,7 @@ const plants = {
   fake_evidence_id: (r) => ({ ...r, actions: [{ ...r.actions[0], evidence: [`${Math.floor(rnd() * 9e15).toString(36).toUpperCase().padStart(17, "X")}`] }] }),
   unknown_ad: (r) => ({ ...r, actions: [{ ...r.actions[0], ad: `ad_${Math.floor(rnd() * 1000)}` }] }),
   raw_field_name: (r) => ({ ...r, headline: `${r.headline} paid_revenue_per_dollar is low.` }),
+  ad_key_instead_of_name: (r) => ({ ...r, actions: [{ ...r.actions[0], reason: `${r.actions[0].reason} Watch ${r.actions[0].ad} closely.` }] }),
 };
 const N = 100, out = { date: new Date().toISOString().slice(0, 10), payments: payments.length, planted: {}, grounded: {} };
 for (const [name, plant] of Object.entries(plants)) {
