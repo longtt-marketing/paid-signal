@@ -1,0 +1,44 @@
+{
+ "date": "2026-10-30",
+ "kind": "simulation",
+ "source": "demo ad export + live PayPal sandbox ledger",
+ "weeks": 8,
+ "runs": 2000,
+ "weekly_budget": 326.5,
+ "order_value": 47.5,
+ "truth": [
+  {
+   "ad": "trial_video",
+   "cost_per_lead": 6.87,
+   "lead_to_paid": 0.167
+  },
+  {
+   "ad": "free_guide",
+   "cost_per_lead": 3.82,
+   "lead_to_paid": 0.047
+  },
+  {
+   "ad": "parent_carousel",
+   "cost_per_lead": 6.54,
+   "lead_to_paid": 0.208
+  },
+  {
+   "ad": "holiday_static",
+   "cost_per_lead": 6.67,
+   "lead_to_paid": 0.214
+  }
+ ],
+ "by_leads": {
+  "paid_orders": 64.2,
+  "revenue": 3050,
+  "profit": 438
+ },
+ "by_paid_orders": {
+  "paid_orders": 69.5,
+  "revenue": 3302,
+  "profit": 690
+ },
+ "extra_revenue_over_8_weeks": 252,
+ "paid_orders_more_in_runs": "1434 of 2000",
+ "ties": 45
+}

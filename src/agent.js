@@ -1,6 +1,7 @@
 // The budget agent: Claude reads the reconciliation through tools and proposes changes. Code computed every number;
 // the agent may only quote them. A gate rejects ungrounded numbers or evidence ids, allows one repair, then flags.
 import { dollars, quotableNumbers, ungroundedNumbers, possibleDuplicates } from "./ledger.js";
+import { checkCall, validate } from "./schema.js";
 
 export const SYSTEM = `You are a performance-marketing analyst for a small business that sells through PayPal.
 Ad platforms report leads; PayPal reports who actually paid. Your job: find where ad spend is not producing paid orders and propose budget changes.
@@ -55,6 +56,8 @@ export function reconciliationView(rec, payments = []) {
 
 /** Checks a submitted recommendation against the reconciliation; returns a list of problems (empty = grounded). */
 export function checkRecommendation(rec, payments, out) {
+  const shape = validate(out, TOOLS.find((t) => t.name === "submit_recommendation").input_schema, "recommendation");
+  if (shape.length) return shape; // the AG Studio budget agent submits here too, so its payload gets the same schema check
   const problems = [];
   const allowed = quotableNumbers(rec);
   const ads = new Set(rec.ads.map((r) => r.ad));
@@ -85,6 +88,9 @@ export async function runAgent({ llm, rec, payments, maxTurns = 8 }) {
     if (!calls.length) { messages.push({ role: "user", content: "Call submit_recommendation to finish." }); continue; }
     const results = [];
     for (const c of calls) {
+      // every call is checked against the tool's declared JSON Schema before anything runs
+      const bad = checkCall(TOOLS, c);
+      if (bad.length) { trace.push({ tool: c.name, refused: bad.slice(0, 4) }); results.push({ id: c.id, content: `Refused by code: ${bad.join(" ")}` }); continue; }
       if (c.name === "read_reconciliation") { trace.push({ tool: c.name }); results.push({ id: c.id, content: JSON.stringify(reconciliationView(rec, payments)) }); }
       else if (c.name === "read_captures") {
         const list = payments.filter((p) => p.ad === c.input.ad).map((p) => ({ capture_id: p.capture_id, amount_usd: p.amount, status: p.status, refunded_usd: p.refunded_amount || "0.00", captured_at: p.captured_at }));

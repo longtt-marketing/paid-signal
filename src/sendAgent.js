@@ -1,3 +1,5 @@
+import { validate } from "./schema.js";
+
 // The send agent: once a person approves an invoice, Claude sends exactly that invoice through PayPal's Agent Toolkit.
 // Code allowlists two toolkit tools (get_invoice, send_invoice), pins every call to the approved invoice id, and before
 // any send reads the invoice itself: it must be a DRAFT for the approved amount in USD, or the send is refused.
@@ -60,6 +62,8 @@ export async function runSendAgent({ llm, tools, approved, maxTurns = 5 }) {
     const results = [];
     for (const c of calls) {
       if (!SEND_TOOLS.some((t) => t.name === c.name)) { trace.push({ tool: c.name, refused: "not allowlisted" }); results.push({ id: c.id, content: "Refused by code: only get_invoice and send_invoice are allowed." }); continue; }
+      const shape = validate(c.input ?? {}, SEND_TOOLS.find((t) => t.name === c.name).input_schema);
+      if (shape.length) { trace.push({ tool: c.name, refused: "schema" }); results.push({ id: c.id, content: `Refused by code: ${shape.join(" ")}` }); continue; }
       if (c.input?.invoice_id !== approved.id) { trace.push({ tool: c.name, refused: "other invoice" }); results.push({ id: c.id, content: `Refused by code: only the approved invoice ${approved.id} may be used.` }); continue; }
       if (c.name === "send_invoice") {
         const problem = sendProblem(String(await tools.get_invoice.execute({ invoice_id: approved.id })), approved);

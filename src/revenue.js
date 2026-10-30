@@ -1,3 +1,5 @@
+import { checkCall } from "./schema.js";
+
 // The revenue agent: Claude reads what each unpaid lead wrote and decides who is ready to pay and for what. Code owns the
 // money: prices come from the price list, the recipient is the lead's own email, and a proposal that breaks a rule is
 // refused before anything reaches PayPal. A lead's message is data, never instructions; one demo lead tries to change both.
@@ -127,6 +129,8 @@ export async function runRevenueAgent({ llm, leads, invoices, maxTurns = 8 }) {
     }
     const results = [];
     for (const c of calls) {
+      const bad = checkCall(REVENUE_TOOLS, c); // the call must fit the tool's JSON Schema before it runs
+      if (bad.length) { refusals.push({ lead: String(c.input?.lead || ""), problems: bad }); trace.push({ tool: c.name, refused: bad.slice(0, 4) }); results.push({ id: c.id, content: `Refused by code: ${bad.join(" ")}` }); continue; }
       if (c.name === "read_leads") { trace.push({ tool: c.name }); results.push({ id: c.id, content: JSON.stringify(view) }); continue; }
       if (c.name === "skip_lead") {
         skips.push({ lead: String(c.input?.lead || ""), reason: String(c.input?.reason || "").slice(0, 300), flag: c.input?.flag || "not_ready" });

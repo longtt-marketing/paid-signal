@@ -37,11 +37,12 @@ Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
 
 No login is needed for any of this; only paying in the demo shop needs the sandbox buyer from the testing notes.
 
-1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): 62 leads claimed by the ads, the paid orders PayPal confirms, per ad.
-2. Open the Studio assistant and choose **Review ad budgets**: the Budget agent (a custom Studio agent on Claude) passes the evidence gate, its change lands in **Approvals**, and it asks Studio's page agent to add the evidence chart.
-3. Under **Invoices**, press **Approve** on a draft: the send agent (Claude + PayPal Agent Toolkit) checks it and sends it.
-4. Open [Proof](https://paid-signal.thelongmarketing.workers.dev/proof.html): held-out evals (the revenue agent invoiced 24 of 24 bookings correctly and 0 of 16 prompt injections), the evidence gate under attack (600 of 600 planted errors caught, 0 of 500 false rejections), live PayPal and Meta checks. [Test scenarios](https://paid-signal.thelongmarketing.workers.dev/scenarios.html) lists nine payment edge cases.
-5. Point any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (read-only tools; see [MCP server](#mcp-server)).
+1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): the ads report 62 leads, PayPal confirms 6 paid orders; the flow chart follows each ad from the ad report, through PayPal, back to Meta.
+2. Press **Ask the revenue agent**: Claude reads what each unpaid lead wrote and drafts PayPal invoices (Agent Toolkit) for the ones ready to pay; code sets every price; a lead whose message tries to rewrite the price and recipient is flagged, never invoiced.
+3. Under **Invoices**, press **Approve** on a draft: the send agent (Claude + PayPal Agent Toolkit) re-reads it in code and sends it.
+4. **Report · AG Studio** tab: open the assistant, choose **Review ad budgets**; a custom Studio agent on Claude submits through the evidence gate and its change lands in Approvals.
+5. [Proof](https://paid-signal.thelongmarketing.workers.dev/proof.html): held-out evals (24 of 24 bookings invoiced correctly, 0 of 16 prompt injections invoiced), the evidence gate under attack (600 of 600 caught), a budget simulation ($690 vs $438 profit), live PayPal and Meta checks.
+6. Any MCP client: `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
 
 ## Try it in three minutes
 
@@ -96,7 +97,7 @@ Studio's widget API so page filters and cross-filters apply to them.
 ## MCP server
 
 `POST /mcp` speaks the Model Context Protocol (streamable HTTP, JSON responses; `src/mcp.js`). Read-only tools:
-`read_paid_signal`, `list_unpaid_leads`, `list_payments`, `check_paypal_ledger`, the same numbers the dashboard shows.
+`read_paid_signal`, `get_ad_truth`, `propose_budget` (proposes, changes nothing), `list_unpaid_leads`, `list_payments`, `check_paypal_ledger`: the same numbers the dashboard shows.
 Claude used it through the Anthropic API's MCP connector: [`docs/proof/mcp-claude-run.md`](docs/proof/mcp-claude-run.md).
 For Claude Desktop: `npx mcp-remote https://paid-signal.thelongmarketing.workers.dev/mcp`.
 
@@ -127,7 +128,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 55 tests: money rules, gate, the three agents, MCP, AG Studio tool names
+npm test                              # 60 tests: money rules, gate, the three agents, schema checks, MCP, AG Studio tool names
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { adName } from "./names.js";
+import FlowChart from "./FlowChart.jsx";
 
 // AG Studio is the heaviest part of the page: it loads as its own chunk when scrolled near, or when asked for.
 const StudioPanel = lazy(() => import("./StudioPanel.jsx"));
@@ -146,7 +147,6 @@ export default function App() {
 
   const t = state?.reconciliation?.totals;
   const ads = state?.reconciliation?.ads || [];
-  const maxLeads = Math.max(1, ...ads.map((a) => a.leads));
   const dup = Object.fromEntries((state?.duplicates || []).map((d) => [d.capture_id, d.first]));
   const metaSent = Object.fromEntries((state?.metaSends || []).map((m) => [m.capture_id, m]));
   const lastMeta = [...(state?.metaSends || [])].filter((m) => m.ok && !m.backfill).sort((a, b) => String(b.at).localeCompare(String(a.at)))[0];
@@ -211,16 +211,9 @@ export default function App() {
             </div>}
           </div>
           <div className="hero-bars">
-            <div className="hb-head"><b>Per ad: leads vs paid</b></div>
-            {ads.map((a) => (
-              <div key={a.ad} className="hb-row">
-                <span>{short(a.ad)}</span>
-                <div className="hb-bars"><i className="l" style={{ width: `${(a.leads / maxLeads) * 100}%` }} /><i className="p" style={{ width: `${Math.max(2, (a.paid / maxLeads) * 100)}%` }} /></div>
-                <b className={a.ad === worst ? "warn" : ""}>{a.leads} → {a.paid}</b>
-              </div>
-            ))}
-            {!state && <p className="ghost">Loading the ledger…</p>}
-            <div className="legend"><span><i className="l" />leads</span><span><i className="p" />paid orders</span></div>
+            <div className="hb-head"><b>From the ad report, through PayPal, back to Meta</b></div>
+            {state ? <FlowChart ads={ads} invoices={invoices} payments={state.payments} events={state.meta?.events} worst={worst} /> : <p className="ghost">Loading the ledger…</p>}
+            <div className="legend"><span><i className="l" />what the ads report</span><span><i className="p" />what PayPal confirms</span><span><i className="m" />what Meta learns</span></div>
           </div>
         </section>
         {error && <p className="err" role="alert">{error}</p>}

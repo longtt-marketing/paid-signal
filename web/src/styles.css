@@ -56,7 +56,12 @@ button:disabled{opacity:.55;cursor:default}
 .hb-bars i.l{background:#3a4150}.hb-bars i.p{background:var(--go);animation-delay:.15s}
 @keyframes grow{from{transform:scaleX(0)}to{transform:none}}
 .legend{margin-top:auto;display:flex;gap:16px;font-size:12px;color:var(--night-mute)}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
-.legend i.l{background:#3a4150}.legend i.p{background:var(--go)}
+.legend i.l{background:#3a4150}.legend i.p{background:var(--go)}.legend i.m{background:#5b8def}
+.flow{margin:0}.flow svg{width:100%;height:auto;display:block;overflow:visible}
+.fl-n{font:700 20px var(--sans);fill:#fff}.fl-n.paid,.fl-n.sent{fill:var(--go)}.fl-l{font:500 10px var(--sans);fill:var(--night-mute)}
+.fl-bar{fill:#4a5263}.fl-bar.invoiced{fill:#8a7a52}.fl-bar.paid{fill:var(--go)}.fl-bar.sent{fill:#5b8def}.fl-bar.worst.leads{fill:#ffb35c}
+.fl-rib{fill:#4a5263;opacity:.35}.fl-rib.s1{fill:var(--go);opacity:.28}.fl-rib.s2{fill:#5b8def;opacity:.35}.fl-rib.worst.s0{fill:#ffb35c;opacity:.3}
+.fl-ad{font:600 11px var(--sans);fill:#d6d9e0}.fl-ad.worst{fill:#ffb35c}
 .ghost{margin:0;color:var(--night-mute);font-size:14px}
 .err{margin:0;color:#9b2c1d;font-size:14px;padding:10px 14px;border-radius:12px;background:#fdecea}
 

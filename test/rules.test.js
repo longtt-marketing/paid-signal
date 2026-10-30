@@ -150,3 +150,11 @@ test("send agent: a toolkit error is reported as not sent", async () => {
   const out = await runSendAgent({ llm: async () => turns[i++], tools, approved: { id: "INV2-OK", lead: "L", ad: "a", amount: "49.00" } });
   assert.equal(out.sent, false); assert.equal(out.trace[0].ok, false);
 });
+
+test("budget split by paid orders: shares sum to the budget, every ad keeps at least 10%, the best payer gets the most", async () => {
+  const { proposeSplit } = await import("../src/ledger.js");
+  const out = proposeSplit([{ ad: "guide", spend: 118.4, paid: 1 }, { ad: "trial", spend: 96.2, paid: 2 }, { ad: "carousel", spend: 71.9, paid: 2 }, { ad: "camp", spend: 40, paid: 1 }], 326.5);
+  assert.ok(Math.abs(out.reduce((n, x) => n + x.budget, 0) - 326.5) < 0.05);
+  assert.ok(out.every((x) => x.share >= 0.1));
+  assert.equal(out.sort((a, b) => b.share - a.share)[0].ad, "carousel");
+});

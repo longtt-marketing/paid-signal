@@ -3,7 +3,7 @@
 import { paypal } from "./paypal.js";
 import { ordersSdk } from "./paypalSdk.js";
 import { handleMcp } from "./mcp.js";
-import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates } from "./ledger.js";
+import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates, proposeSplit } from "./ledger.js";
 import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
 import { runSendAgent, SEND_SYSTEM, SEND_TOOLS } from "./sendAgent.js";
 import { parseCsv, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS } from "./revenue.js";
@@ -167,6 +167,19 @@ async function mcpTool(env, url, name, args) {
     const { payments, duplicates } = await get("/api/ledger");
     const dup = new Map(duplicates.map((d) => [d.capture_id, d.first]));
     return payments.map((p) => ({ capture_id: p.capture_id, ad: p.ad, source: p.source, amount: p.amount, refunded: p.refunded_amount, captured_at: p.captured_at, possible_duplicate_of: dup.get(p.capture_id) || null }));
+  }
+  if (name === "get_ad_truth" || name === "propose_budget") {
+    const csv = await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text();
+    const [{ reconciliation: r, meta }, ledger, { invoices }] = await Promise.all([get("/api/reconcile", { csv }), get("/api/ledger"), get("/api/invoices")]);
+    if (name === "propose_budget") {
+      const rows = r.ads.map((a) => ({ ad: a.ad, spend: a.spend_cents / 100, paid: a.paid }));
+      const budget = Number(args.budget_usd) > 0 ? Number(args.budget_usd) : rows.reduce((n, x) => n + x.spend, 0);
+      return { proposal: proposeSplit(rows, budget).map((x) => ({ ad: x.ad, now_usd: rows.find((y) => y.ad === x.ad).spend.toFixed(2), proposed_usd: x.budget.toFixed(2) })),
+        rule: "paid orders per dollar, at least 10% per ad", applied: false, how_to_apply: "A person approves budget changes in the Paid Signal dashboard; this tool changes nothing." };
+    }
+    const capAd = Object.fromEntries(ledger.payments.map((p) => [p.capture_id, p.ad]));
+    return r.ads.map((a) => ({ ad: a.ad, leads_reported: a.leads, invoiced: invoices.filter((i) => i.ad === a.ad && i.status !== "CANCELLED").length, paid_orders: a.paid,
+      held_as_duplicate: a.held, fully_refunded: a.refunded, meta_purchase_events: meta.events.filter((e) => capAd[String(e.event_id).replace("paypal:", "")] === a.ad).length }));
   }
   if (name === "check_paypal_ledger") return get("/api/paypal-check");
   throw new Error(`Unknown tool ${name}`);

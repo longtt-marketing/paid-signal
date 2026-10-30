@@ -64,6 +64,16 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     </div>
   </section>
 
+  <section aria-labelledby="money">
+    <h2 id="money">Does it make money? A simulation</h2>
+    <p class="sub">Same weekly budget ($326.50), 8 weeks, replayed 2,000 times. Each ad's cost per lead and lead-to-paid rate come from the demo ad export and its PayPal results. One way moves budget toward the most leads per dollar, which is what ad platforms optimise for; the other moves it toward the most PayPal-confirmed paid orders per dollar, which is what Paid Signal shows. Both keep at least 10% on every ad. A simulation, not a measurement; it reruns on a real shop's numbers with <code>node scripts/eval-budget-sim.mjs shop.csv</code>.</p>
+    <div class="grid">
+      <div class="stat"><b>$690</b><span>profit over 8 weeks when budget follows paid orders</span><small>69.5 paid orders on average.</small></div>
+      <div class="stat"><b class="bad">$438</b><span>profit when budget follows leads</span><small>64.2 paid orders: the cheapest leads pay least often.</small></div>
+      <div class="stat"><b>1,434 / 2,000</b><span>runs where following paid orders brought more paid orders</span><small>45 ties; the rest went the other way, because weekly results are noisy.</small></div>
+    </div>
+  </section>
+
   <section aria-labelledby="gate">
     <h2 id="gate">Evidence gate, under attack</h2>
     <p class="sub">The budget agent may only quote numbers the reconciliation produced. 100 recommendations per attack, each with one planted error, on the live ledger.</p>
@@ -93,13 +103,13 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section aria-labelledby="quality">
     <h2 id="quality">Tests and speed</h2>
     <div class="grid">
-      <div class="stat"><b>55</b><span>unit tests on money rules, the gate, the three agents, MCP and every AG Studio tool name</span><small>CI on every push.</small></div>
+      <div class="stat"><b>59</b><span>unit tests on money rules, the gate, the three agents, schema checks, MCP and every AG Studio tool name</span><small>CI on every push.</small></div>
       <div class="stat"><b>13 + 20</b><span>browser checks and Postman assertions against the live app</span><small>The browser checks run daily.</small></div>
       <div class="stat"><b>2.3 s</b><span>to a usable dashboard on a throttled phone (4G, 4x CPU)</span><small>From 18 s with one bundle; measured with Playwright on 29 Oct. A cold first visit can take longer.</small></div>
     </div>
   </section>
 
-  <p class="foot">Reproduce: <code>node scripts/eval-revenue.mjs 2</code>, <code>node scripts/eval-gate.mjs</code>, <code>node scripts/eval-agent.mjs 10</code>, <code>npm test</code>. Raw results: <a href="https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof">docs/proof</a>. The ad export and leads are fictional demo data; PayPal calls are real sandbox calls; Meta events go to a real Meta dataset as test events.</p>
+  <p class="foot">Reproduce: <code>node scripts/eval-budget-sim.mjs</code>, <code>node scripts/eval-revenue.mjs 2</code>, <code>node scripts/eval-gate.mjs</code>, <code>node scripts/eval-agent.mjs 10</code>, <code>npm test</code>. Raw results: <a href="https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof">docs/proof</a>. The ad export and leads are fictional demo data; PayPal calls are real sandbox calls; Meta events go to a real Meta dataset as test events.</p>
 </main>
 <script src="/proof.js" defer></script>
 </body>

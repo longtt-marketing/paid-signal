@@ -54,7 +54,10 @@ try {
   const init = await mcp({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "e2e", version: "1" } } });
   ok("MCP initialize", init.result?.serverInfo?.name === "paid-signal");
   const tools = await mcp({ jsonrpc: "2.0", id: 2, method: "tools/list" });
-  ok("MCP lists four tools", tools.result?.tools?.length === 4);
+  ok("MCP lists six read-only tools", tools.result?.tools?.length === 6 && tools.result.tools.every((t) => t.annotations?.readOnlyHint));
+  const prop = await mcp({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "propose_budget", arguments: {} } });
+  const proposal = JSON.parse(prop.result?.content?.[0]?.text || "{}");
+  ok("MCP propose_budget proposes and changes nothing", proposal.applied === false && proposal.proposal?.length === 4);
   const read = await mcp({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "read_paid_signal", arguments: {} } });
   const data = JSON.parse(read.result?.content?.[0]?.text || "{}");
   ok("MCP read_paid_signal returns 62 leads", data.totals?.leads === 62, `paid ${data.totals?.paid_orders}`);

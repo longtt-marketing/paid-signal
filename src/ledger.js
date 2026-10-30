@@ -106,6 +106,20 @@ export function ungroundedNumbers(text, allowed, extra = []) {
   return found.map((s) => s.replace(/[$,]/g, "")).filter((n) => !ok.has(n) && !ok.has(n.replace(/\.00$/, "")));
 }
 
+/**
+ * Next period's budget split by PayPal-confirmed paid orders per dollar (with a small prior so one order is not certainty),
+ * keeping at least `floor` of the budget on every ad so a slow ad still gets measured. The same rule the budget simulation
+ * tests against splitting by leads (scripts/eval-budget-sim.mjs).
+ * @param {Array<{ ad: string, spend: number, paid: number }>} rows
+ * @param {number} budget
+ */
+export function proposeSplit(rows, budget, floor = 0.1) {
+  const score = rows.map((r) => (r.paid + 0.5) / (r.spend + 10));
+  const sum = score.reduce((a, b) => a + b, 0) || 1;
+  return rows.map((r, i) => ({ ad: r.ad, share: floor + (1 - floor * rows.length) * (score[i] / sum) }))
+    .map((x) => ({ ...x, budget: Math.round(budget * x.share * 100) / 100 }));
+}
+
 /** Two live captures from the same payer for the same ad within `windowMs` look like a double click at checkout. */
 export function possibleDuplicates(payments, windowMs = 10 * 60 * 1000) {
   const at = (p) => Date.parse(p.captured_at);
