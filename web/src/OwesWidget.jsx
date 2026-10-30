@@ -3,11 +3,16 @@
 // Reads rows through the widget API, so page filters and cross-filters apply.
 import { useEffect, useState } from "react";
 
+// Studio does not pass a changed context down to custom widgets, so the panel announces new data and the widget reloads
+export const DATA_EVENT = "paid-signal:data";
+
 const pick = (row, field, i) => row[field?.key] ?? row[field?.id] ?? Object.values(row)[i];
 const usd = (n) => "$" + Number(n || 0).toFixed(2);
 
 export function OwesWidget({ dataMapping, widgetApi, context }) {
   const [rows, setRows] = useState([]);
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const on = () => setTick((t) => t + 1); addEventListener(DATA_EVENT, on); return () => removeEventListener(DATA_EVENT, on); }, []);
   const who = dataMapping?.who?.[0], status = dataMapping?.status?.[0], amount = dataMapping?.amount?.[0], days = dataMapping?.days?.[0], nudge = dataMapping?.nudge?.[0];
 
   useEffect(() => {
@@ -24,7 +29,7 @@ export function OwesWidget({ dataMapping, widgetApi, context }) {
       widgetApi.setDisplayState(out.length ? "displayed" : "noData");
     }).catch(() => live && widgetApi.setDisplayState("noData"));
     return () => { live = false; };
-  }, [who, status, amount, days, nudge, widgetApi, context?.dataVersion]);
+  }, [who, status, amount, days, nudge, widgetApi, context?.dataVersion, tick]);
 
   const out = rows.filter((r) => r.status !== "Paid"), paid = rows.filter((r) => r.status === "Paid");
   return (

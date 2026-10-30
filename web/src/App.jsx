@@ -57,7 +57,13 @@ export default function App() {
     const recent = (c) => Date.now() - Date.parse(c.sent_at || c.created_at) < 120000;
     const fresh = cur.filter((c) => !d.invoices.some((x) => x.id === c.id) && recent(c));
     // a send this page just made beats a listing that still says DRAFT
-    const merged = d.invoices.map((x) => { const c = cur.find((y) => y.id === x.id); return c && c.sent_at && !x.sent_at && recent(c) ? c : x; });
+    const merged = d.invoices.map((x) => {
+      const c = cur.find((y) => y.id === x.id);
+      if (c && c.sent_at && !x.sent_at && recent(c)) return c;
+      // the same for a reminder this page just saw the agent send
+      if (c && c.reminded_at && !x.reminded_at && Date.now() - Date.parse(c.reminded_at) < 120000) return { ...x, reminded_at: c.reminded_at, reminder: c.reminder };
+      return x;
+    });
     return [...fresh, ...merged].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   }); }).catch(() => {}), [pinStudio]);
   useEffect(() => { loadInvoices(); }, [loadInvoices]);
@@ -110,11 +116,16 @@ export default function App() {
   // the revenue agent decides who is ready to pay; code prices it; the Agent Toolkit drafts it; nothing is sent here
   const [revenue, setRevenue] = useState({ status: "idle" });
   const [chase, setChase] = useState({ status: "idle" });
+  // the chase agent's answer says whom it reminded; show that at once, before the KV listing catches up
+  const markReminded = useCallback((d) => {
+    const at = new Date().toISOString(), by = Object.fromEntries((d?.reminded || []).map((r) => [r.id, r]));
+    if (Object.keys(by).length) setInvoices((cur) => cur.map((i) => (by[i.id] ? { ...i, reminded_at: at, reminder: { subject: by[i.id].subject, note: by[i.id].note } } : i)));
+  }, []);
   const [studioPage, setStudioPage] = useState("overview");
   // sent but unpaid: the chase agent reads each with PayPal's Agent Toolkit, picks whom to remind and writes the note
   const askChase = async () => {
     setChase({ status: "running" });
-    try { const d = await api("/api/agent/chase", {}); setChase({ status: "done", ...d }); loadInvoices(); }
+    try { const d = await api("/api/agent/chase", {}); setChase({ status: "done", ...d }); markReminded(d); setTimeout(loadInvoices, 4000); }
     catch (e) { setChase({ status: "error", error: e.message }); }
   };
   const addDrafts = (drafts = []) => setInvoices((cur) => [...drafts.filter((d) => d.id && !cur.some((c) => c.id === d.id)), ...cur]);
@@ -125,7 +136,7 @@ export default function App() {
   };
   // the Studio assistant runs the same revenue agent; its decisions land in Approvals, and a notice says so
   // the Studio nudge agent ran the chase agent: show its result under Invoices and refresh the list
-  const onNudge = useCallback((d) => { pinStudio(); if (d) setChase({ status: "done", ...d }); loadInvoices(); flash(`The nudge agent sent ${d?.reminded?.length || 0} friendly reminder(s).`); }, [flash, pinStudio, loadInvoices]);
+  const onNudge = useCallback((d) => { pinStudio(); if (d) setChase({ status: "done", ...d }); markReminded(d); setTimeout(loadInvoices, 4000); flash(`The nudge agent sent ${d?.reminded?.length || 0} friendly reminder(s).`); }, [flash, pinStudio, loadInvoices, markReminded]);
   const onStudioInvoices = useCallback((d) => { pinStudio(); if (d) { setRevenue({ status: "done", ...d }); addDrafts(d.drafts); } loadInvoices(); flash("The revenue agent's drafts are waiting for your approval.", "approvals"); }, [loadInvoices, flash, pinStudio]);
   // a synthetic week with enough paid orders, so the agent has a real budget decision to make (labelled everywhere)
   const askWeek = async (id) => {

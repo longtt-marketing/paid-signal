@@ -1,11 +1,14 @@
 // Custom AG Studio widget: per ad, the leads the ad platform reports, how many got a PayPal invoice, and how many paid
 // orders PayPal confirms (from checkout or invoice, so paid can exceed invoiced). Reads aggregated rows through the widget API, so page filters and cross-filters apply.
 import { useEffect, useState } from "react";
+import { DATA_EVENT } from "./OwesWidget.jsx";
 
 const pick = (row, field, i) => row[field?.key] ?? row[field?.id] ?? Object.values(row)[i];
 
 export function FunnelWidget({ dataMapping, widgetApi, context }) {
   const [rows, setRows] = useState([]);
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const on = () => setTick((t) => t + 1); addEventListener(DATA_EVENT, on); return () => removeEventListener(DATA_EVENT, on); }, []);
   const cat = dataMapping?.category?.[0], leads = dataMapping?.leads?.[0], inv = dataMapping?.invoiced?.[0], paid = dataMapping?.paid?.[0];
 
   useEffect(() => {
@@ -20,7 +23,7 @@ export function FunnelWidget({ dataMapping, widgetApi, context }) {
       widgetApi.setDisplayState(out.length ? "displayed" : "noData");
     }).catch(() => live && widgetApi.setDisplayState("noData"));
     return () => { live = false; };
-  }, [cat, leads, inv, paid, widgetApi, context?.dataVersion]);
+  }, [cat, leads, inv, paid, widgetApi, context?.dataVersion, tick]);
 
   const max = Math.max(1, ...rows.map((r) => r.leads));
   const w = (n) => `${Math.max(n ? 2 : 0, (n / max) * 100)}%`;
