@@ -45,6 +45,37 @@ async function saveRecommendation(env, recommendation, source) {
   return saved;
 }
 
+/**
+ * The revenue agent reads what each unpaid lead wrote and proposes invoices; code prices and checks every proposal, and
+ * PayPal's Agent Toolkit creates the drafts. Nothing is sent: each draft waits in Approvals. Used by the dashboard and by
+ * the nightly refill, so every draft a judge finds was decided by the agent and priced by code.
+ */
+async function revenueDrafts(env, url) {
+  const t0 = Date.now();
+  const invoices = await listPrefix(env, "inv:");
+  const leads = (await demoLeads(env, url)).filter((l) => !invoices.some((i) => i.lead === l.lead && i.status === "PAID"));
+  const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });
+  const run = await runRevenueAgent({ llm, leads, invoices });
+  const toolkit = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
+    configuration: { actions: { invoices: { create: true } }, context: { sandbox: true } } }).getTools();
+  const drafts = [];
+  for (const p of run.proposals) {
+    const lead = leads.find((l) => l.lead === p.lead);
+    const params = { currency_code: "USD", reference: "Kite Robotics booking", note: p.note, invoicer_business_name: "Kite Robotics Club (demo)",
+      primary_recipients: [{ billing_info: { email_address: lead.email, name: { given_name: lead.lead.replace(/ \(.*\)$/, "") } } }],
+      items: p.lines.map((l) => ({ name: l.name, quantity: "1", unit_amount: { currency_code: "USD", value: l.unit } })) };
+    let out = {}; try { out = JSON.parse(String(await toolkit.create_invoice.execute(params))); } catch {}
+    const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
+    if (!/^INV2-[A-Z0-9-]+$/.test(id)) { drafts.push({ lead: p.lead, error: "PayPal did not create the draft." }); continue; }
+    const rec = { id, lead: lead.lead, ad: lead.ad, email: lead.email, amount: p.total, lines: p.lines, status: "DRAFT",
+      reference: packClick({ ad: lead.ad, source: lead.source, clickId: lead.click_id, clickedAt: 0 }), note: p.note, reason: p.reason,
+      drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() };
+    await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); drafts.push(rec);
+  }
+  await forget("inv:");
+  return ({ drafts, skips: run.skips, refusals: run.refusals, summary: run.summary, trace: run.trace, ms: Date.now() - t0 });
+}
+
 async function listPayments(env) {
   return (await cachedList(env, "pay:")).sort((a, b) => String(a.captured_at).localeCompare(String(b.captured_at)));
 }
@@ -224,16 +255,6 @@ async function demoLeads(env, url) {
   return parseCsv(await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-leads.csv`))).text());
 }
 
-/** A PayPal draft invoice for one demo lead, at the fixed price, with the lead's ad click in the private memo. */
-async function draftInvoiceFor(env, pp, l) {
-  const reference = packClick({ ad: l.ad, source: l.source, clickId: l.click_id, clickedAt: 0 }); // the demo leads carry no click time
-  const inv = await pp.createDraftInvoice({ email: l.email, name: l.lead, item: PRODUCT.name, amount: PRODUCT.amount, reference, business: "Kite Robotics Club (demo)",
-    note: `You asked about: ${l.asked_for}. Pay with PayPal to book the trial class.` });
-  const rec = { id: inv.id, lead: l.lead, ad: l.ad, email: l.email, amount: PRODUCT.amount, status: inv.status || "DRAFT", reference, created_at: new Date().toISOString() };
-  await env.LEDGER.put(`inv:${inv.id}`, JSON.stringify(rec));
-  return rec;
-}
-
 /** An invoice paid through PayPal becomes a capture in the ledger, attributed by the click packed in its reference. */
 async function recordInvoicePayment(env, invoice, url = new URL("https://paid-signal.thelongmarketing.workers.dev/")) {
   const kept = await env.LEDGER.get(`inv:${invoice.id}`, "json");
@@ -396,29 +417,7 @@ const app = {
       // and PayPal's Agent Toolkit creates the drafts. Nothing is sent: each draft waits in Approvals.
       if (url.pathname === "/api/agent/revenue" && request.method === "POST") {
         const stop = await guard(env, request, "revenue agent runs", 4, 40); if (stop) return json({ error: stop }, 429);
-        const t0 = Date.now();
-        const invoices = await listPrefix(env, "inv:");
-        const leads = (await demoLeads(env, url)).filter((l) => !invoices.some((i) => i.lead === l.lead && i.status === "PAID"));
-        const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });
-        const run = await runRevenueAgent({ llm, leads, invoices });
-        const toolkit = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
-          configuration: { actions: { invoices: { create: true } }, context: { sandbox: true } } }).getTools();
-        const drafts = [];
-        for (const p of run.proposals) {
-          const lead = leads.find((l) => l.lead === p.lead);
-          const params = { currency_code: "USD", reference: "Kite Robotics booking", note: p.note, invoicer_business_name: "Kite Robotics Club (demo)",
-            primary_recipients: [{ billing_info: { email_address: lead.email, name: { given_name: lead.lead.replace(/ \(.*\)$/, "") } } }],
-            items: p.lines.map((l) => ({ name: l.name, quantity: "1", unit_amount: { currency_code: "USD", value: l.unit } })) };
-          let out = {}; try { out = JSON.parse(String(await toolkit.create_invoice.execute(params))); } catch {}
-          const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
-          if (!/^INV2-[A-Z0-9-]+$/.test(id)) { drafts.push({ lead: p.lead, error: "PayPal did not create the draft." }); continue; }
-          const rec = { id, lead: lead.lead, ad: lead.ad, email: lead.email, amount: p.total, lines: p.lines, status: "DRAFT",
-            reference: packClick({ ad: lead.ad, source: lead.source, clickId: lead.click_id, clickedAt: 0 }), note: p.note, reason: p.reason,
-            drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() };
-          await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); drafts.push(rec);
-        }
-        await forget("inv:");
-        return json({ drafts, skips: run.skips, refusals: run.refusals, summary: run.summary, trace: run.trace, ms: Date.now() - t0 });
+        return json(await revenueDrafts(env, url));
       }
 
       // Sent invoices nobody has paid: the chase agent reads each with the Agent Toolkit, chooses whom to remind and writes
@@ -599,20 +598,14 @@ const app = {
 app.scheduled = async (_event, env) => {
   const pp = paypal({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET });
   let invoices = await listPrefix(env, "inv:");
-  for (const i of invoices.filter((x) => x.status === "DRAFT" && x.drafted_by && Date.now() - Date.parse(x.created_at) > 20 * 3600000)) {
+  // drafts nobody approved within a day are cleared, so judges find fresh ones
+  for (const i of invoices.filter((x) => x.status === "DRAFT" && Date.now() - Date.parse(x.created_at || 0) > 20 * 3600000)) {
     try { await pp.deleteDraftInvoice(i.id); } catch {}
     await env.LEDGER.delete(`inv:${i.id}`);
   }
   invoices = await listPrefix(env, "inv:");
-  let drafts = invoices.filter((i) => i.status === "DRAFT").length;
-  if (drafts >= 3) return;
-  const leads = await demoLeads(env, new URL("https://paid-signal.thelongmarketing.workers.dev/"));
-  for (const l of leads) {
-    if (drafts >= 3) break;
-    const mine = invoices.filter((i) => i.lead === l.lead);
-    if (!mine.length || mine.some((i) => i.status === "DRAFT" || i.status === "PAID")) continue;
-    await draftInvoiceFor(env, pp, l); drafts++;
-  }
   await forget("inv:");
+  // no draft waiting: the revenue agent reads the leads again and drafts only for the ones ready to pay, priced by code
+  if (!invoices.some((i) => i.status === "DRAFT")) await revenueDrafts(env, new URL("https://paid-signal.thelongmarketing.workers.dev/"));
 };
 export default app;
