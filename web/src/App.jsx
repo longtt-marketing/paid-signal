@@ -169,6 +169,7 @@ export default function App() {
             <p className="pitch">Ad platforms learn from the {t ? t.leads : "leads"}. Paid Signal teaches them the {t ? t.paid : "paid orders"}, straight from PayPal.</p>
             {t && <div className="chips-row">
               <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
+              {t.held > 0 && <span title="Same payer, same ad, minutes apart: not counted as a paid order, and kept from the ad platforms"><b>{t.held}</b> possible duplicate held</span>}
               <span><b>{usd(t.spend_cents)}</b> ad spend</span>
               <span><b>{costPerPaid}</b> per paid order</span>
             </div>}
@@ -204,7 +205,7 @@ export default function App() {
                   <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th>Per paid order</th></tr></thead>
                   <tbody>
                     {byCost.map((a) => (
-                      <tr key={a.ad}><td>{adName(a.ad)}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td>{a.paid}</td><td>{usd(a.revenue_cents)}</td>
+                      <tr key={a.ad}><td>{adName(a.ad)}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td>{a.paid}{a.held > 0 && <small className="held"> +{a.held} held</small>}</td><td>{usd(a.revenue_cents)}</td>
                         <td>{a.cost_per_paid_cents == null ? <span className="pill warn">no paid order</span> : <span className={`pill ${a.ad === best ? "good" : a.ad === worst ? "warn" : ""}`}>{usd(a.cost_per_paid_cents)}</span>}</td></tr>
                     ))}
                     {t && <tr className="total"><td>Total</td><td>{usd(t.spend_cents)}</td><td>{t.leads}</td><td>{t.paid}</td><td>{usd(t.revenue_cents)}</td><td>{costPerPaid}</td></tr>}

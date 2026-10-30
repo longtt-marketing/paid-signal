@@ -112,7 +112,8 @@ async function mcpTool(env, url, name, args) {
   }
   if (name === "list_unpaid_leads") {
     const [{ leads }, { invoices }] = await Promise.all([get("/api/leads"), get("/api/invoices")]);
-    return leads.map((l) => ({ lead: l.lead, ad: l.ad, asked_for: l.asked_for, invoice: invoices.find((i) => i.lead === l.lead)?.status || null }));
+    const status = (l) => invoices.find((i) => i.lead === l.lead && i.status === "PAID")?.status || invoices.find((i) => i.lead === l.lead)?.status || null;
+    return leads.filter((l) => status(l) !== "PAID").map((l) => ({ lead: l.lead, ad: l.ad, asked_for: l.asked_for, invoice: status(l) }));
   }
   if (name === "list_payments") {
     const { payments, duplicates } = await get("/api/ledger");
@@ -123,7 +124,7 @@ async function mcpTool(env, url, name, args) {
   throw new Error(`Unknown tool ${name}`);
 }
 
-// a possible duplicate still counts as paid in the ledger, but is not reported to ad platforms until refunded or reviewed
+// a possible duplicate is held: not a paid order in the reconciliation and not reported to ad platforms until it is refunded
 const heldDuplicates = (payments) => new Set(possibleDuplicates(payments).map((d) => d.capture_id));
 // payments captured before this are the seeded demo ledger; refunds on them are previewed, not sent
 const SEEDED_BEFORE = "2026-10-29T09:00:00Z";
@@ -329,7 +330,8 @@ const app = {
         const agent = await runSendAgent({ llm, tools, approved: { id, lead: rec.lead, ad: rec.ad, amount: String(rec.amount || "49.00") } });
         const fresh = await pp.getInvoice(id);
         Object.assign(rec, { status: fresh.status, approved_at: approvedAt, pay_url: fresh.detail?.metadata?.recipient_view_url || rec.pay_url || null,
-          ...(agent.sent ? { sent_at: new Date().toISOString(), sent_by: "send agent (Claude + PayPal Agent Toolkit)" } : {}) });
+          // "sent by the agent" only when PayPal itself no longer shows a draft
+          ...(agent.sent && fresh.status && fresh.status !== "DRAFT" ? { sent_at: new Date().toISOString(), sent_by: "send agent (Claude + PayPal Agent Toolkit)" } : {}) });
         await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); await forget("inv:");
         return json({ invoice: rec, agent });
       }

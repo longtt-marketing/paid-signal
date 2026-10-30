@@ -9,7 +9,7 @@ Rules:
 - Quote only numbers that appear in tool results, written exactly as given. Do not compute new numbers, forecast returns or invent percentages.
 - Every action cites evidence: capture ids from read_captures, or "row:<ad key>" for the ad's reconciliation row.
 - Small samples are weak evidence. Say so when an ad has fewer than 3 paid orders. Refunds are not paid orders.
-- possible_duplicates lists payments that may be the same purchase twice. If an ad's paid orders include one, say so, and do not recommend more budget when its count only reaches 3 because of it.
+- possible_duplicates lists payments that may be the same purchase twice. Those with held: true are already held out of paid_orders and revenue (held_as_possible_duplicate); held: false means the first of the pair was refunded, so this one counts. If an ad has one held, say so: if it is a real second purchase, that ad has one more paid order.
 - Prefer "keep and gather more data" over a confident change you cannot support.
 - Write for the shop owner in plain words ("cost per paid order", "spend with no paid order"), never field names such as spend_usd or paid_revenue_per_dollar.
 - Finish by calling submit_recommendation once.`;
@@ -39,16 +39,17 @@ export const TOOLS = [
 ];
 
 export function reconciliationView(rec, payments = []) {
+  const held = new Set(possibleDuplicates(payments).map((d) => d.capture_id)); // the set reconcile holds out
   return {
-    totals: { leads: rec.totals.leads, paid_orders: rec.totals.paid, fully_refunded: rec.totals.refunded, spend_usd: dollars(rec.totals.spend_cents), paid_revenue_usd: dollars(rec.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: dollars(rec.totals.spend_without_paid_cents) },
+    totals: { leads: rec.totals.leads, paid_orders: rec.totals.paid, fully_refunded: rec.totals.refunded, held_as_possible_duplicate: rec.totals.held, spend_usd: dollars(rec.totals.spend_cents), paid_revenue_usd: dollars(rec.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: dollars(rec.totals.spend_without_paid_cents) },
     ads: rec.ads.map((r) => ({
-      ad: r.ad, spend_usd: dollars(r.spend_cents), leads: r.leads, paid_orders: r.paid, fully_refunded: r.refunded, paid_revenue_usd: dollars(r.revenue_cents),
+      ad: r.ad, spend_usd: dollars(r.spend_cents), leads: r.leads, paid_orders: r.paid, fully_refunded: r.refunded, held_as_possible_duplicate: r.held, paid_revenue_usd: dollars(r.revenue_cents),
       cost_per_paid_order_usd: r.cost_per_paid_cents === null ? "none paid" : dollars(r.cost_per_paid_cents),
       lead_to_paid: r.lead_to_paid === null ? "no leads" : Math.round(r.lead_to_paid * 100) + "%", paid_revenue_per_dollar: r.roas === null ? "no spend" : r.roas.toFixed(2),
     })),
     unmatched_captures: rec.unmatched_captures,
     // computed in code (refunded pairs included), so the agent can quote the gap instead of working it out from capture times
-    possible_duplicates: possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => ({ capture_id: d.capture_id, same_payer_and_ad_as: d.first, seconds_apart: d.seconds })),
+    possible_duplicates: possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => ({ capture_id: d.capture_id, same_payer_and_ad_as: d.first, seconds_apart: d.seconds, held: held.has(d.capture_id) })),
   };
 }
 

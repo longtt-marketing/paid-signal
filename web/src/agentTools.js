@@ -25,7 +25,7 @@ For budget questions (which ads to cut, keep or grow), delegate to the budget ag
 // standalone budget agent passes), then hands work to Studio's page agent to put the evidence on the dashboard.
 const BUDGET = `You are the Paid Signal budget agent for a small shop that sells through PayPal.
 1. Call read_paid_signal. Quote numbers exactly as given; never compute, forecast or round. Write plain words, not field names.
-2. Call submit_budget_recommendation once with 1 to 3 actions. Evidence is "row:<ad key>" for an ad's row. Say when a sample is under 3 paid orders, and when an ad's paid orders include a possible duplicate; do not recommend more budget when the count only reaches 3 because of a duplicate.
+2. Call submit_budget_recommendation once with 1 to 3 actions. Evidence is "row:<ad key>" for an ad's row. Say when a sample is under 3 paid orders, and when an ad has a possible duplicate held out of its paid orders (if it is a real second purchase, its paid count is one higher).
    If it comes back rejected, fix exactly the listed problems and submit again (one repair).
 3. Once accepted, delegate to the page agent: ask it to add one bar chart that shows the evidence behind your main action
    (for example paid revenue against spend by ad), using the fields already on the page.
@@ -45,7 +45,7 @@ export function buildAi({ getCsv, onInvoices, onRecommendation }) {
           return ctx.success("Reconciliation loaded.", {
             totals: { leads: r.totals.leads, paid_orders: r.totals.paid, fully_refunded: r.totals.refunded, spend_usd: $(r.totals.spend_cents), paid_revenue_usd: $(r.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: $(r.totals.spend_without_paid_cents) },
             ads: r.ads.map((a) => ({ ad: a.ad, spend_usd: $(a.spend_cents), leads: a.leads, paid_orders: a.paid, fully_refunded: a.refunded, paid_revenue_usd: $(a.revenue_cents), cost_per_paid_order_usd: a.cost_per_paid_cents == null ? "none paid" : $(a.cost_per_paid_cents) })),
-            // same payer, same ad, minutes apart: still counted until refunded, so the agent must say so
+            // same payer, same ad, minutes apart: held out of paid orders until refunded, and the agent must say so
             possible_duplicates: l.duplicates.map((x) => ({ capture_id: x.capture_id, same_payer_and_ad_as: x.first, seconds_apart: x.seconds, ad: l.payments.find((p) => p.capture_id === x.capture_id)?.ad })),
           });
         },
@@ -56,7 +56,9 @@ export function buildAi({ getCsv, onInvoices, onRecommendation }) {
         params: (s) => s.object({}),
         execute: async (_args, ctx) => {
           const [{ leads }, { invoices }] = await Promise.all([get("/api/leads", ctx.signal), get("/api/invoices", ctx.signal)]);
-          return ctx.success(`${leads.length} leads.`, { leads: leads.map((l) => ({ lead: l.lead, ad: l.ad, asked_for: l.asked_for, invoice: invoices.find((i) => i.lead === l.lead)?.status || null })) });
+          const status = (l) => invoices.find((i) => i.lead === l.lead && i.status === "PAID")?.status || invoices.find((i) => i.lead === l.lead)?.status || null;
+          const unpaid = leads.filter((l) => status(l) !== "PAID"); // a lead who paid an invoice is a customer, not an unpaid lead
+          return ctx.success(`${unpaid.length} unpaid leads.`, { leads: unpaid.map((l) => ({ lead: l.lead, ad: l.ad, asked_for: l.asked_for, invoice: status(l) })) });
         },
       }),
       api.defineAiTool({

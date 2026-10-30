@@ -39,16 +39,23 @@ export function parseAdCsv(text) {
   return { rows, errors };
 }
 
-/** A capture counts as a paid order unless fully refunded; partial refunds reduce revenue. */
+/**
+ * A capture counts as a paid order unless fully refunded; partial refunds reduce revenue. A possible duplicate (same
+ * payer, same ad, minutes apart) is held: not a paid order and not revenue until it is refunded, the same
+ * rule that keeps it back from Meta and Google.
+ */
 export function reconcile(adRows, payments) {
-  const byAd = new Map(adRows.map((r) => [r.ad, { ad: r.ad, spend_cents: r.spend_cents, leads: r.leads, paid: 0, refunded: 0, revenue_cents: 0, captures: [] }]));
+  const byAd = new Map(adRows.map((r) => [r.ad, { ad: r.ad, spend_cents: r.spend_cents, leads: r.leads, paid: 0, refunded: 0, held: 0, revenue_cents: 0, held_cents: 0, captures: [] }]));
   const unmatched = [];
+  const held = new Set(possibleDuplicates(payments).map((d) => d.capture_id));
   for (const p of payments) {
     const row = byAd.get(p.ad);
     if (!row) { unmatched.push(p.capture_id); continue; }
     const gross = cents(p.amount), back = cents(p.refunded_amount || 0);
     row.captures.push(p.capture_id);
-    if (back >= gross) row.refunded++; else row.paid++;
+    if (back >= gross) row.refunded++;
+    else if (held.has(p.capture_id)) { row.held++; row.held_cents += gross - back; continue; }
+    else row.paid++;
     row.revenue_cents += Math.max(0, gross - back);
   }
   const ads = [...byAd.values()].map((r) => ({
@@ -61,7 +68,7 @@ export function reconcile(adRows, payments) {
   return {
     ads,
     totals: {
-      spend_cents: sum("spend_cents"), leads: sum("leads"), paid: sum("paid"), refunded: sum("refunded"), revenue_cents: sum("revenue_cents"),
+      spend_cents: sum("spend_cents"), leads: sum("leads"), paid: sum("paid"), refunded: sum("refunded"), held: sum("held"), revenue_cents: sum("revenue_cents"), held_cents: sum("held_cents"),
       spend_without_paid_cents: ads.filter((r) => r.paid === 0).reduce((a, r) => a + r.spend_cents, 0),
     },
     unmatched_captures: unmatched,
@@ -75,9 +82,9 @@ export function quotableNumbers(rec) {
   const t = rec.totals;
   // counts the agent can see in the table: how many ads, how many captures
   add(rec.ads.length); add(rec.ads.reduce((n, r) => n + r.captures.length, 0));
-  [t.leads, t.paid, t.refunded, dollars(t.spend_cents), dollars(t.revenue_cents), dollars(t.spend_without_paid_cents)].forEach(add);
+  [t.leads, t.paid, t.refunded, t.held, dollars(t.spend_cents), dollars(t.revenue_cents), dollars(t.held_cents), dollars(t.spend_without_paid_cents)].forEach(add);
   for (const r of rec.ads) {
-    [r.leads, r.paid, r.refunded, r.captures.length, dollars(r.spend_cents), dollars(r.revenue_cents)].forEach(add);
+    [r.leads, r.paid, r.refunded, r.held, r.captures.length, dollars(r.spend_cents), dollars(r.revenue_cents), dollars(r.held_cents)].forEach(add);
     if (r.cost_per_paid_cents !== null) add(dollars(r.cost_per_paid_cents));
     if (r.lead_to_paid !== null) add(Math.round(r.lead_to_paid * 100) + "%");
     if (r.roas !== null) add(r.roas.toFixed(2));
@@ -117,7 +124,7 @@ export async function sha256(s) { return hex(await crypto.subtle.digest("SHA-256
  * Meta Conversions API Purchase events for paid captures. event_id is derived from the capture so a resend
  * deduplicates; fbc follows Meta's fb.1.<click ms>.<fbclid> format. Fully refunded captures are held back and listed.
  * @param {any[]} payments
- * @param {{ sourceUrl?: string, hold?: Set<string> }} [opts] hold: possible duplicates, kept back until refunded or reviewed
+ * @param {{ sourceUrl?: string, hold?: Set<string> }} [opts] hold: possible duplicates, kept back until refunded
  */
 export async function metaEvents(payments, { sourceUrl, hold } = {}) {
   const events = [], held = [];

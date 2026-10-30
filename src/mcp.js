@@ -2,7 +2,7 @@
 // ads bring paying PayPal customers. Read-only on purpose: the public demo exposes no write tool here.
 
 export const MCP_TOOLS = [
-  { name: "read_paid_signal", description: "Per ad: spend, leads the ad platform reports, PayPal paid orders, refunds, net paid revenue and cost per paid order, plus totals and possible duplicate payments. Computed in code from the ad export and PayPal captures.", inputSchema: { type: "object", properties: { csv: { type: "string", description: "Optional ad export CSV (ad, spend, leads). Defaults to the demo export." } } } },
+  { name: "read_paid_signal", description: "Per ad: spend, leads the ad platform reports, PayPal paid orders, refunds, net paid revenue and cost per paid order, plus totals and possible duplicate payments (held out of paid orders until refunded). Computed in code from the ad export and PayPal captures.", inputSchema: { type: "object", properties: { csv: { type: "string", description: "Optional ad export CSV (ad, spend, leads). Defaults to the demo export." } } } },
   { name: "list_unpaid_leads", description: "Leads the ad export counted that never paid through PayPal, with their ad, what they asked about, and any invoice already drafted or sent.", inputSchema: { type: "object", properties: {} } },
   { name: "list_payments", description: "Every PayPal capture in the ledger with its ad, click source, amount, refunds and possible duplicate flag.", inputSchema: { type: "object", properties: {} } },
   { name: "check_paypal_ledger", description: "Cross-check the ledger against PayPal Transaction Search: matched captures, ones PayPal's report has not caught up with, and any PayPal payment the ledger missed.", inputSchema: { type: "object", properties: {} } },

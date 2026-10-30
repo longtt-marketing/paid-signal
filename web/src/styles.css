@@ -83,6 +83,7 @@ table.grid{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 .grid th{text-align:left;font:600 12px var(--sans);color:var(--faint);padding:8px 10px;border-bottom:1px solid var(--line)}
 .grid td{padding:11px 10px;border-bottom:1px solid var(--line2)}.grid th:not(:first-child),.grid td:not(:first-child){text-align:right}
 .grid tr.total td{font-weight:700;border-bottom:0}
+.held{font:600 11px var(--sans);color:var(--gap);margin-left:4px}
 .pill{display:inline-block;font:700 12px var(--sans);padding:3px 9px;border-radius:999px;background:var(--head)}
 .pill.good{background:var(--paid-bg);color:var(--paid)}.pill.warn{background:var(--gap-bg);color:var(--gap)}
 .list{display:flex;flex-direction:column}

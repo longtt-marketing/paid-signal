@@ -98,6 +98,16 @@ test("Google: Meta clicks, held duplicates and clicks older than 90 days are lef
   assert.equal(rows.conversions.length, 0);
 });
 
+test("reconcile: a possible duplicate is held out of paid orders and revenue, the same rule as the ad platforms", () => {
+  const r = reconcile([{ ad: "trial", spend_cents: 9620, leads: 14 }], [pay({ capture_id: "A" }), pay({ capture_id: "B", captured_at: at(3.6) }), pay({ capture_id: "C", payer_email_sha256: "h2", captured_at: at(30) })]);
+  const row = r.ads[0];
+  assert.deepEqual([row.paid, row.held, row.revenue_cents, row.held_cents, row.cost_per_paid_cents], [2, 1, 9800, 4900, 4810]);
+  assert.deepEqual([r.totals.paid, r.totals.held], [2, 1]);
+  // once the duplicate is refunded it is a refund, not a held order
+  const after = reconcile([{ ad: "trial", spend_cents: 9620, leads: 14 }], [pay({ capture_id: "A" }), pay({ capture_id: "B", captured_at: at(3.6), refunded_amount: "49.00" })]).ads[0];
+  assert.deepEqual([after.paid, after.held, after.refunded], [1, 0, 1]);
+});
+
 // evidence gate
 const rec = reconcile([{ ad: "trial", spend_cents: 9620, leads: 14 }, { ad: "guide", spend_cents: 11840, leads: 31 }], [pay({ capture_id: "A" }), pay({ capture_id: "B", captured_at: at(3.6) })]);
 const payments = [pay({ capture_id: "A" }), pay({ capture_id: "B", captured_at: at(3.6) })];
@@ -117,7 +127,12 @@ test("gate: unknown ads, missing evidence and raw field names are rejected", () 
 });
 test("agent view: possible duplicates are given to the agent, computed in code", () => {
   const v = reconciliationView(rec, payments);
-  assert.deepEqual(v.possible_duplicates, [{ capture_id: "B", same_payer_and_ad_as: "A", seconds_apart: 216 }]);
+  assert.deepEqual(v.possible_duplicates, [{ capture_id: "B", same_payer_and_ad_as: "A", seconds_apart: 216, held: true }]);
+  // the first of the pair refunded: B counts as paid, and the agent is told it is not held
+  const refundedFirst = [pay({ capture_id: "A", refunded_amount: "49.00" }), pay({ capture_id: "B", captured_at: at(3.6) })];
+  const r2 = reconcile([{ ad: "trial", spend_cents: 9620, leads: 14 }], refundedFirst);
+  assert.deepEqual([r2.ads[0].paid, r2.ads[0].held], [1, 0]);
+  assert.equal(reconciliationView(r2, refundedFirst).possible_duplicates[0].held, false);
 });
 
 // send agent limits
@@ -130,7 +145,8 @@ test("send agent: stops after its turn budget without sending", async () => {
 test("send agent: a toolkit error is reported as not sent", async () => {
   const turns = [{ raw: [], calls: [{ id: "1", name: "send_invoice", input: { invoice_id: "INV2-OK" } }] }, { raw: [{ type: "text", text: "Could not send." }], calls: [] }];
   let i = 0;
-  const tools = { send_invoice: { execute: async () => "Error: INVOICE_ALREADY_SENT" } };
+  const tools = { get_invoice: { execute: async () => JSON.stringify({ status: "DRAFT", amount: { currency_code: "USD", value: "49.00" } }) },
+    send_invoice: { execute: async () => "Error: INVOICE_ALREADY_SENT" } };
   const out = await runSendAgent({ llm: async () => turns[i++], tools, approved: { id: "INV2-OK", lead: "L", ad: "a", amount: "49.00" } });
   assert.equal(out.sent, false); assert.equal(out.trace[0].ok, false);
 });

@@ -21,10 +21,12 @@ Paid Signal closes that loop on the PayPal developer platform:
    (paid orders, net revenue). A Claude budget agent proposes changes; every number it writes is checked in code against
    the reconciliation. Inside AG Studio, Claude can draft PayPal invoices for warm leads. A person approves a draft;
    then a send agent (Claude with **PayPal's Agent Toolkit**) reads that invoice from PayPal, checks it and sends it.
-   Code pins the agent to the approved invoice. Budget changes and refunds stay clicks a person makes.
+   Code pins the agent to the approved invoice and refuses a send unless that invoice is still a draft for the approved amount in USD. Budget changes and refunds stay clicks a person makes.
 4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
    by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund becomes a Google retraction or restatement and holds the Meta event back;
-   a possible duplicate payment is held back from both until it is refunded. The demo shows
+   a possible duplicate payment is held back from both, and is not counted as a paid order, until it is refunded.
+   Meta gets every paid order, Google clicks included (Meta matches on the hashed email, and its own attribution decides
+   whether one of its ads gets credit); Google gets only orders with a gclid. The demo shows
    and downloads these payloads. The Purchase events were also sent to a real Meta dataset as **test events**: Meta's
    Test Events tab shows them processed and a resent copy deduplicated by `event_id`
    ([`scripts/meta-test-event.mjs`](scripts/meta-test-event.mjs), [screenshot](docs/proof/meta-test-events.png)).
@@ -125,7 +127,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 45 tests: money rules, gate, send agent, MCP
+npm test                              # 51 tests: money rules, gate, send agent, MCP, AG Studio tool names
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

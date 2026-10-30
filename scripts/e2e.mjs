@@ -32,6 +32,7 @@ try {
   ok("AG Studio loads when scrolled to", scripts.some((u) => u.includes("StudioPanel")));
   const head = await page.textContent("h1");
   ok("headline compares leads with PayPal paid orders", /Ads report \d+ leads\. PayPal confirms \d+ paid orders?\./.test(head), head);
+  await page.waitForFunction(() => document.querySelectorAll(".claim-row").length >= 4 && document.querySelectorAll(".fn-row").length >= 4, null, { timeout: 30000 }).catch(() => {});
   ok("claimed-vs-confirmed widget renders", await page.locator(".claim-row").count() >= 4);
   ok("lead/invoice/paid widget renders", await page.locator(".fn-row").count() >= 4);
   ok("payments list shows every capture", await page.locator("#captures .cap").count() >= 8);

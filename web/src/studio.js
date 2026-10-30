@@ -10,24 +10,25 @@ const f = (id, name, format, hide) => ({ id, name, format, ...(hide ? { hide } :
 const sum = (id) => ({ id, aggregation: "sum" });
 
 /** Two tables joined on the ad key: what each ad claims, and what PayPal captured for it. */
-export function buildData(rec, payments, invoices = []) {
+export function buildData(rec, payments, invoices = [], duplicates = []) {
   const ads = rec.ads.map((r) => ({
     ad: r.ad, name: adName(r.ad), spend: r.spend_cents / 100, leads: r.leads, payers: r.paid, refunds: r.refunded,
     revenue: r.revenue_cents / 100, noPayer: r.paid === 0 ? r.spend_cents / 100 : 0,
     invoiced: invoices.filter((i) => i.ad === r.ad && i.status !== "CANCELLED").length,
   }));
   const known = new Set(rec.ads.map((r) => r.ad));
+  const held = new Set(duplicates.map((d) => d.capture_id)); // from /api/ledger: the set reconcile holds out
   const caps = payments.map((p) => {
-    const gross = Number(p.amount), back = Number(p.refunded_amount || 0);
+    const gross = Number(p.amount), back = Number(p.refunded_amount || 0), hold = back < gross && held.has(p.capture_id);
     return {
       id: p.capture_id, ad: known.has(p.ad) ? p.ad : "(not in export)", adName: known.has(p.ad) ? adName(p.ad) : "No ad click", status: p.status, source: p.source === "fb" ? "Meta click" : p.source === "g" ? "Google click" : "Other",
-      gross, refunded: back, net: Math.max(0, gross - back), paid: back >= gross ? 0 : 1, date: String(p.captured_at).slice(0, 10), capturedAt: p.captured_at,
+      gross, refunded: back, net: hold ? 0 : Math.max(0, gross - back), paid: back >= gross || hold ? 0 : 1, held: hold ? 1 : 0, date: String(p.captured_at).slice(0, 10), capturedAt: p.captured_at,
     };
   });
   const dates = caps.map((c) => c.date).sort();
   const today = new Date().toISOString().slice(0, 10);
   return {
-    description: "A small shop's ad export (spend and leads the ad platform reports per ad) joined to PayPal sandbox captures attributed to those ads by the click id stored in each order's custom_id. Paid orders counts captures not fully refunded.",
+    description: "A small shop's ad export (spend and leads the ad platform reports per ad) joined to PayPal sandbox captures attributed to those ads by the click id stored in each order's custom_id. Paid orders counts captures not fully refunded; a possible duplicate (same payer, same ad, minutes apart) is held: not a paid order and not net revenue until it is refunded.",
     sources: [
       {
         id: "ads", name: "Ads", description: "One row per ad from the ad platform export.", data: ads,
@@ -37,7 +38,7 @@ export function buildData(rec, payments, invoices = []) {
       {
         id: "captures", name: "PayPal captures", description: "One row per PayPal capture, attributed to an ad by click id.", data: caps,
         fields: [f("id", "Capture", "textFormat"), f("ad", "Ad key", "textFormat", true), f("adName", "Ad", "textFormat"), f("status", "Status", "textFormat"), f("source", "Click source", "textFormat"),
-          f("gross", "Captured", "currencyFormat"), f("refunded", "Refunded", "currencyFormat"), f("net", "Net paid", "currencyFormat"), f("paid", "Is paid", "integerFormat"), f("date", "Capture date", "dateFormat"), f("capturedAt", "Captured at", "textFormat")],
+          f("gross", "Captured", "currencyFormat"), f("refunded", "Refunded", "currencyFormat"), f("net", "Net paid", "currencyFormat"), f("paid", "Is paid", "integerFormat"), f("held", "Held as possible duplicate", "integerFormat"), f("date", "Capture date", "dateFormat"), f("capturedAt", "Captured at", "textFormat")],
       },
     ],
     relations: [{ id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],

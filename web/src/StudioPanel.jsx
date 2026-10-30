@@ -13,7 +13,7 @@ const PANELS = { view: { right: ["ai", "filters"] }, edit: { right: ["ai", "edit
 const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, csvRef, onInvoices, onRecommendation }, ref) {
   const studio = useRef(null);
   const ai = useMemo(() => buildAi({ getCsv: () => csvRef.current, onInvoices, onRecommendation }), [csvRef, onInvoices, onRecommendation]);
-  const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments, invoices) : undefined), [state, invoices]);
+  const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments, invoices, state.duplicates) : undefined), [state, invoices]);
   const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() }), [state]);
   const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition, funnelWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline", "lead-funnel"] }] }), []);
   useImperativeHandle(ref, () => ({
