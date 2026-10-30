@@ -1,0 +1,110 @@
+{
+ "date": "2026-10-30",
+ "what": "The author's real Meta test (2 to 8 Oct 2026, 33 ads) through Paid Signal's budget rule (src/ledger.js proposeSplit). Completed affiliate orders stand in for PayPal-confirmed paid orders.",
+ "rows_compared": 10,
+ "ads_with_completed_orders": [
+  {
+   "ad": "Jacket",
+   "completed": 2,
+   "rank_by_clicks_per_spend": 7
+  },
+  {
+   "ad": "Baggy jeans",
+   "completed": 2,
+   "rank_by_clicks_per_spend": 9
+  },
+  {
+   "ad": "Fashion item E",
+   "completed": 1,
+   "rank_by_clicks_per_spend": 10
+  }
+ ],
+ "completed_orders_from_bottom_half_by_clicks": 5,
+ "completed_orders_total": 5,
+ "click_rule": {
+  "increase": "Bag",
+  "increase_completed": 0,
+  "reduce": "Fashion item E",
+  "reduce_completed": 1
+ },
+ "paid_signal_rule": {
+  "moved": 0,
+  "reasons": [
+   "kept: 2 paid orders, fewer than 3",
+   "kept: 0 paid orders, fewer than 3",
+   "kept: 1 paid order, fewer than 3"
+  ]
+ },
+ "ranking": [
+  {
+   "rank": 1,
+   "ad": "Bag",
+   "spend_vnd": 13871,
+   "clicks": 43,
+   "completed": 0
+  },
+  {
+   "rank": 2,
+   "ad": "Cardigan",
+   "spend_vnd": 96011,
+   "clicks": 261,
+   "completed": 0
+  },
+  {
+   "rank": 3,
+   "ad": "Polo shirt C",
+   "spend_vnd": 67813,
+   "clicks": 181,
+   "completed": 0
+  },
+  {
+   "rank": 4,
+   "ad": "Polo shirt A",
+   "spend_vnd": 115490,
+   "clicks": 287,
+   "completed": 0
+  },
+  {
+   "rank": 5,
+   "ad": "Polo shirt B",
+   "spend_vnd": 121083,
+   "clicks": 283,
+   "completed": 0
+  },
+  {
+   "rank": 6,
+   "ad": "Dress",
+   "spend_vnd": 22392,
+   "clicks": 44,
+   "completed": 0
+  },
+  {
+   "rank": 7,
+   "ad": "Jacket",
+   "spend_vnd": 87741,
+   "clicks": 171,
+   "completed": 2
+  },
+  {
+   "rank": 8,
+   "ad": "24 other ads with no order, taken together",
+   "spend_vnd": 470699,
+   "clicks": 850,
+   "completed": 0
+  },
+  {
+   "rank": 9,
+   "ad": "Baggy jeans",
+   "spend_vnd": 63653,
+   "clicks": 98,
+   "completed": 2
+  },
+  {
+   "rank": 10,
+   "ad": "Fashion item E",
+   "spend_vnd": 59507,
+   "clicks": 76,
+   "completed": 1
+  }
+ ]
+}

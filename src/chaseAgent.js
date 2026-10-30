@@ -40,9 +40,10 @@ const HOUR = 3600000;
 
 // Demo clock: in this public demo an hour stands for the three days a real shop would wait before a first reminder,
 // and a day for the week before a second one, so judges can see the agent work the same day.
-/** Invoices a reminder may go to: sent, not paid, sent an hour ago or more, not reminded in the last day. */
+/** Invoices a reminder may go to: drafted by the revenue agent (so priced in code from what the lead asked for), sent,
+ * not paid, sent an hour ago or more, not reminded in the last day. A hand-made invoice is never chased. */
 export function eligibleForReminder(invoices, now = Date.now()) {
-  return invoices.filter((i) => WAITING.has(i.status) && i.sent_at && now - Date.parse(i.sent_at) >= HOUR
+  return invoices.filter((i) => i.drafted_by && i.lines?.length && WAITING.has(i.status) && i.sent_at && now - Date.parse(i.sent_at) >= HOUR
     && !(i.reminded_at && now - Date.parse(i.reminded_at) < 24 * HOUR));
 }
 

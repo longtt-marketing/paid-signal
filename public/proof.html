@@ -120,7 +120,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section aria-labelledby="quality">
     <h2 id="quality">Tests and speed</h2>
     <div class="grid">
-      <div class="stat"><b>74</b><span>unit tests on money rules, the gate, the four agents, schema checks, MCP and every AG Studio tool name</span><small>CI on every push.</small></div>
+      <div class="stat"><b>75</b><span>unit tests on money rules, the gate, the four agents, schema checks, MCP and every AG Studio tool name</span><small>CI on every push.</small></div>
       <div class="stat"><b>14 + 20</b><span>browser checks and Postman assertions against the live app</span><small>The browser checks run daily.</small></div>
       <div class="stat"><b>2.3 s</b><span>to a usable dashboard on a throttled phone (4G, 4x CPU)</span><small>From 18 s with one bundle; measured with Playwright on 29 Oct. A cold first visit can take longer.</small></div>
     </div>
@@ -128,7 +128,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 
   <section aria-labelledby="real">
     <h2 id="real">Why this exists: the same gap in the author's own ads</h2>
-    <p class="sub">The demo shop is fictional, so here is a real case: the author's own Meta ads sending traffic to Shopee affiliate links in Vietnam, 2 to 8 October 2026, the days the merchant platform's export covers, 33 ads. Clicks and spend come from Meta's API per ad; orders and commission from Shopee's official export, matched to each ad one-to-one by its link's Sub_id. Not PayPal, and not run through Paid Signal: it is why the author built it, shown where the author had real numbers. Motivation, not a result.</p>
+    <p class="sub">The demo shop is fictional, so here is a real case: the author's own Meta ads sending traffic to Shopee affiliate links in Vietnam, 2 to 8 October 2026, the days the merchant platform's export covers, 33 ads. Clicks and spend come from Meta's API per ad; orders and commission from Shopee's official export, matched to each ad one-to-one by its link's Sub_id. Not PayPal: it is why the author built it, shown where the author had real numbers, and below it is run through Paid Signal's own budget rule. Motivation, not a result.</p>
     <div class="grid">
       <div class="stat"><b>2,294</b><span>clicks Meta reported, for 1,118,260 VND (about $43) of ads</span><small>The campaigns' objective was Traffic, so Meta optimised for exactly these.</small></div>
       <div class="stat"><b class="bad">10</b><span>order lines the merchant platform recorded: 5 completed, 4 pending, 1 cancelled</span><small>Expected commission 70,577 VND, 6.3% of spend; no payout recorded yet.</small></div>
@@ -145,10 +145,11 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
         <tr><td>Baggy jeans</td><td class="n">98</td><td class="n">63,653</td><td class="n">2 completed, 1 pending</td><td class="n">13,030</td></tr>
       </tbody>
     </table></div>
-    <p class="sub">Ranked by clicks, the polo ads win. Ranked by money, the jacket ad, fifth by clicks, brought 71% of all commission, from just 2 orders. A small test (about $43), so it shows a pattern, not a result: budget that follows the ad platform's number can go to the wrong ad. Paid Signal's own rule would not move budget on 2 orders either; it would keep the split and keep counting. Raw numbers: <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/real-ads-case.json">real-ads-case.json</a>.</p>
+    <p class="sub">Ranked by clicks, the polo ads win. Ranked by money, the jacket ad, fifth by clicks, brought 71% of all commission, from just 2 orders. A small test (about $43), so it shows a pattern, not a result: budget that follows the ad platform's number can go to the wrong ad. Raw numbers: <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/real-ads-case.json">real-ads-case.json</a>.</p>
+    <p class="sub"><b>Through Paid Signal's budget rule</b> (<code>node scripts/eval-real-case.mjs</code>, completed orders standing in for PayPal-confirmed payments, matched to ads by Sub_id as a capture is by its custom_id): all 5 completed orders came from the three ads ranked 7th, 9th and 10th of 10 by clicks per unit of spend (the 24 ads with no order counted as one row). A rule that follows clicks would raise the Bag ad, which completed no order, and cut Fashion item E, which completed one. Paid Signal's rule moves nothing: no ad has 3 completed orders yet, so it keeps the split and keeps counting. Output: <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/real-case-run.json">real-case-run.json</a>.</p>
   </section>
 
-  <p class="foot">Reproduce: <code>node scripts/eval-budget-sim.mjs</code>, <code>node scripts/eval-budget-scenarios.mjs 2</code>, <code>node scripts/eval-revenue.mjs 2</code>, <code>node scripts/eval-gate.mjs</code>, <code>node scripts/eval-agent.mjs 10</code>, <code>npm test</code>. Raw results: <a href="https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof">docs/proof</a>. The ad export and leads are fictional demo data; PayPal calls are real sandbox calls; Meta events go to a real Meta dataset as test events.</p>
+  <p class="foot">Reproduce: <code>node scripts/eval-budget-sim.mjs</code>, <code>node scripts/eval-budget-scenarios.mjs 2</code>, <code>node scripts/eval-revenue.mjs 2</code>, <code>node scripts/eval-gate.mjs</code>, <code>node scripts/eval-agent.mjs 10</code>, <code>node scripts/eval-real-case.mjs</code>, <code>npm test</code>. Raw results: <a href="https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof">docs/proof</a>. The ad export and leads are fictional demo data; PayPal calls are real sandbox calls; Meta events go to a real Meta dataset as test events.</p>
 </main>
 <script src="/proof.js" defer></script>
 </body>

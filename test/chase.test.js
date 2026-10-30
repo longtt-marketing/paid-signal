@@ -3,11 +3,15 @@ import assert from "node:assert/strict";
 import { eligibleForReminder, reminderProblem, runChaseAgent } from "../src/chaseAgent.js";
 
 const now = Date.parse("2026-10-30T12:00:00Z");
-const inv = (o) => ({ id: "INV2-A", lead: "Lead 13 (fictional)", amount: "88.20", status: "SENT", sent_at: "2026-10-30T05:00:00Z", ...o });
+const inv = (o) => ({ id: "INV2-A", lead: "Lead 13 (fictional)", amount: "88.20", status: "SENT", sent_at: "2026-10-30T05:00:00Z", drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", lines: [{ sku: "trial_class", qty: 1 }, { sku: "trial_class", qty: 1 }], ...o });
 
 test("chase: only sent, unpaid invoices an hour old and not reminded today are eligible", () => {
   const list = [inv({}), inv({ id: "INV2-B", status: "PAID" }), inv({ id: "INV2-C", sent_at: "2026-10-30T11:30:00Z" }), inv({ id: "INV2-D", reminded_at: "2026-10-30T02:00:00Z" }), inv({ id: "INV2-E", status: "DRAFT", sent_at: null })];
   assert.deepEqual(eligibleForReminder(list, now).map((i) => i.id), ["INV2-A"]);
+});
+
+test("chase: a hand-made invoice, not priced in code from what the lead asked for, is never reminded", () => {
+  assert.deepEqual(eligibleForReminder([inv({ drafted_by: undefined, lines: [] })], now), []);
 });
 
 test("chase: a reminder needs a fresh read showing PayPal still waiting, and quotes no other amount", () => {
