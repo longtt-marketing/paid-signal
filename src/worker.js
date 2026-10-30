@@ -114,6 +114,25 @@ async function firstPaint(env, url, page) {
   } catch { return page; }
 }
 
+/**
+ * Agent loops sometimes leave an empty text block, or an assistant turn ending in whitespace, and the Messages API refuses
+ * both with a 400. Clean them before the turn goes out, so one stray block cannot stop a Studio agent mid-run.
+ */
+export function cleanTurns(messages) {
+  const out = messages.map((m) => {
+    if (typeof m.content === "string") return { ...m, content: m.content.trim() ? m.content : "(no text)" };
+    if (!Array.isArray(m.content)) return m;
+    const content = m.content.filter((c) => c?.type !== "text" || String(c.text || "").trim());
+    return { ...m, content: content.length ? content : [{ type: "text", text: "(no text)" }] };
+  });
+  const last = out.at(-1);
+  if (last?.role === "assistant") {
+    if (typeof last.content === "string") last.content = last.content.trimEnd();
+    else { const t = [...last.content].reverse().find((c) => c.type === "text"); if (t && last.content.at(-1) === t) t.text = t.text.trimEnd(); }
+  }
+  return out;
+}
+
 // The dashboard page: only this site's scripts, PayPal and Google Fonts; never framed by another site.
 const PAGE_CSP = ["default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob:", "connect-src 'self'", "worker-src 'self' blob:", "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'"].join("; ");
@@ -437,12 +456,17 @@ const app = {
         }
         const stop = await guard(env, request, "assistant turns", 80, Number(env.AI_TURNS_DAILY || 400)); if (stop) return json({ error: stop }, 429);
         const model = "claude-sonnet-5-5"; // one model, whatever the page asks for
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
+        const body = JSON.stringify({ model, max_tokens: Math.min(Number(b.max_tokens) || 3000, 4000), system: b.system, messages: cleanTurns(b.messages), tools: b.tools, ...(b.tool_choice ? { tool_choice: b.tool_choice } : {}) });
+        const ask = () => fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST", body,
           headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json", ...(env.ANTHROPIC_WORKSPACE_ID ? { "anthropic-workspace-id": env.ANTHROPIC_WORKSPACE_ID } : {}) },
-          body: JSON.stringify({ model, max_tokens: Math.min(Number(b.max_tokens) || 3000, 4000), system: b.system, messages: b.messages, tools: b.tools, ...(b.tool_choice ? { tool_choice: b.tool_choice } : {}) }),
         });
-        return new Response(await res.text(), { status: res.status, headers: { "content-type": "application/json" } });
+        let res = await ask();
+        // several Studio agents run at once; an overloaded or rate-limited moment is retried once instead of breaking the run
+        if ([429, 500, 529].includes(res.status)) { await new Promise((r) => setTimeout(r, 1500)); res = await ask(); }
+        const text = await res.text();
+        if (!res.ok) console.warn("anthropic turn failed", res.status, text.slice(0, 300));
+        return new Response(text, { status: res.status, headers: { "content-type": "application/json" } });
       }
 
       if (url.pathname === "/api/reconcile" && request.method === "POST") {
