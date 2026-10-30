@@ -110,6 +110,7 @@ export default function App() {
   // the revenue agent decides who is ready to pay; code prices it; the Agent Toolkit drafts it; nothing is sent here
   const [revenue, setRevenue] = useState({ status: "idle" });
   const [chase, setChase] = useState({ status: "idle" });
+  const [studioPage, setStudioPage] = useState("overview");
   // sent but unpaid: the chase agent reads each with PayPal's Agent Toolkit, picks whom to remind and writes the note
   const askChase = async () => {
     setChase({ status: "running" });
@@ -394,6 +395,11 @@ export default function App() {
               {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {waiting > 0 && <span className="count">{waiting}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
               <button className="btn dark" onClick={openAssistant}>Open the Studio assistant</button>
             </div>
+          </div>
+          <div className="studio-pages" role="tablist" aria-label="Report pages">
+            {[["overview", "Ads vs PayPal"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"]].map(([id, label]) => (
+              <button key={id} role="tab" aria-selected={studioPage === id} className={studioPage === id ? "on" : ""} onClick={() => { setStudioPage(id); studio.current?.selectPage(id); }}>{label}</button>
+            ))}
           </div>
           <div className="studio">
             {studioOn && license !== undefined

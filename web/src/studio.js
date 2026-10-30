@@ -11,8 +11,8 @@ const USD = { format: new Intl.NumberFormat("en-US", { style: "currency", curren
 const f = (id, name, format, hide) => ({ id, name, format, ...(format === "currencyFormat" ? { formatOptions: USD } : {}), ...(hide ? { hide } : {}) });
 const sum = (id) => ({ id, aggregation: "sum" });
 
-/** Two tables joined on the ad key: what each ad claims, and what PayPal captured for it. */
-export function buildData(rec, payments, invoices = [], duplicates = []) {
+/** Two tables joined on the ad key: what each ad claims, and what PayPal captured for it and Meta received. */
+export function buildData(rec, payments, invoices = [], duplicates = [], metaSends = []) {
   const ads = rec.ads.map((r) => ({
     ad: r.ad, name: adName(r.ad), spend: r.spend_cents / 100, leads: r.leads, payers: r.paid, refunds: r.refunded,
     revenue: r.revenue_cents / 100, noPayer: r.paid === 0 ? r.spend_cents / 100 : 0,
@@ -20,9 +20,15 @@ export function buildData(rec, payments, invoices = [], duplicates = []) {
   }));
   const known = new Set(rec.ads.map((r) => r.ad));
   const held = new Set(duplicates.map((d) => d.capture_id)); // from /api/ledger: the set reconcile holds out
+  const sent = Object.fromEntries(metaSends.map((m) => [m.capture_id, m]));
   const caps = payments.map((p) => {
     const gross = Number(p.amount), back = Number(p.refunded_amount || 0), hold = back < gross && held.has(p.capture_id);
+    const m = sent[p.capture_id], inv = invoices.find((i) => i.id === p.order_id);
+    // what the ad platform learned about this payment, in the owner's words
+    const meta = m?.ok && m.events_received > 0 ? "Received by Meta" : back >= gross ? "Held: fully refunded" : hold ? "Held: possible duplicate" : m?.held ? `Held: ${m.held}` : !p.click_id ? "Held: no ad click" : "Not sent yet";
     return {
+      via: p.via === "invoice" ? "PayPal invoice" : "PayPal checkout", lead: inv ? inv.lead.replace(" (fictional)", "") : p.via === "invoice" ? "Invoice lead" : "Shop visitor", meta,
+      metaAt: m?.ok ? String(m.at).slice(0, 19).replace("T", " ") : "",
       id: p.capture_id, ad: known.has(p.ad) ? p.ad : "(not in export)", adName: known.has(p.ad) ? adName(p.ad) : "No ad click", status: p.status, source: p.source === "fb" ? "Meta click" : p.source === "g" ? "Google click" : "Other",
       gross, refunded: back, net: hold ? 0 : Math.max(0, gross - back), paid: back >= gross || hold ? 0 : 1, held: hold ? 1 : 0, date: String(p.captured_at).slice(0, 10), capturedAt: p.captured_at,
     };
@@ -40,7 +46,8 @@ export function buildData(rec, payments, invoices = [], duplicates = []) {
       {
         id: "captures", name: "PayPal captures", description: "One row per PayPal capture, attributed to an ad by click id.", data: caps,
         fields: [f("id", "Capture", "textFormat"), f("ad", "Ad key", "textFormat", true), f("adName", "Ad", "textFormat"), f("status", "Status", "textFormat"), f("source", "Click source", "textFormat"),
-          f("gross", "Captured", "currencyFormat"), f("refunded", "Refunded", "currencyFormat"), f("net", "Net paid", "currencyFormat"), f("paid", "Is paid", "integerFormat"), f("held", "Held as possible duplicate", "integerFormat"), f("date", "Capture date", "dateFormat"), f("capturedAt", "Captured at", "textFormat")],
+          f("gross", "Captured", "currencyFormat"), f("refunded", "Refunded", "currencyFormat"), f("net", "Net paid", "currencyFormat"), f("paid", "Is paid", "integerFormat"), f("held", "Held as possible duplicate", "integerFormat"), f("date", "Capture date", "dateFormat"), f("capturedAt", "Captured at", "textFormat"),
+          f("via", "Paid through", "textFormat"), f("lead", "Who paid", "textFormat"), f("meta", "Meta", "textFormat"), f("metaAt", "Meta received at (UTC)", "textFormat")],
       },
     ],
     relations: [{ id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],
@@ -48,7 +55,8 @@ export function buildData(rec, payments, invoices = [], duplicates = []) {
     expressions: [
       // named measures, so the grid shows "Spend" rather than "Spend (sum)"
       ...[["mSpend", "Spend", "ads.spend", "currencyFormat"], ["mLeads", "Leads", "ads.leads", "integerFormat"], ["mPaid", "Paid orders", "ads.payers", "integerFormat"],
-        ["mRefunds", "Fully refunded", "ads.refunds", "integerFormat"], ["mRevenue", "Revenue", "ads.revenue", "currencyFormat"]]
+        ["mRefunds", "Fully refunded", "ads.refunds", "integerFormat"], ["mRevenue", "Revenue", "ads.revenue", "currencyFormat"],
+        ["cPaid", "Paid orders", "captures.paid", "integerFormat"], ["cNet", "Net paid", "captures.net", "currencyFormat"], ["cRefunded", "Refunded", "captures.refunded", "currencyFormat"]]
         .map(([id, name, field, format]) => ({ id, name, format, ...(format === "currencyFormat" ? { formatOptions: USD } : {}), isMeasure: true, expression: sum(field) })),
       { id: "costPerPayer", name: "Cost / paid order", description: "Ad spend divided by PayPal paid orders.", format: "currencyFormat", formatOptions: USD, isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
       { id: "revenuePerDollar", name: "Paid revenue per $1 of ads", description: "PayPal net revenue divided by ad spend.", format: "currencyFormat", formatOptions: USD, isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.revenue"), sum("ads.spend")] } },
@@ -96,6 +104,24 @@ export const initialReport = {
       },
       widgetLayout: { net: at(0, 0, 12, 7), refunded: at(12, 0, 12, 7), timeline: at(0, 7, 24, 14), list: at(0, 21, 24, 20) },
     },
+    {
+      // the whole path per ad: how each payment came in, and whether the ad platform learned about it
+      id: "ledger", name: "Ad → PayPal → Meta",
+      widgets: {
+        path: {
+          type: "pivot-grid",
+          dataMapping: { rows: [{ id: "captures.adName" }, { id: "captures.via" }, { id: "captures.meta" }], columns: [], values: [{ id: "cPaid" }, { id: "cNet" }, { id: "cRefunded" }] },
+          format: { title: { enabled: true, text: "Each ad: paid through, and what Meta received" } },
+        },
+        ledger: {
+          type: "grid",
+          dataMapping: { cols: [{ id: "captures.adName" }, { id: "captures.lead" }, { id: "captures.via" }, { id: "captures.id" }, { id: "cNet" }, { id: "cRefunded" }, { id: "captures.meta" }, { id: "captures.metaAt" }] },
+          sort: [{ field: { id: "captures.adName" }, direction: "asc" }],
+          format: { title: { enabled: true, text: "Ledger: every payment from its ad to Meta" }, style: { headerRow: { wrapText: true } } },
+        },
+      },
+      widgetLayout: { path: at(0, 0, 24, 16), ledger: at(0, 16, 24, 20) },
+    },
   ],
 };
 
@@ -124,6 +150,7 @@ export const phoneReport = {
     ...(pg.id === "overview" ? { widgets: { ...pg.widgets, rpd: kpi("Revenue per $1", { id: "revenuePerDollar" }), nopayer: kpi("Per paid order", { id: "costPerPayer" }) } } : {}),
     widgetLayout: pg.id === "overview"
       ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), claim: at(0, 14, 24, 16), table: at(0, 30, 24, 20), funnel: at(0, 50, 24, 16) }
+      : pg.id === "ledger" ? { path: at(0, 0, 24, 20), ledger: at(0, 20, 24, 24) }
       : { net: at(0, 0, 12, 7), refunded: at(12, 0, 12, 7), timeline: at(0, 7, 24, 16), list: at(0, 23, 24, 22) },
   })),
 };

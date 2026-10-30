@@ -17,7 +17,7 @@ const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, 
   const studio = useRef(null);
   const [phone] = useState(narrow); // chosen once at mount; Studio keeps its own layout state after that
   const ai = useMemo(() => buildAi({ getCsv: () => csvRef.current, onInvoices, onRecommendation }), [csvRef, onInvoices, onRecommendation]);
-  const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments, invoices, state.duplicates) : undefined), [state, invoices]);
+  const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments, invoices, state.duplicates, state.metaSends) : undefined), [state, invoices]);
   const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() }), [state]);
   const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition, funnelWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline", "lead-funnel"] }] }), []);
   useImperativeHandle(ref, () => ({
