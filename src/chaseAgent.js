@@ -53,7 +53,8 @@ export function reminderProblem(input, { eligible, read, sent, maxReminders = 3 
   const status = parse(read[inv.id] || "")?.status;
   if (!status) return "Call get_invoice for it first.";
   if (!WAITING.has(status)) return `PayPal shows it ${status}, not waiting for payment.`;
-  const amounts = [...`${input.subject} ${input.note}`.matchAll(/\$?\d[\d,]*(?:\.\d+)?/g)].map((m) => Number(m[0].replace(/[$,]/g, "")));
+  // money is a $ amount or a number with cents; "2 children", "5 days" or "Dec 15" are not amounts
+  const amounts = [...`${input.subject} ${input.note}`.matchAll(/\$\s?\d[\d,]*(?:\.\d+)?|\b\d[\d,]*\.\d{2}\b/g)].map((m) => Number(m[0].replace(/[$,\s]/g, "")));
   const bad = amounts.filter((n) => n !== Number(inv.amount));
   if (bad.length) return `The note quotes ${bad.join(", ")}; only the invoice total ${inv.amount} may appear.`;
   return null;

@@ -281,7 +281,21 @@ export default function App() {
                   : <span><b>Live to Meta:</b> pay in the demo shop and its Purchase event is sent to the shop's Meta dataset (test events) the moment PayPal confirms it.</span>}
               </div>}
               <div className="sig">
-                {state && <pre tabIndex={0} aria-label="Meta Purchase event preview">{JSON.stringify(state.meta.events[0] || { note: "No paid capture with a click id yet." }, null, 2)}</pre>}
+                {state && (() => {
+                  // the same payment the line above talks about: the last one sent live, else the latest event
+                  const ev = (lastMeta && state.meta.events.find((e) => e.event_id === `paypal:${lastMeta.capture_id}`)) || state.meta.events[state.meta.events.length - 1];
+                  if (!ev) return <p className="muted">No paid capture with an ad click yet.</p>;
+                  const sent = metaSent[ev.event_id.replace("paypal:", "")];
+                  return <div className="sig-event">
+                    <dl>
+                      <div><dt>Payment</dt><dd>capture {ev.event_id.replace("paypal:", "")} · ${ev.custom_data.value.toFixed(2)}</dd></div>
+                      <div><dt>Event</dt><dd>Purchase · {ev.action_source === "chat" ? "paid by invoice after a chat" : "paid at checkout"}</dd></div>
+                      <div><dt>Matched on</dt><dd>{[ev.user_data.fbc && "the ad click (fbc)", ev.user_data.em && "the payer's hashed email", ev.user_data.client_user_agent && "browser"].filter(Boolean).join(", ")}</dd></div>
+                      <div><dt>Meta</dt><dd>{sent?.ok ? `received ${sent.events_received} event ${clock(sent.at)}${sent.backfill ? " (sent later, before the live link)" : ""}` : "not sent yet"}</dd></div>
+                    </dl>
+                    <details><summary>Event as sent (JSON)</summary><pre tabIndex={0} aria-label="Meta Purchase event">{JSON.stringify(ev, null, 2)}</pre></details>
+                  </div>;
+                })()}
                 <div className="sig-side">
                   {state?.meta.held.length > 0 && <div><b>Held back from Meta</b>{state.meta.held.map((h) => <small key={h.capture_id}>{h.capture_id} · {h.reason}</small>)}</div>}
                   {state && <div><b>Google adjustments</b>{state.google.adjustments.map((a) => <small key={a.order_id + a.adjustment_type}>{a.adjustment_type === "RETRACTION" ? "Retraction" : "Restatement"} · {a.order_id}{a.adjusted_value ? ` → $${a.adjusted_value}` : ""}</small>)}</div>}

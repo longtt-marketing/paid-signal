@@ -32,8 +32,9 @@ export function parseAdCsv(text) {
   if (ai < 0 || si < 0 || li < 0) return { rows: [], errors: ["The export needs columns for ad, spend and leads."] };
   const rows = [];
   for (const [n, l] of lines.slice(1).entries()) {
-    const c = split(l), spend = cents(c[si]), leads = Number(String(c[li]).replace(/[^0-9.]/g, ""));
-    if (!c[ai] || !Number.isFinite(spend) || !Number.isFinite(leads)) { errors.push(`Row ${n + 2} skipped: missing ad, spend or leads.`); continue; }
+    const c = split(l), rawSpend = String(c[si] ?? "").replace(/[$,\s]/g, ""), rawLeads = String(c[li] ?? "").replace(/[,\s]/g, "");
+    if (!c[ai] || !/^\d+(\.\d+)?$/.test(rawSpend) || !/^\d+$/.test(rawLeads)) { errors.push(`Row ${n + 2} skipped: ad, spend (a number, 0 or more) and leads (a whole number, 0 or more) are needed.`); continue; }
+    const spend = cents(rawSpend), leads = Number(rawLeads);
     rows.push({ ad: c[ai], spend_cents: spend, leads });
   }
   return { rows, errors };
@@ -177,7 +178,8 @@ export async function metaEvents(payments, { sourceUrl, hold } = {}) {
     if (!user.fbc && !user.em) { held.push({ capture_id: p.capture_id, reason: "nothing Meta can match on" }); continue; }
     events.push({
       event_name: "Purchase", event_time: Math.floor(Date.parse(p.captured_at) / 1000), event_id: `paypal:${p.capture_id}`,
-      action_source: "website", ...(sourceUrl ? { event_source_url: sourceUrl } : {}), user_data: user,
+      // an invoice is paid after a conversation, not on a web page: Meta's "chat" source, with no page URL
+      ...(p.via === "invoice" ? { action_source: "chat" } : { action_source: "website", ...(sourceUrl ? { event_source_url: sourceUrl } : {}) }), user_data: user,
       custom_data: { value: Number(dollars(gross - back)), currency: p.currency || "USD", order_id: p.order_id },
     });
   }

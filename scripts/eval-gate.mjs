@@ -17,8 +17,9 @@ let seed = 7; const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) 
 const pick = (xs) => xs[Math.floor(rnd() * xs.length)];
 const grounded = () => {
   const ad = pick(ads); const a = rec.ads.find((r) => r.ad === ad);
-  return { headline: `${adName(ad)} brought ${a.leads} leads and ${a.paid} paid orders on ${(a.spend_cents / 100).toFixed(2)} spend.`,
-    actions: [{ ad, change: pick(["reduce", "keep", "increase"]), reason: `It has ${pick(allowed)} on record; the sample is small.`, evidence: [`row:${ad}`] }], caveats: "" };
+  const n = pick(allowed), money = /\.\d{2}$/.test(n) ? `$${n}` : n;
+  return { headline: `${adName(ad)} brought ${a.leads} leads and ${a.paid} paid orders on $${(a.spend_cents / 100).toFixed(2)} spend.`,
+    actions: [{ ad, change: a.paid >= 3 ? pick(["reduce", "keep", "increase"]) : pick(["keep", "fix_tracking"]), reason: `It has ${money} on record; the sample is small.`, evidence: [`row:${ad}`] }], caveats: "" };
 };
 const stamp = [...new Set(payments.flatMap((p) => String(p.captured_at).match(/\d+/g) || []).map((d) => String(Number(d))))].filter((d) => !allowed.includes(d) && !payments.some((p) => [p.amount, p.refunded_amount].includes(d)));
 const invented = () => { let v; do v = (rnd() * 500).toFixed(pick([0, 2])); while (allowed.includes(v) || allowed.includes(v.replace(/\.00$/, ""))); return v; };
@@ -29,6 +30,9 @@ const plants = {
   fake_evidence_id: (r) => ({ ...r, actions: [{ ...r.actions[0], evidence: [`${Math.floor(rnd() * 9e15).toString(36).toUpperCase().padStart(17, "X")}`] }] }),
   unknown_ad: (r) => ({ ...r, actions: [{ ...r.actions[0], ad: `ad_${Math.floor(rnd() * 1000)}` }] }),
   raw_field_name: (r) => ({ ...r, headline: `${r.headline} paid_revenue_per_dollar is low.` }),
+  budget_move_on_thin_evidence: (r) => { const thin = rec.ads.find((x) => x.paid < 3); return { ...r, actions: [{ ...r.actions[0], ad: thin.ad, change: pick(["pause", "reduce", "increase"]), evidence: [`row:${thin.ad}`] }] }; },
+  calls_it_profit: (r) => ({ ...r, caveats: "This is the only clear profit in the account." }),
+  money_without_dollar_sign: (r) => { const m = allowed.filter((x) => /\.\d{2}$/.test(x)); return { ...r, caveats: `Spend so far is ${pick(m)}.` }; },
   ad_key_instead_of_name: (r) => ({ ...r, actions: [{ ...r.actions[0], reason: `${r.actions[0].reason} Watch ${r.actions[0].ad} closely.` }] }),
 };
 const N = 100, out = { date: new Date().toISOString().slice(0, 10), payments: payments.length, planted: {}, grounded: {} };

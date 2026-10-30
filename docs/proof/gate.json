@@ -26,6 +26,18 @@
    "tried": 100,
    "caught": 100
   },
+  "budget_move_on_thin_evidence": {
+   "tried": 100,
+   "caught": 100
+  },
+  "calls_it_profit": {
+   "tried": 100,
+   "caught": 100
+  },
+  "money_without_dollar_sign": {
+   "tried": 100,
+   "caught": 100
+  },
   "ad_key_instead_of_name": {
    "tried": 100,
    "caught": 100

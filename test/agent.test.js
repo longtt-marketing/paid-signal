@@ -19,15 +19,15 @@ function scripted(submissions) {
 }
 
 test("a grounded recommendation passes the evidence check", async () => {
-  const good = { headline: "guide spent $118.40 on 31 leads and 0 paid orders.", actions: [{ ad: "guide", change: "pause", reason: "31 leads, 0 paid.", evidence: ["row:guide"] }] };
+  const good = { headline: "guide spent $118.40 on 31 leads and 0 paid orders.", actions: [{ ad: "guide", change: "keep", reason: "31 leads, 0 paid; it needs more paid orders before its budget moves.", evidence: ["row:guide"] }] };
   const out = await runAgent({ llm: scripted([good]), rec, payments });
   assert.equal(out.grounded, true);
-  assert.equal(out.recommendation.actions[0].change, "pause");
+  assert.equal(out.recommendation.actions[0].change, "keep");
 });
 
 test("an invented number is rejected, repaired once, and evidence ids must exist", async () => {
-  const bad = { headline: "guide will lose $500 next month.", actions: [{ ad: "guide", change: "pause", reason: "x", evidence: ["CAP9"] }] };
-  const fixed = { headline: "guide has 0 paid orders.", actions: [{ ad: "guide", change: "pause", reason: "31 leads.", evidence: ["row:guide"] }] };
+  const bad = { headline: "guide will lose $500 next month.", actions: [{ ad: "guide", change: "keep", reason: "x", evidence: ["CAP9"] }] };
+  const fixed = { headline: "guide has 0 paid orders.", actions: [{ ad: "guide", change: "keep", reason: "31 leads.", evidence: ["row:guide"] }] };
   const out = await runAgent({ llm: scripted([bad, fixed]), rec, payments });
   assert.equal(out.grounded, true);
   assert.deepEqual(checkRecommendation(rec, payments, bad), ['Number "500" is not in the tool results.', 'Evidence "CAP9" does not exist.']);
@@ -46,8 +46,16 @@ test("numbers read_captures returns (amount, capture time) are grounded; invente
   assert.equal(checkRecommendation(rec, payments, { ...out, headline: "trial will earn $49.50." }).length, 1);
 });
 
-test("tool field names are sent back for plain words; ad keys are fine", () => {
-  const out = { headline: "guide has 0 paid orders; spend_usd is 118.40.", actions: [{ ad: "guide", change: "reduce", reason: "31 leads.", evidence: ["row:guide"] }] };
+test("tool field names are sent back for plain words", () => {
+  const out = { headline: "guide has 0 paid orders; spend_usd is $118.40.", actions: [{ ad: "guide", change: "keep", reason: "31 leads.", evidence: ["row:guide"] }] };
   assert.deepEqual(checkRecommendation(rec, payments, out), ['"spend_usd" is a field name; write it in plain words.']);
-  assert.deepEqual(checkRecommendation(rec, payments, { ...out, headline: "guide has 0 paid orders and spent 118.40." }), []);
+  assert.deepEqual(checkRecommendation(rec, payments, { ...out, headline: "guide has 0 paid orders and spent $118.40." }), []);
+});
+
+test("gate: no budget move on fewer than 3 paid orders, no 'profit', money carries a dollar sign", () => {
+  const ok = { headline: "guide spent $118.40 and has 0 paid orders.", caveats: "", actions: [{ ad: "guide", change: "keep", reason: "Needs more paid orders.", evidence: ["row:guide"] }] };
+  assert.deepEqual(checkRecommendation(rec, payments, ok), []);
+  assert.match(checkRecommendation(rec, payments, { ...ok, actions: [{ ...ok.actions[0], change: "pause" }] })[0], /fewer than 3/);
+  assert.match(checkRecommendation(rec, payments, { ...ok, caveats: "The only clear profit is here." })[0], /profit/);
+  assert.match(checkRecommendation(rec, payments, { ...ok, headline: "guide spent 118.40." })[0], /dollar sign/);
 });

@@ -10,12 +10,12 @@ Rules:
 - Call read_reconciliation first. Call read_captures for any ad you make a claim about.
 - Quote only numbers that appear in tool results, written exactly as given. Do not compute new numbers, forecast returns or invent percentages.
 - Every action cites evidence: capture ids from read_captures, or "row:<ad key>" for the ad's reconciliation row.
-- Small samples are weak evidence. Say so when an ad has fewer than 3 paid orders. Refunds are not paid orders.
+- Small samples are weak evidence. An ad with fewer than 3 paid orders gets "keep" (or "fix_tracking"), never pause, reduce or increase: say it needs more paid orders before its budget moves. Refunds are not paid orders.
 - possible_duplicates lists payments that may be the same purchase twice. Those with held: true are already held out of paid_orders and revenue (held_as_possible_duplicate); held: false means the first of the pair was refunded, so this one counts. If an ad has one held, say so: if it is a real second purchase, that ad has one more paid order.
 - Prefer "keep and gather more data" over a confident change you cannot support.
 - Write for the shop owner in plain words ("cost per paid order", "spend with no paid order"), never field names such as spend_usd or paid_revenue_per_dollar.
 - In the headline, reasons and caveats call an ad by its name (the "name" field, e.g. "Holiday camp · static"), never its key; the key goes only in "ad" and in evidence.
-- Paid revenue is already net of refunds; never suggest a refund may not be taken out. Paid revenue minus ad spend is not profit (product cost is unknown): never call it profit. Write money as $118.40.
+- Paid revenue is already net of refunds; never suggest a refund may not be taken out. Call it "paid revenue minus ad spend" and do not use the word "profit" at all (product cost is unknown). Write money with a dollar sign: $118.40, a shortfall as "$41.50 below ad spend", paid revenue per dollar as "$0.41 per $1".
 - Finish by calling submit_recommendation once.`;
 
 export const TOOLS = [
@@ -74,7 +74,14 @@ export function checkRecommendation(rec, payments, out) {
   // the owner reads this: tool field names (spend_usd, paid_revenue_per_dollar) must become plain words, ad keys the ad's name
   const fields = new Set([...texts.join(" ").matchAll(/\b[a-z]+(?:_[a-z]+)+\b/g)].map((m) => m[0]));
   for (const f of fields) problems.push(ads.has(f) ? `"${f}" is an ad key; call the ad "${adName(f)}".` : `"${f}" is a field name; write it in plain words.`);
+  const all = texts.join(" ");
+  // a disclaimer ("not profit") is fine; calling a number profit is not
+  if (/(?<!\b(?:not|no|isn't)\s(?:a\s)?)\bprofit/i.test(all)) problems.push(`"profit" is not known (product cost is not in the data); say "paid revenue minus ad spend".`);
+  for (const m of all.matchAll(/(^|[^$\d.])(\d[\d,]*\.\d{2})\b/g)) problems.push(`Write "${m[2]}" as money with a dollar sign, e.g. $${m[2]}.`);
   for (const a of out.actions || []) {
+    const row = rec.ads.find((r) => r.ad === a.ad);
+    if (row && ["pause", "reduce", "increase"].includes(a.change) && row.paid < 3)
+      problems.push(`"${adName(a.ad)}" has ${row.paid} paid order${row.paid === 1 ? "" : "s"}; with fewer than 3 the change must be keep or fix_tracking, not ${a.change}.`);
     if (!ads.has(a.ad)) problems.push(`Ad "${a.ad}" is not in the reconciliation.`);
     for (const e of a.evidence || []) if (!(e.startsWith("row:") ? ads.has(e.slice(4)) : ids.has(e))) problems.push(`Evidence "${e}" does not exist.`);
   }

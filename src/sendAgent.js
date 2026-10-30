@@ -69,7 +69,8 @@ export async function runSendAgent({ llm, tools, approved, maxTurns = 5 }) {
         const problem = sendProblem(String(await tools.get_invoice.execute({ invoice_id: approved.id })), approved);
         if (problem) { trace.push({ tool: c.name, refused: problem }); results.push({ id: c.id, content: `Refused by code: ${problem}` }); continue; }
       }
-      const args = c.name === "send_invoice" ? { invoice_id: approved.id, send_to_recipient: true } : { invoice_id: approved.id };
+      // the model's own arguments go through, already checked to name the approved invoice; a send always notifies the lead
+      const args = c.name === "send_invoice" ? { ...c.input, send_to_recipient: true } : c.input;
       const out = String(await tools[c.name].execute(args));
       const failed = isError(out);
       if (c.name === "send_invoice" && !failed) sent = true;

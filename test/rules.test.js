@@ -192,7 +192,21 @@ test("each ad shows paid revenue minus its spend, refunds out, and the agent may
 
 test("gate: an ad key in text the owner reads is refused and the ad's name is suggested", () => {
   const rec = reconcile([{ ad: "free_guide", spend_cents: 11840, leads: 31 }], [pay({ ad: "free_guide" })]);
-  const problems = checkRecommendation(rec, [pay({ ad: "free_guide" })], { headline: "Cut free_guide.", caveats: "", actions: [{ ad: "free_guide", change: "reduce", reason: "Free guide · lead form brings leads that rarely pay.", evidence: ["row:free_guide"] }] });
+  const problems = checkRecommendation(rec, [pay({ ad: "free_guide" })], { headline: "Watch free_guide.", caveats: "", actions: [{ ad: "free_guide", change: "keep", reason: "Free guide · lead form brings leads that rarely pay.", evidence: ["row:free_guide"] }] });
   assert.equal(problems.length, 1);
   assert.match(problems[0], /Free guide · lead form/);
+});
+
+test("ad export: negative or non-numeric spend and leads are refused, not guessed", () => {
+  const out = parseAdCsv("ad,spend,leads\nfoo,abc,-5\nbar,10.50,3\nbaz,$1,234.00,7");
+  assert.deepEqual(out.rows.map((r) => r.ad), ["bar"]);
+  assert.equal(out.errors.length, 2);
+});
+
+test("Meta: an invoice payment is a chat conversion with no page URL; a checkout is a website one", async () => {
+  const { metaEvents } = await import("../src/ledger.js");
+  const { events } = await metaEvents([pay({ capture_id: "W1" }), pay({ capture_id: "I1", via: "invoice", clicked_at: 0, payer_email_sha256: "abc" })], { sourceUrl: "https://x/shop" });
+  assert.equal(events.find((e) => e.event_id === "paypal:W1").action_source, "website");
+  const inv = events.find((e) => e.event_id === "paypal:I1");
+  assert.equal(inv.action_source, "chat"); assert.equal(inv.event_source_url, undefined);
 });

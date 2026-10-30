@@ -182,7 +182,8 @@ async function mcpTool(env, url, name, args) {
     const [{ reconciliation: r, meta }, ledger, { invoices }] = await Promise.all([get("/api/reconcile", { csv }), get("/api/ledger"), get("/api/invoices")]);
     if (name === "propose_budget") {
       const rows = r.ads.map((a) => ({ ad: a.ad, spend: a.spend_cents / 100, paid: a.paid }));
-      const budget = Number(args.budget_usd) > 0 ? Number(args.budget_usd) : rows.reduce((n, x) => n + x.spend, 0);
+      if (args.budget_usd !== undefined && !(Number(args.budget_usd) >= 1 && Number(args.budget_usd) <= 1000000)) throw new Error("budget_usd must be a number from 1 to 1000000.");
+      const budget = args.budget_usd !== undefined ? Number(args.budget_usd) : rows.reduce((n, x) => n + x.spend, 0);
       const total = rows.reduce((n, x) => n + x.spend, 0) || 1;
       const proposal = proposeSplit(rows, budget).map((x) => { const y = rows.find((z) => z.ad === x.ad); return { ad: x.ad, name: adName(x.ad), paid_orders: y.paid, now_usd: (budget * y.spend / total).toFixed(2), proposed_usd: x.budget.toFixed(2), why: x.reason }; });
       return { proposal, rule: "paid orders per dollar, at least 10% per ad; an ad with fewer than 3 PayPal-confirmed paid orders keeps its share",
@@ -531,7 +532,10 @@ const app = {
         const parsed = parseAdCsv(csv);
         const payments = await listPayments(env);
         const rec = reconcile(parsed.rows, payments);
-        return json({ reconciliation: rec, csv_errors: parsed.errors, meta: await metaFromLedger(payments, `${url.origin}/shop.html`), google: googleRows(payments, undefined, { hold: heldDuplicates(payments) }) });
+        // what would go to Meta, minus the hashed email: Meta gets it, a public page does not
+        const meta = await metaFromLedger(payments, `${url.origin}/shop.html`);
+        meta.events = meta.events.map((e) => ({ ...e, user_data: { ...e.user_data, ...(e.user_data.em ? { em: ["(SHA-256 of the payer's email; sent to Meta, not shown here)"] } : {}) } }));
+        return json({ reconciliation: rec, csv_errors: parsed.errors, meta, google: googleRows(payments, undefined, { hold: heldDuplicates(payments) }) });
       }
 
       // The same gate for the budget agent that runs inside AG Studio: its recommendation is accepted only if every

@@ -88,6 +88,9 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
         <tr><td>Unknown ad</td><td class="n">100 / 100</td></tr>
         <tr><td>Raw field name instead of plain words</td><td class="n">100 / 100</td></tr>
         <tr><td>Ad key instead of the ad's name</td><td class="n">100 / 100</td></tr>
+        <tr><td>Budget moved on fewer than 3 paid orders</td><td class="n">100 / 100</td></tr>
+        <tr><td>Calls revenue minus ad spend "profit"</td><td class="n">100 / 100</td></tr>
+        <tr><td>Money written without a dollar sign</td><td class="n">100 / 100</td></tr>
         <tr><td>Grounded recommendations wrongly rejected</td><td class="n">0 / 500</td></tr>
       </tbody>
     </table></div>
@@ -96,7 +99,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section aria-labelledby="agents">
     <h2 id="agents">The other agents</h2>
     <div class="grid">
-      <div class="stat"><b>9 / 10</b><span>live budget-agent runs passed the gate on the first submission</span><small>10 / 10 after one repair. The one rejection: it wrote a raw field name.</small></div>
+      <div class="stat"><b>10 / 10</b><span>live budget-agent runs passed the gate on the first submission</span><small>Measured after the gate was tightened: no budget move on fewer than 3 paid orders, no "profit", dollar signs, ad names. Before the prompt was reworded, 0 / 10 passed first time (all fixed on repair).</small></div>
       <div class="stat"><b>3 of 7</b><span>unpaid invoices the chase agent chose to remind in its first live run</span><small>The three leads who had asked to book. It read five with get_invoice first, skipped four, and noticed one invoice did not match what the lead asked for.</small></div>
       <div class="stat"><b>4 / 4</b><span>bad sends the send agent's code refuses</span><small>Not a draft, wrong amount, wrong currency, or PayPal did not return the invoice. Unit-tested; the model cannot override it.</small></div>
       <div class="stat"><b>1 answer</b><span>from Claude as an outside MCP client</span><small>Named the cheapest ad, warned it rests on one order, and found the held duplicate. <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-run.md">Transcript</a>.</small></div>
