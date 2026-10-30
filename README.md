@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**Teach your ads what a paid customer looks like.**
+**Tell your ads who actually paid.**
 
 Ad platforms optimise for what they can see: clicks, leads, chat taps. For a small business that gets paid through
 PayPal, the thing that matters, a payment, never reaches the ad platform. So budgets drift toward ads that produce

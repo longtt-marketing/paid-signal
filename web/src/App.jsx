@@ -238,7 +238,7 @@ export default function App() {
               <svg width="56" height="40" viewBox="0 0 56 40" aria-hidden="true"><path d="M2 20h46M38 8l12 12-12 12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
               <div><b className="n paid">{t ? t.paid : "…"}</b><span>paid {t?.paid === 1 ? "order" : "orders"} PayPal confirms</span></div>
             </div>
-            <p className="pitch">Ad platforms learn from the {t ? t.leads : "leads"}. Paid Signal teaches them the {t ? t.paid : "paid orders"}, straight from PayPal.</p>
+            <p className="pitch">Ad platforms learn from the {t ? t.leads : "leads"}. Paid Signal sends them the {t ? t.paid : "paid orders"}, straight from PayPal.</p>
             {t && <div className="chips-row">
               <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
               {t.held > 0 && <span title="Same payer, same ad, minutes apart: not counted as a paid order, and kept from the ad platforms"><b>{t.held}</b> possible duplicate held</span>}
@@ -258,7 +258,7 @@ export default function App() {
           <article><span className="step">1</span><b>Pay from an ad click</b><p>Open an ad link and pay in the PayPal sandbox. The click rides in the order.</p><a className="btn" href={adLink("trial_video", "fb")}>Open an ad link</a></article>
           <article><span className="step">2</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
           <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("week4")}>Or try a synthetic week with more orders</button></article>
-          <article><span className="step">4</span><b>Teach the ad platform</b><p>Paid orders become Meta and Google conversions. Refunds pull them back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
+          <article><span className="step">4</span><b>Tell the ad platform</b><p>Paid orders become Meta and Google conversions. Refunds pull them back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
         </section>
 
         <div className="cols">

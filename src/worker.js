@@ -151,7 +151,7 @@ async function firstPaint(env, url, page) {
     const html = `<div class="app"><header class="top"><div class="top-in"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a></div></header>`
       + `<main class="desk"><section class="hero"><div class="hero-copy"><h1 class="sr">Ads report ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}.</h1><p class="kicker">Kite Robotics Club · demo ad export · PayPal sandbox</p>`
       + `<div class="duo"><div><b class="n claimed">${t.leads}</b><span>leads the ads report</span></div><div><b class="n paid">${t.paid}</b><span>paid ${t.paid === 1 ? "order" : "orders"} PayPal confirms</span></div></div>`
-      + `<p class="pitch">Ad platforms learn from the ${t.leads}. Paid Signal teaches them the ${t.paid}, straight from PayPal.</p></div>`
+      + `<p class="pitch">Ad platforms learn from the ${t.leads}. Paid Signal sends them the ${t.paid}, straight from PayPal.</p></div>`
       + `<div class="hero-bars"><p class="ghost">Loading the ledger…</p></div></section></main></div>`;
     return new HTMLRewriter().on("#root", { element(e) { e.setInnerContent(html, { html: true }); } }).transform(page);
   } catch { return page; }
