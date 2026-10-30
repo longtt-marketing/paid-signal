@@ -21,9 +21,15 @@ try {
   });
   ok("PayPal order created with the click in custom_id", /^[A-Z0-9]{10,24}$/.test(order.id || "") && order.custom_id?.includes("c=IwARe2e"), order.id);
 
-  // 2. the dashboard: headline from the ledger and the three custom AG Studio widgets
-  await page.goto(`${BASE}/?film=1`, { waitUntil: "networkidle" });
+  // 2. the dashboard answers before AG Studio loads; Studio arrives as its own chunk when scrolled to
+  const scripts = [];
+  page.on("request", (r) => { if (r.resourceType() === "script") scripts.push(r.url()); });
+  await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+  await page.waitForSelector("#captures .cap", { timeout: 30000 });
+  ok("dashboard renders without loading AG Studio", !scripts.some((u) => u.includes("StudioPanel")), `${scripts.length} scripts`);
+  await page.locator("#studio").scrollIntoViewIfNeeded();
   await page.waitForSelector(".funnel", { timeout: 60000 });
+  ok("AG Studio loads when scrolled to", scripts.some((u) => u.includes("StudioPanel")));
   const head = await page.textContent("h1");
   ok("headline compares leads with PayPal paid orders", /Ads report \d+ leads\. PayPal confirms \d+ paid orders?\./.test(head), head);
   ok("claimed-vs-confirmed widget renders", await page.locator(".claim-row").count() >= 4);
@@ -37,6 +43,7 @@ try {
   // 4. the timeline widget on the PayPal captures page
   await page.evaluate(() => { const a = window.__studio; const s = a.getState(); a.setState({ ...s, selectedPageId: "captures" }); });
   await page.waitForSelector(".timeline svg", { timeout: 30000 });
+  await page.waitForFunction(() => document.querySelectorAll(".timeline circle").length >= 8, null, { timeout: 15000 }).catch(() => {});
   ok("payment timeline widget renders", await page.locator(".timeline circle").count() >= 8);
 
   // 5. MCP: initialize, list tools, read the reconciliation

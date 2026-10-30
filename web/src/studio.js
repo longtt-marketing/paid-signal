@@ -3,13 +3,8 @@
 // groups and sums rows the server already settled.
 import { studioTheme } from "ag-studio";
 
-export const AD_NAMES = {
-  trial_video: "Trial class · video",
-  free_guide: "Free guide · lead form",
-  parent_carousel: "Testimonial · carousel",
-  holiday_static: "Holiday camp · static",
-};
-export const adName = (k) => AD_NAMES[k] || k;
+import { AD_NAMES, adName } from "./names.js";
+export { AD_NAMES, adName };
 
 const f = (id, name, format, hide) => ({ id, name, format, ...(hide ? { hide } : {}) });
 const sum = (id) => ({ id, aggregation: "sum" });

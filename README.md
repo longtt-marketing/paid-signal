@@ -36,7 +36,7 @@ Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev**
 No login is needed for any of this; only paying in the demo shop needs the sandbox buyer from the testing notes.
 
 1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): 62 leads claimed by the ads, the paid orders PayPal confirms, per ad.
-2. Open the Studio assistant and choose **Review ad budgets**: the Budget agent (a custom Studio agent on Claude) passes the evidence gate, its change lands in the approvals column, and it asks Studio's page agent to add the evidence chart.
+2. Open the Studio assistant and choose **Review ad budgets**: the Budget agent (a custom Studio agent on Claude) passes the evidence gate, its change lands in **Approvals**, and it asks Studio's page agent to add the evidence chart.
 3. Under **Invoices**, press **Approve** on a draft: the send agent (Claude + PayPal Agent Toolkit) checks it and sends it.
 4. Open [Test scenarios](https://paid-signal.thelongmarketing.workers.dev/scenarios.html): nine cases and the measured proof (499 of 500 planted errors caught, 10 of 10 live agent runs grounded first time).
 5. Point any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (read-only tools; see [MCP server](#mcp-server)).
@@ -110,6 +110,15 @@ Cloudflare Worker (src/worker.js)
 public/  built React + AG Studio app, demo shop, demo data
 web/     app source (Vite)
 ```
+
+**Speed.** The dashboard is server-rendered at the edge with the live totals, then hydrates from a 67 KB (gzip) bundle;
+AG Studio (1.5 MB gzip) is its own chunk, loaded when its section scrolls near or the assistant is opened. Measured on
+the live site (Playwright, 2026-10-29): ready in 1.7 s on desktop and 2.3 s on a throttled phone (4G, 4x CPU), down
+from 5 s and 18 s with one bundle.
+
+**Security.** Every write must be JSON from this origin, with a per-visitor burst limit and daily caps; ad keys and
+click ids are allow-listed; the Claude proxy serves only AG Studio's own tools; PayPal webhooks are signature-verified;
+pages carry a Content Security Policy and `frame-ancestors 'none'`; server errors never return PayPal or Claude details.
 
 ## Run it yourself
 

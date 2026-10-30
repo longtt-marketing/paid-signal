@@ -16,7 +16,7 @@ const CLICK_ID = /^[A-Za-z0-9_-]{1,64}$/;
 // tools AG Studio's built-in agents and Paid Signal's own Studio tools send; the Claude proxy serves nothing else
 const STUDIO_TOOLS = new Set(["add_page_filter", "add_widget", "add_widget_filter", "clear_plan", "configure_widget", "create_expression", "create_plan",
   "delete_expression", "execute_query", "position_widget", "remove_page_filter", "remove_widget", "remove_widget_filter", "rename_thread", "update_expression",
-  "update_plan", "view_page", "view_plan", "view_report", "view_schema", "view_widget", "delegate_to", "read_paid_signal", "list_unpaid_leads",
+  "update_plan", "view_page", "view_plan", "view_report", "view_schema", "view_widget", "delegate_to", "complete_task", "read_paid_signal", "list_unpaid_leads",
   "draft_paypal_invoices", "check_paypal_ledger", "submit_budget_recommendation"]);
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -75,10 +75,12 @@ async function firstPaint(env, url, page) {
   try {
     const csv = await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text();
     const t = reconcile(parseAdCsv(csv).rows, await listPayments(env)).totals;
-    const html = `<main style="padding:28px 24px;font-family:'Inter Tight',system-ui,sans-serif;color:#15171c;background:#f6f5f1;min-height:100vh">`
-      + `<p style="margin:0 0 6px;font-size:13px;color:#6b7080">Kite Robotics Club · demo ads · PayPal sandbox</p>`
-      + `<h1 style="margin:0;font-size:clamp(26px,4vw,40px);line-height:1.1;letter-spacing:-.02em">Ads report ${t.leads} leads. <span style="color:#1a7a48">PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}.</span></h1>`
-      + `<p style="margin:14px 0 0;color:#4a4f5a">Loading the AG Studio dashboard…</p></main>`;
+    // the same markup and classes the app renders, so the page reads at once and nothing jumps when React takes over
+    const html = `<div class="app"><header class="top"><div class="top-in"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a></div></header>`
+      + `<main class="desk"><section class="hero"><div class="hero-copy"><h1 class="sr">Ads report ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}.</h1><p class="kicker">Kite Robotics Club · demo ad export · PayPal sandbox</p>`
+      + `<div class="duo"><div><b class="n claimed">${t.leads}</b><span>leads the ads report</span></div><div><b class="n paid">${t.paid}</b><span>paid ${t.paid === 1 ? "order" : "orders"} PayPal confirms</span></div></div>`
+      + `<p class="pitch">Ad platforms learn from the ${t.leads}. Paid Signal teaches them the ${t.paid}, straight from PayPal.</p></div>`
+      + `<div class="hero-bars"><p class="ghost">Loading the ledger…</p></div></section></main></div>`;
     return new HTMLRewriter().on("#root", { element(e) { e.setInnerContent(html, { html: true }); } }).transform(page);
   } catch { return page; }
 }
@@ -377,9 +379,12 @@ const app = {
         const b = JSON.parse(raw);
         // only AG Studio agent turns: Studio's own and Paid Signal's tools, a bounded conversation; anything else is refused
         const names = Array.isArray(b.tools) ? b.tools.map((t) => t?.name) : [];
-        if (!names.length || names.some((n) => !STUDIO_TOOLS.has(n)) || !Array.isArray(b.messages) || b.messages.length > 80 || String(b.system || "").length > 60000)
+        const unknown = names.filter((n) => !STUDIO_TOOLS.has(n));
+        if (!names.length || unknown.length || !Array.isArray(b.messages) || b.messages.length > 80 || String(b.system || "").length > 60000) {
+          console.warn("ai turn refused", { unknown, messages: b.messages?.length, system: String(b.system || "").length });
           return json({ error: "Only AG Studio agent turns are accepted." }, 400);
-        const stop = await guard(env, request, "assistant turns", 40, Number(env.AI_TURNS_DAILY || 400)); if (stop) return json({ error: stop }, 429);
+        }
+        const stop = await guard(env, request, "assistant turns", 80, Number(env.AI_TURNS_DAILY || 400)); if (stop) return json({ error: stop }, 429);
         const model = "claude-sonnet-5-5"; // one model, whatever the page asks for
         const res = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
