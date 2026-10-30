@@ -63,6 +63,8 @@ export function reconcile(adRows, payments) {
     cost_per_paid_cents: r.paid ? Math.round(r.spend_cents / r.paid) : null,
     lead_to_paid: r.leads ? r.paid / r.leads : null,
     roas: r.spend_cents ? r.revenue_cents / r.spend_cents : null,
+    // what the ad returned after its own spend, refunds already taken out; product cost is not known here, so not profit
+    net_cents: r.revenue_cents - r.spend_cents,
   }));
   const sum = (k) => ads.reduce((a, r) => a + r[k], 0);
   return {
@@ -70,6 +72,7 @@ export function reconcile(adRows, payments) {
     totals: {
       spend_cents: sum("spend_cents"), leads: sum("leads"), paid: sum("paid"), refunded: sum("refunded"), held: sum("held"), revenue_cents: sum("revenue_cents"), held_cents: sum("held_cents"),
       spend_without_paid_cents: ads.filter((r) => r.paid === 0).reduce((a, r) => a + r.spend_cents, 0),
+      net_cents: sum("revenue_cents") - sum("spend_cents"),
     },
     unmatched_captures: unmatched,
   };
@@ -82,9 +85,9 @@ export function quotableNumbers(rec) {
   const t = rec.totals;
   // counts the agent can see in the table: how many ads, how many captures
   add(rec.ads.length); add(rec.ads.reduce((n, r) => n + r.captures.length, 0));
-  [t.leads, t.paid, t.refunded, t.held, dollars(t.spend_cents), dollars(t.revenue_cents), dollars(t.held_cents), dollars(t.spend_without_paid_cents)].forEach(add);
+  [t.leads, t.paid, t.refunded, t.held, dollars(t.spend_cents), dollars(t.revenue_cents), dollars(t.held_cents), dollars(t.spend_without_paid_cents), dollars(Math.abs(t.net_cents))].forEach(add);
   for (const r of rec.ads) {
-    [r.leads, r.paid, r.refunded, r.held, r.captures.length, dollars(r.spend_cents), dollars(r.revenue_cents), dollars(r.held_cents)].forEach(add);
+    [r.leads, r.paid, r.refunded, r.held, r.captures.length, dollars(r.spend_cents), dollars(r.revenue_cents), dollars(r.held_cents), dollars(Math.abs(r.net_cents))].forEach(add);
     if (r.cost_per_paid_cents !== null) add(dollars(r.cost_per_paid_cents));
     if (r.lead_to_paid !== null) add(Math.round(r.lead_to_paid * 100) + "%");
     if (r.roas !== null) add(r.roas.toFixed(2));
@@ -155,11 +158,13 @@ export async function metaEvents(payments, { sourceUrl, hold } = {}) {
     if (hold?.has(p.capture_id)) { held.push({ capture_id: p.capture_id, reason: "possible duplicate" }); continue; }
     if (clickAge(p) > 28 * DAY) { held.push({ capture_id: p.capture_id, reason: "paid more than 28 days after the click" }); continue; }
     const user = {};
-    if (p.source === "fb" && p.click_id) user.fbc = `fb.1.${p.clicked_at || Date.parse(p.captured_at)}.${p.click_id}`;
+    // fbc needs the real click time; an invoice payment has none, so it is matched on the lead's hashed email instead
+    if (p.source === "fb" && p.click_id && p.clicked_at) user.fbc = `fb.1.${p.clicked_at}.${p.click_id}`;
     // the ledger keeps only the hash; Meta matches on it, so a purchase from a Google click still reaches Meta
     if (p.payer_email) user.em = [await sha256(p.payer_email.trim().toLowerCase())];
     else if (p.payer_email_sha256) user.em = [p.payer_email_sha256];
     if (p.user_agent) user.client_user_agent = p.user_agent; // Meta wants it on website events; stored at capture
+    if (!user.fbc && !user.em) { held.push({ capture_id: p.capture_id, reason: "nothing Meta can match on" }); continue; }
     events.push({
       event_name: "Purchase", event_time: Math.floor(Date.parse(p.captured_at) / 1000), event_id: `paypal:${p.capture_id}`,
       action_source: "website", ...(sourceUrl ? { event_source_url: sourceUrl } : {}), user_data: user,

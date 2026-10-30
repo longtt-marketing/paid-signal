@@ -91,6 +91,7 @@ table.grid{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
 .held{font:600 11px var(--sans);color:var(--gap);margin-left:4px}
 .pill{display:inline-block;font:700 12px var(--sans);padding:3px 9px;border-radius:999px;background:var(--head)}
 .pill.good{background:var(--paid-bg);color:var(--paid)}.pill.warn{background:var(--gap-bg);color:var(--gap)}
+td.neg{color:var(--gap);font-weight:700}td.pos{color:var(--paid);font-weight:700}
 .list{display:flex;flex-direction:column}
 .cap{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line2)}
 .cap span{display:flex;flex-direction:column;min-width:0;gap:1px}.cap small{color:var(--faint);overflow-wrap:anywhere}

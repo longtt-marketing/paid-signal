@@ -158,3 +158,24 @@ test("budget split by paid orders: shares sum to the budget, every ad keeps at l
   assert.ok(out.every((x) => x.share >= 0.1));
   assert.equal(out.sort((a, b) => b.share - a.share)[0].ad, "carousel");
 });
+
+test("Meta: no made-up click time; an invoice payment is matched on the lead's hashed email, or held if there is nothing to match", async () => {
+  const { metaEvents } = await import("../src/ledger.js");
+  const inv = { capture_id: "I1", order_id: "INV2-1", ad: "guide", source: "fb", click_id: "IwARx", clicked_at: 0, amount: "49.00", currency: "USD", captured_at: "2026-10-28T10:00:00Z" };
+  const withEmail = await metaEvents([{ ...inv, payer_email_sha256: "abc" }]);
+  assert.equal(withEmail.events[0].user_data.fbc, undefined);
+  assert.deepEqual(withEmail.events[0].user_data.em, ["abc"]);
+  const bare = await metaEvents([{ ...inv, payer_email_sha256: null }]);
+  assert.equal(bare.events.length, 0);
+  assert.equal(bare.held[0].reason, "nothing Meta can match on");
+});
+
+test("each ad shows paid revenue minus its spend, refunds out, and the agent may quote it", () => {
+  const rec = reconcile([{ ad: "a", spend_cents: 5000, leads: 4 }, { ad: "b", spend_cents: 1000, leads: 2 }],
+    [{ capture_id: "C1", ad: "a", amount: "49.00", refunded_amount: "49.00" }, { capture_id: "C2", ad: "b", amount: "35.95", refunded_amount: "0.00" }]);
+  assert.equal(rec.ads[0].net_cents, -5000);
+  assert.equal(rec.ads[1].net_cents, 2595);
+  assert.equal(rec.totals.net_cents, -2405);
+  const ok = quotableNumbers(rec);
+  assert.ok(ok.has("50.00") && ok.has("25.95") && ok.has("24.05"));
+});

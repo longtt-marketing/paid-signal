@@ -229,7 +229,7 @@ async function recordInvoicePayment(env, invoice) {
     await env.LEDGER.put(`pay:${id}`, JSON.stringify({
       capture_id: id, order_id: invoice.id, status: "COMPLETED", amount: t.amount?.value, currency: t.amount?.currency_code || "USD",
       ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt, captured_at: t.payment_date_time || (t.payment_date ? `${t.payment_date}T00:00:00Z` : new Date().toISOString()),
-      refunded_amount: "0.00", payer_email_sha256: null, via: "invoice",
+      refunded_amount: "0.00", payer_email_sha256: kept?.email ? await sha(String(kept.email).trim().toLowerCase()) : null, via: "invoice",
     }));
   }
   const rec = await env.LEDGER.get(`inv:${invoice.id}`, "json");

@@ -42,11 +42,12 @@ export const TOOLS = [
 export function reconciliationView(rec, payments = []) {
   const held = new Set(possibleDuplicates(payments).map((d) => d.capture_id)); // the set reconcile holds out
   return {
-    totals: { leads: rec.totals.leads, paid_orders: rec.totals.paid, fully_refunded: rec.totals.refunded, held_as_possible_duplicate: rec.totals.held, spend_usd: dollars(rec.totals.spend_cents), paid_revenue_usd: dollars(rec.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: dollars(rec.totals.spend_without_paid_cents) },
+    totals: { leads: rec.totals.leads, paid_orders: rec.totals.paid, fully_refunded: rec.totals.refunded, held_as_possible_duplicate: rec.totals.held, spend_usd: dollars(rec.totals.spend_cents), paid_revenue_usd: dollars(rec.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: dollars(rec.totals.spend_without_paid_cents), paid_revenue_minus_ad_spend_usd: dollars(rec.totals.net_cents) },
     ads: rec.ads.map((r) => ({
       ad: r.ad, spend_usd: dollars(r.spend_cents), leads: r.leads, paid_orders: r.paid, fully_refunded: r.refunded, held_as_possible_duplicate: r.held, paid_revenue_usd: dollars(r.revenue_cents),
       cost_per_paid_order_usd: r.cost_per_paid_cents === null ? "none paid" : dollars(r.cost_per_paid_cents),
       lead_to_paid: r.lead_to_paid === null ? "no leads" : Math.round(r.lead_to_paid * 100) + "%", paid_revenue_per_dollar: r.roas === null ? "no spend" : r.roas.toFixed(2),
+      paid_revenue_minus_ad_spend_usd: dollars(r.net_cents),
     })),
     unmatched_captures: rec.unmatched_captures,
     // computed in code (refunded pairs included), so the agent can quote the gap instead of working it out from capture times

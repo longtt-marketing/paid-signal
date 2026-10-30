@@ -12,6 +12,7 @@ async function api(path, body) {
   return data;
 }
 const usd = (c) => "$" + (c / 100).toFixed(2);
+const signed = (c) => (c < 0 ? "−" : c > 0 ? "+" : "") + usd(Math.abs(c));
 const money = (v) => "$" + Number(v || 0).toFixed(2);
 const CHANGE = { pause: "Pause", reduce: "Reduce budget", increase: "Increase budget", keep: "Keep and watch", fix_tracking: "Fix tracking" };
 const short = (name) => adName(name).split(" · ")[0];
@@ -231,13 +232,13 @@ export default function App() {
               <div className="card-head"><h2>Per ad</h2><span className="muted">Sorted by spend</span></div>
               <div className="scroll-x">
                 <table className="grid">
-                  <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th>Per paid order</th></tr></thead>
+                  <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Paid revenue after refunds, minus this ad's spend. Product cost is not included.">After ad spend</th><th>Per paid order</th></tr></thead>
                   <tbody>
                     {byCost.map((a) => (
-                      <tr key={a.ad}><td>{adName(a.ad)}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td>{a.paid}{a.held > 0 && <small className="held"> +{a.held} held</small>}</td><td>{usd(a.revenue_cents)}</td>
+                      <tr key={a.ad}><td>{adName(a.ad)}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td>{a.paid}{a.held > 0 && <small className="held"> +{a.held} held</small>}</td><td>{usd(a.revenue_cents)}</td><td className={a.net_cents < 0 ? "neg" : "pos"}>{signed(a.net_cents)}</td>
                         <td>{a.cost_per_paid_cents == null ? <span className="pill warn">no paid order</span> : <span className={`pill ${a.ad === best ? "good" : a.ad === worst ? "warn" : ""}`}>{usd(a.cost_per_paid_cents)}</span>}</td></tr>
                     ))}
-                    {t && <tr className="total"><td>Total</td><td>{usd(t.spend_cents)}</td><td>{t.leads}</td><td>{t.paid}</td><td>{usd(t.revenue_cents)}</td><td>{costPerPaid}</td></tr>}
+                    {t && <tr className="total"><td>Total</td><td>{usd(t.spend_cents)}</td><td>{t.leads}</td><td>{t.paid}</td><td>{usd(t.revenue_cents)}</td><td className={t.net_cents < 0 ? "neg" : "pos"}>{signed(t.net_cents)}</td><td>{costPerPaid}</td></tr>}
                   </tbody>
                 </table>
               </div>
