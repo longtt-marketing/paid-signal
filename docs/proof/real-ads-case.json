@@ -1,0 +1,125 @@
+{
+ "what": "The author's own Meta ad test sending traffic to Shopee affiliate links, Vietnam, 2-8 Oct 2026. Not PayPal and not the demo shop: real money, used to show the gap Paid Signal closes.",
+ "sources": {
+  "meta": "Meta Marketing API daily insights per ad, stored by the author's affiliate system (current_meta_daily); MEDIA_SPEND before 10% VAT",
+  "orders": "Shopee Affiliate official conversion export imported 9 Oct 2026, attributed to ads one-to-one by Sub_id1 (current_commission_line)",
+  "cross_check": "matches the 12 Oct 2026 business review in the author's affiliate repo (1,118,260 VND spend for 2-8 Oct, 70,577 VND expected commission)"
+ },
+ "currency": "VND",
+ "period": "2026-10-02 to 2026-10-08: Meta spend and clicks cut to the days the Shopee export covers (orders to 2026-10-08)",
+ "totals": {
+  "ads": 33,
+  "spend": 1118260,
+  "meta_outbound_clicks": 2294,
+  "order_lines": 10,
+  "completed": 5,
+  "pending": 4,
+  "cancelled": 1,
+  "commission_expected": 70577,
+  "commission_on_completed_orders": 55374,
+  "commission_cash_paid": null,
+  "commission_cash_paid_note": "no payout statement covering these orders was recorded; unknown is not zero",
+  "ads_with_any_order": 7,
+  "ads_with_no_order": 26,
+  "spend_on_ads_with_no_order": 659595,
+  "clicks_on_ads_with_no_order": 1314
+ },
+ "ads_with_orders": [
+  {
+   "ad": "Jacket",
+   "spend": 87741,
+   "outbound_clicks": 171,
+   "order_lines": 2,
+   "completed": 2,
+   "pending": 0,
+   "cancelled": 0,
+   "commission_expected": 50168
+  },
+  {
+   "ad": "Baggy jeans",
+   "spend": 63653,
+   "outbound_clicks": 98,
+   "order_lines": 3,
+   "completed": 2,
+   "pending": 1,
+   "cancelled": 0,
+   "commission_expected": 13030
+  },
+  {
+   "ad": "Cardigan",
+   "spend": 96011,
+   "outbound_clicks": 261,
+   "order_lines": 1,
+   "completed": 0,
+   "pending": 1,
+   "cancelled": 0,
+   "commission_expected": 3475
+  },
+  {
+   "ad": "Bag",
+   "spend": 13871,
+   "outbound_clicks": 43,
+   "order_lines": 1,
+   "completed": 0,
+   "pending": 1,
+   "cancelled": 0,
+   "commission_expected": 1744
+  },
+  {
+   "ad": "Fashion item E",
+   "spend": 59507,
+   "outbound_clicks": 76,
+   "order_lines": 1,
+   "completed": 1,
+   "pending": 0,
+   "cancelled": 0,
+   "commission_expected": 1114
+  },
+  {
+   "ad": "Polo shirt A",
+   "spend": 115490,
+   "outbound_clicks": 287,
+   "order_lines": 1,
+   "completed": 0,
+   "pending": 1,
+   "cancelled": 0,
+   "commission_expected": 1046
+  },
+  {
+   "ad": "Dress",
+   "spend": 22392,
+   "outbound_clicks": 44,
+   "order_lines": 1,
+   "completed": 0,
+   "pending": 0,
+   "cancelled": 1,
+   "commission_expected": 0
+  }
+ ],
+ "other_ads": {
+  "ads": 26,
+  "spend": 659595,
+  "outbound_clicks": 1314,
+  "order_lines": 0,
+  "named": [
+   {
+    "ad": "Polo shirt B",
+    "spend": 121083,
+    "outbound_clicks": 283,
+    "order_lines": 0
+   },
+   {
+    "ad": "Polo shirt C",
+    "spend": 67813,
+    "outbound_clicks": 181,
+    "order_lines": 0
+   }
+  ]
+ },
+ "reading": [
+  "By clicks the polo ads lead (287, 283 and 181). By money the jacket ad leads: 5th by clicks (171), 2 completed orders, 50,168 VND, 71% of all expected commission. Two orders: a pattern, not a result.",
+  "26 of 33 ads produced no order at all yet took 59% of spend and 57% of the clicks Meta reported.",
+  "Expected commission was 6.3% of media spend, and no payout for it had been recorded. Meta optimised for the clicks it could see."
+ ],
+ "campaign_objective": "OUTCOME_TRAFFIC for all 33 ads: Meta was asked for clicks"
+}
