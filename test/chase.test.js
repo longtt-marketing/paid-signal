@@ -17,6 +17,7 @@ test("chase: a reminder needs a fresh read showing PayPal still waiting, and quo
   assert.equal(reminderProblem(ok, { eligible, read: { "INV2-A": '{"status":"SENT"}' }, sent: [] }), null);
   assert.match(reminderProblem(ok, { eligible, read: { "INV2-A": '{"status":"PAID"}' }, sent: [] }), /PAID/);
   assert.match(reminderProblem({ ...ok, note: "Pay today and get 20% off $70." }, { eligible, read: { "INV2-A": '{"status":"SENT"}' }, sent: [] }), /only the invoice total/);
+  assert.match(reminderProblem({ ...ok, note: "Pay today and get 20% off." }, { eligible, read: { "INV2-A": '{"status":"SENT"}' }, sent: [] }), /discount or a deadline/);
   assert.match(reminderProblem({ ...ok, invoice_id: "INV2-Z" }, { eligible, read: {}, sent: [] }), /eligible/);
   assert.match(reminderProblem(ok, { eligible, read: { "INV2-A": '{"status":"SENT"}' }, sent: ["X", "Y", "Z"] }), /At most 3/);
 });

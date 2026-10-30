@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Paid Signal: use it on your shop</title>
+<meta name="description" content="The four steps that connect a real shop to Paid Signal: keep the ad click, PayPal webhooks, Meta and Google, and the ad export.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f4f3ee;--card:#fff;--ink:#0e1116;--mute:#474c57;--faint:#666b78;--line:#e2dfd6;--chip:#f1efe8;--paid:#137a45;--blue:#1d4f91;--blue-bg:#e5edf8;--go:#2fbf71}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 "Inter Tight",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--ink)}a:hover{color:var(--paid)}:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 28px;border-bottom:1px solid var(--line);background:var(--paper)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--ink);text-decoration:none}
+.mark{width:28px;height:28px;border-radius:8px;background:var(--ink);display:grid;place-items:center}.mark i{width:10px;height:10px;border-radius:50%;background:var(--go)}
+.top nav{display:flex;gap:18px;flex-wrap:wrap}.top nav a{text-decoration:none;font-size:15px;color:var(--mute)}.top nav a:hover{color:var(--ink)}
+main{max-width:1080px;margin:0 auto;padding:48px 24px 96px;display:flex;flex-direction:column;gap:28px}
+h1{margin:0;font-size:clamp(32px,4.5vw,46px);line-height:1.05;font-weight:700;letter-spacing:-.03em}
+.lede{margin:12px 0 0;font-size:18px;color:var(--mute);max-width:64ch}
+ol.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px;counter-reset:s}
+ol.steps li{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;counter-increment:s;display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 14px}
+ol.steps li::before{content:counter(s);grid-row:span 3;width:34px;height:34px;border-radius:10px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:700}
+h2{margin:0;font-size:19px;letter-spacing:-.01em}
+ol.steps p{margin:0;color:var(--mute);font-size:15px;max-width:72ch}
+code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(--chip);padding:1px 6px;border-radius:6px}
+pre{margin:8px 0 0;background:#0e1116;color:#e8e6df;border-radius:12px;padding:14px 16px;overflow-x:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+.note{margin:0;background:var(--blue-bg);border-radius:14px;padding:14px 18px;font-size:15px}
+.foot{margin:0;font-size:14px;color:var(--faint)}
+@media (max-width:640px){.top{padding:14px 16px}main{padding:32px 16px 64px}ol.steps li{grid-template-columns:minmax(0,1fr)}ol.steps li::before{grid-row:auto}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav><a href="/">Dashboard</a><a href="/proof">Proof</a><a href="/scenarios.html">Scenarios</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></nav></header>
+<main>
+  <div>
+    <h1>Use it on your shop</h1>
+    <p class="lede">The demo runs on a fictional shop. A real one connects in four steps: keep the ad click, let PayPal report payments, give Paid Signal the shop's Meta and Google conversion access, and paste the ad export. It runs as one Cloudflare Worker from the open-source repo, with the shop's own keys.</p>
+  </div>
+  <ol class="steps">
+    <li><h2>Keep the ad click on the landing page</h2>
+      <p>Meta and Google add <code>fbclid</code> or <code>gclid</code> to the link. Keep it for the visit and send it with the checkout; it goes into the PayPal order's <code>custom_id</code>. This is what the demo shop does.</p>
+      <pre>const q = new URLSearchParams(location.search);
+const id = q.get("fbclid") || q.get("gclid");
+if (id) sessionStorage.setItem("ps-click", JSON.stringify({
+  source: q.get("fbclid") ? "fb" : "g", click_id: id, ad: q.get("ad"), clicked_at: Date.now() }));
+// at checkout: POST /api/checkout with the saved click; the order's custom_id becomes
+// a=&lt;ad&gt;;s=&lt;fb|g&gt;;c=&lt;click id&gt;;t=&lt;click time&gt;</pre></li>
+    <li><h2>Let PayPal report payments</h2>
+      <p>Register a PayPal webhook pointing at <code>/api/webhook</code> for <code>PAYMENT.CAPTURE.COMPLETED</code>, <code>PAYMENT.CAPTURE.REFUNDED</code> and <code>INVOICING.INVOICE.PAID</code>. Every delivery is checked with <code>verify-webhook-signature</code>, and Transaction Search cross-checks the ledger against PayPal's own history.</p></li>
+    <li><h2>Connect Meta and Google</h2>
+      <p>Add the shop's Meta dataset id and a Conversions API token as Worker secrets (<code>META_DATASET_ID</code>, <code>META_CAPI_TOKEN</code>). Each confirmed payment from a Meta click is sent the moment PayPal captures it; a payment refunded before it is sent is held back, and a buyer from a Google click goes to Google, not Meta. Google offline conversions come out as rows to upload, with retractions and restatements for refunds.</p></li>
+    <li><h2>Paste the ad export</h2>
+      <p>On the dashboard, paste a CSV with three columns (ad, spend, leads) from Ads Manager. The reconciliation, the budget agent and the MCP tools read it next to what PayPal confirms. Invoices for leads who came through a chat keep the lead's ad in the ledger.</p></li>
+  </ol>
+  <p class="note">Not built yet: a sign-in for the owner (in this public demo anyone can approve and send, in the sandbox), and a one-click PayPal and Meta connection in place of secrets.</p>
+  <p class="foot">Code and set-up: <a href="https://github.com/longtt-marketing/paid-signal">github.com/longtt-marketing/paid-signal</a> (MIT licence).</p>
+</main>
+</body>
+</html>

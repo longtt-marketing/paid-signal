@@ -57,6 +57,8 @@ export function reminderProblem(input, { eligible, read, sent, maxReminders = 3 
   const amounts = [...`${input.subject} ${input.note}`.matchAll(/\$\s?\d[\d,]*(?:\.\d+)?|\b\d[\d,]*\.\d{2}\b/g)].map((m) => Number(m[0].replace(/[$,\s]/g, "")));
   const bad = amounts.filter((n) => n !== Number(inv.amount));
   if (bad.length) return `The note quotes ${bad.join(", ")}; only the invoice total ${inv.amount} may appear.`;
+  // the shop offered no discount or deadline, so a reminder may not promise one
+  if (/\d+\s?%|\b(discount|coupon|promo|deal|expires?|deadline|last chance)\b/i.test(`${input.subject} ${input.note}`)) return "The note promises a discount or a deadline the shop did not offer.";
   return null;
 }
 

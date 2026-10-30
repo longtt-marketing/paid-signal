@@ -75,9 +75,9 @@ async function recordCapture(env, order, userAgent) {
  * is kept with the payment so the dashboard and the receipt can show it. A held capture (duplicate, no click) is not sent.
  */
 async function sendToMeta(env, url, record) {
-  if (!record || !env.META_CAPI_TOKEN || !env.META_DATASET_ID || !env.META_TEST_CODE) return null;
+  if (!record || !env.META_CAPI_TOKEN || !env.META_DATASET_ID) return null;
   const sent = await env.LEDGER.get(`meta:${record.capture_id}`, "json");
-  if (sent) return sent;
+  if (sent && (sent.ok || sent.held)) return sent; // a send that failed (Meta timed out) is tried again
   const payments = await listPayments(env);
   const { events, held } = await metaEvents([record], { sourceUrl: `${url.origin}/shop.html`, hold: heldDuplicates(payments) });
   let out;
@@ -86,11 +86,12 @@ async function sendToMeta(env, url, record) {
     try {
       const res = await fetch(`https://graph.facebook.com/v21.0/${env.META_DATASET_ID}/events`, {
         method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(8000),
-        body: JSON.stringify({ data: events, test_event_code: env.META_TEST_CODE, access_token: env.META_CAPI_TOKEN }),
+        // test events only while META_TEST_CODE is set (this demo); a real shop leaves it unset
+        body: JSON.stringify({ data: events, ...(env.META_TEST_CODE ? { test_event_code: env.META_TEST_CODE } : {}), access_token: env.META_CAPI_TOKEN }),
       });
       const j = await res.json().catch(() => ({}));
       out = { capture_id: record.capture_id, event_id: events[0].event_id, value: events[0].custom_data.value, ok: res.ok, events_received: j.events_received ?? 0,
-        fbtrace_id: j.fbtrace_id || null, error: j.error ? String(j.error.message || "error").slice(0, 160) : null, test_event: true, at: new Date().toISOString() };
+        fbtrace_id: j.fbtrace_id || null, error: j.error ? String(j.error.message || "error").slice(0, 160) : null, test_event: Boolean(env.META_TEST_CODE), at: new Date().toISOString() };
     } catch (e) { out = { capture_id: record.capture_id, ok: false, error: "Meta did not answer in time.", at: new Date().toISOString() }; }
   }
   await env.LEDGER.put(`meta:${record.capture_id}`, JSON.stringify(out), { expirationTtl: 60 * 86400 }); await forget("meta:");
@@ -233,7 +234,7 @@ async function draftInvoiceFor(env, pp, l) {
 }
 
 /** An invoice paid through PayPal becomes a capture in the ledger, attributed by the click packed in its reference. */
-async function recordInvoicePayment(env, invoice) {
+async function recordInvoicePayment(env, invoice, url = new URL("https://paid-signal.thelongmarketing.workers.dev/")) {
   const kept = await env.LEDGER.get(`inv:${invoice.id}`, "json");
   const click = unpackClick(invoice.detail?.memo || kept?.reference || invoice.detail?.reference);
   const txs = invoice.payments?.transactions || [];
@@ -244,6 +245,8 @@ async function recordInvoicePayment(env, invoice) {
       ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt, captured_at: t.payment_date_time || (t.payment_date ? `${t.payment_date}T00:00:00Z` : new Date().toISOString()),
       refunded_amount: "0.00", payer_email_sha256: kept?.email ? await sha(String(kept.email).trim().toLowerCase()) : null, via: "invoice",
     }));
+    // an invoice paid days after the chat teaches Meta too, the moment PayPal says it is paid
+    await sendToMeta(env, url, await env.LEDGER.get(`pay:${id}`, "json"));
   }
   const rec = await env.LEDGER.get(`inv:${invoice.id}`, "json");
   if (rec) { rec.status = invoice.status || "PAID"; rec.paid_at = new Date().toISOString(); await env.LEDGER.put(`inv:${invoice.id}`, JSON.stringify(rec)); }
@@ -279,7 +282,7 @@ const app = {
       const origin = request.headers.get("origin");
       if (origin && origin !== url.origin && url.pathname !== "/mcp") return json({ error: "Cross-site requests are not accepted." }, 403);
       // the routes that spend Claude turns answer only this site's own pages, which always send their Origin
-      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/invoices/approve") && origin !== url.origin)
+      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/invoices/approve" || url.pathname === "/api/refund") && origin !== url.origin)
         return json({ error: "Only the Paid Signal page can call this." }, 403);
       if (env.BURST && !(await env.BURST.limit({ key: ip })).success) return json({ error: "Too many requests. Wait a minute and try again." }, 429);
     }
@@ -338,11 +341,14 @@ const app = {
         const event = await request.json();
         if (!env.PAYPAL_WEBHOOK_ID || !(await pp.verifyWebhook({ headers: request.headers, event, webhookId: env.PAYPAL_WEBHOOK_ID }))) return json({ error: "unverified" }, 401);
         const res = event.resource || {};
-        if (event.event_type === "PAYMENT.CAPTURE.COMPLETED" && !(await env.LEDGER.get(`pay:${res.id}`))) {
+        if (event.event_type === "PAYMENT.CAPTURE.COMPLETED") {
+          const known = await env.LEDGER.get(`pay:${res.id}`, "json");
           const orderId = res.supplementary_data?.related_ids?.order_id;
-          if (orderId) await sendToMeta(env, url, await recordCapture(env, await orders.getOrder(orderId)));
+          // already recorded at capture: only make sure Meta got it (the capture call may have timed out on Meta)
+          if (known) await sendToMeta(env, url, known);
+          else if (orderId) await sendToMeta(env, url, await recordCapture(env, await orders.getOrder(orderId)));
         }
-        if (event.event_type === "INVOICING.INVOICE.PAID" && res.id) await recordInvoicePayment(env, await pp.getInvoice(res.id));
+        if (event.event_type === "INVOICING.INVOICE.PAID" && res.id) await recordInvoicePayment(env, await pp.getInvoice(res.id), url);
         if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
           const captureId = (res.links || []).find((l) => l.rel === "up")?.href?.split("/").pop();
           if (captureId) {
@@ -366,7 +372,8 @@ const app = {
       // Leads the ad export counted but PayPal never saw pay. The agent may draft invoices for them; a person sends.
       if (url.pathname === "/api/leads") return json({ leads: await demoLeads(env, url) });
 
-      if (url.pathname === "/api/invoices" && request.method === "GET") return json({ invoices: await cachedList(env, "inv:") });
+      // the recipient's email stays on the server (PayPal sends to it); the public list shows who, not where
+      if (url.pathname === "/api/invoices" && request.method === "GET") return json({ invoices: (await cachedList(env, "inv:")).map(({ email, ...i }) => i) });
 
       // Webhooks are the main path, but the sandbox does not always emit INVOICING.INVOICE.PAID: ask PayPal about every
       // sent invoice and record the ones it says are paid (recordInvoicePayment is idempotent per payment id).
@@ -379,7 +386,7 @@ const app = {
         if (Date.now() - last < 300000) return json({ checked: 0, paid: 0, recent: true, invoices: all });
         await env.LEDGER.put("sync:last", String(Date.now()));
         let paid = 0;
-        for (const i of open) { const inv = await pp.getInvoice(i.id); if (inv.status === "PAID" || inv.status === "PARTIALLY_PAID") { await recordInvoicePayment(env, inv); paid++; } }
+        for (const i of open) { const inv = await pp.getInvoice(i.id); if (inv.status === "PAID" || inv.status === "PARTIALLY_PAID") { await recordInvoicePayment(env, inv, url); paid++; } }
         if (paid) await forget("inv:");
         return json({ checked: open.length, paid, invoices: await cachedList(env, "inv:") });
       }

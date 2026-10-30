@@ -74,10 +74,10 @@ test("a second payment by the same payer for the same ad within minutes is flagg
   assert.deepEqual(possibleDuplicates([pay({ ...h, capture_id: "A" }), pay({ ...h, capture_id: "B", refunded_amount: "49.00" })]), []);
 });
 
-test("attribution windows: no Meta event 28+ days after the click, no Google row 90+ days after", async () => {
+test("attribution windows: no Meta event 8+ days after the click, no Google row 90+ days after", async () => {
   const late = (days, o) => pay({ clicked_at: Date.parse("2026-10-28T10:00:00Z") - days * 86400000, ...o });
-  assert.deepEqual((await metaEvents([late(30, {})])).held.map((h) => h.reason), ["paid more than 28 days after the click"]);
-  assert.equal((await metaEvents([late(20, {})])).events.length, 1);
+  assert.deepEqual((await metaEvents([late(30, {})])).held.map((h) => h.reason), ["paid more than 7 days after the click"]);
+  assert.equal((await metaEvents([late(5, {})])).events.length, 1);
   assert.equal(googleRows([late(91, { source: "g" })]).conversions.length, 0);
   assert.equal(googleRows([late(60, { source: "g" })]).conversions.length, 1);
 });

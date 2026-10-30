@@ -146,7 +146,8 @@ export function possibleDuplicates(payments, windowMs = 10 * 60 * 1000) {
   return out;
 }
 
-// a payment long after its click is not credited to the ad: Meta's longest click window is 28 days, Google's 90
+// a payment long after its click is not credited to the ad: Meta attributes clicks for up to 7 days and takes events no
+// older than 7 days; Google's window is longer and has its own rows
 const DAY = 86400000;
 const clickAge = (p) => (p.clicked_at ? Date.parse(p.captured_at) - p.clicked_at : 0);
 
@@ -167,11 +168,13 @@ export async function metaEvents(payments, { sourceUrl, hold } = {}) {
     // PayPal still confirms the money, but with no ad click there is no ad to teach
     if (!p.click_id) { held.push({ capture_id: p.capture_id, reason: "no ad click" }); continue; }
     if (hold?.has(p.capture_id)) { held.push({ capture_id: p.capture_id, reason: "possible duplicate" }); continue; }
-    if (clickAge(p) > 28 * DAY) { held.push({ capture_id: p.capture_id, reason: "paid more than 28 days after the click" }); continue; }
+    // a buyer who came from a Google ad teaches Google, not Meta: sending it to Meta would let Meta take credit for it
+    if (p.source === "g") { held.push({ capture_id: p.capture_id, reason: "Google click: sent to Google instead" }); continue; }
+    if (clickAge(p) > 7 * DAY) { held.push({ capture_id: p.capture_id, reason: "paid more than 7 days after the click" }); continue; }
     const user = {};
     // fbc needs the real click time; an invoice payment has none, so it is matched on the lead's hashed email instead
     if (p.source === "fb" && p.click_id && p.clicked_at) user.fbc = `fb.1.${p.clicked_at}.${p.click_id}`;
-    // the ledger keeps only the hash; Meta matches on it, so a purchase from a Google click still reaches Meta
+    // the ledger keeps only the hash; Meta matches on it when there is no click time (an invoice paid after a chat)
     if (p.payer_email) user.em = [await sha256(p.payer_email.trim().toLowerCase())];
     else if (p.payer_email_sha256) user.em = [p.payer_email_sha256];
     if (p.user_agent) user.client_user_agent = p.user_agent; // Meta wants it on website events; stored at capture

@@ -76,15 +76,15 @@ test("Meta: event_source_url and a stored user agent are passed through", async 
   assert.equal(events[0].event_source_url, "https://shop.example/shop.html");
   assert.equal(events[0].user_data.client_user_agent, "Mozilla/5.0 test");
 });
-test("Meta: a Google click still reaches Meta through the hashed email, without an fbc", async () => {
-  const { events } = await metaEvents([pay({ source: "g", click_id: "Cj0K" })]);
-  assert.equal(events.length, 1); assert.equal(events[0].user_data.fbc, undefined); assert.deepEqual(events[0].user_data.em, ["h1"]);
+test("Meta: a buyer from a Google click is held for Google, so Meta cannot take credit for it", async () => {
+  const { events, held } = await metaEvents([pay({ source: "g", click_id: "Cj0K" })]);
+  assert.equal(events.length, 0); assert.equal(held[0].reason, "Google click: sent to Google instead");
 });
-test("Meta: exactly 28 days after the click still counts, a day later does not", async () => {
+test("Meta: exactly 7 days after the click still counts, a day later does not", async () => {
   const clicked = Date.parse("2026-10-01T10:00:00Z");
   const on = (days) => pay({ clicked_at: clicked, captured_at: new Date(clicked + days * DAY).toISOString() });
-  assert.equal((await metaEvents([on(28)])).events.length, 1);
-  assert.equal((await metaEvents([on(29)])).events.length, 0);
+  assert.equal((await metaEvents([on(7)])).events.length, 1);
+  assert.equal((await metaEvents([on(8)])).events.length, 0);
 });
 
 // Google rows
