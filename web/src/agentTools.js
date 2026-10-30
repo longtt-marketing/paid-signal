@@ -1,5 +1,5 @@
 // Paid Signal tools for AG Studio's lead agent. Read tools return numbers computed by the Worker; the one write tool
-// only creates PayPal DRAFT invoices, which a person must send from the approvals inbox.
+// only creates PayPal DRAFT invoices. A person approves each one in Approvals; only then does the send agent send it.
 import { claudeAdapter } from "./claudeAdapter.js";
 import { createAiHarness, directLlmRunner } from "ag-studio";
 
@@ -17,7 +17,7 @@ export const PROMPT_STARTERS = [
 const EXTRA = `You also act for a small shop that sells through PayPal. Ad platforms report leads; PayPal confirms who paid.
 Use read_paid_signal for per-ad spend, leads, paid orders and revenue (computed in code; quote numbers exactly, never invent or forecast).
 Use list_unpaid_leads to see leads with no PayPal payment. draft_paypal_invoices creates PayPal DRAFT invoices tagged with each lead's ad click;
-nothing is sent: the shop owner reviews and sends them from the approvals inbox. Draft only for leads who showed buying intent, and say why.
+nothing is sent here: each draft waits in Approvals, and only after the shop owner approves it does the send agent send it. Draft only for leads who showed buying intent, and say why.
 check_paypal_ledger compares the webhook ledger with PayPal's Transaction Search.
 For budget questions (which ads to cut, keep or grow), delegate to the budget agent; it checks its numbers in code.`;
 

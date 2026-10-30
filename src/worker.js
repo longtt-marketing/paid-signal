@@ -206,6 +206,9 @@ const app = {
       if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) return json({ error: "Send JSON." }, 415);
       const origin = request.headers.get("origin");
       if (origin && origin !== url.origin && url.pathname !== "/mcp") return json({ error: "Cross-site requests are not accepted." }, 403);
+      // the routes that spend Claude turns answer only this site's own pages, which always send their Origin
+      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/invoices/approve") && origin !== url.origin)
+        return json({ error: "Only the Paid Signal page can call this." }, 403);
       if (env.BURST && !(await env.BURST.limit({ key: ip })).success) return json({ error: "Too many requests. Wait a minute and try again." }, 429);
     }
     try {
@@ -245,7 +248,9 @@ const app = {
         const partial = amount !== undefined && Number(amount) < left;
         if (String(cur.captured_at) < SEEDED_BEFORE) return json({ preview: true, message: `Capture ${capture_id} is one of the demo's seeded sandbox payments, so this refund is only previewed: its ad would lose $${amount ?? left} of paid revenue, and ${partial ? (cur.source === "g" ? "its Google row would become a restatement" : "its Meta event value would drop") : (cur.source === "g" ? "its Google row would become a retraction" : "its Meta event would be held back")}. To run a real sandbox refund, pay in the demo shop and refund that payment.` });
         const stop = await guard(env, request, "refunds", 3, 30); if (stop) return json({ error: stop }, 429);
-        const r = await orders.refundCapture(capture_id, { amount: amount === undefined ? undefined : Number(amount).toFixed(2), requestId: crypto.randomUUID() });
+        // the same refund retried (double click, network retry) carries the same request id, so PayPal applies it once
+        const refundKey = `refund-${capture_id}-${amount === undefined ? "full" : Number(amount).toFixed(2)}-${cur.refunded_amount || "0.00"}`;
+        const r = await orders.refundCapture(capture_id, { amount: amount === undefined ? undefined : Number(amount).toFixed(2), requestId: refundKey });
         // mark the refund as applied first, so PayPal's PAYMENT.CAPTURE.REFUNDED webhook for it is not counted again
         await env.LEDGER.put(`seen:${r.id}`, "1");
         const rec = await applyRefund(env, capture_id, r.amount?.value || amount, r.create_time);

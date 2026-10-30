@@ -61,7 +61,7 @@ export function paypal({ clientId, secret, base = "https://api-m.sandbox.paypal.
       });
       return out.verification_status === "SUCCESS";
     },
-    /** Draft invoice: nothing reaches the customer until send. The ad click rides in detail.reference. */
+    /** Draft invoice: nothing reaches the customer until send. The ad click rides in detail.memo, which only the merchant sees. */
     createDraftInvoice({ email, name, item, amount, currency = "USD", reference, note, business }) {
       return call("/v2/invoicing/invoices", {
         requestId: crypto.randomUUID(),
