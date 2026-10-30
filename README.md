@@ -43,7 +43,7 @@ No login is needed for any of this; only paying in the demo shop needs the sandb
 2. Press **Ask the revenue agent**: Claude reads what each unpaid lead wrote and drafts PayPal invoices (Agent Toolkit) for the ones ready to pay; code sets every price; a lead whose message tries to rewrite the price and recipient is flagged, never invoiced.
 3. Under **Invoices**, press **Approve** on a draft: the send agent (Claude + PayPal Agent Toolkit) re-reads it in code and sends it. **Chase unpaid** lets the chase agent decide which sent invoices get a reminder and write it.
 4. **Report · AG Studio** tab: open the assistant, choose **Review ad budgets**; a custom Studio agent on Claude submits through the evidence gate and its change lands in Approvals.
-5. [Proof](https://paid-signal.thelongmarketing.workers.dev/proof): held-out evals (12 bookings, 10 not-ready leads and 8 prompt injections, each run twice: 24 of 24, 20 of 20, 0 of 16), the evidence gate under attack (1,000 of 1,000 caught), a budget simulation with its uncertainty ($1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs), live PayPal and Meta checks.
+5. [Proof](https://paid-signal.thelongmarketing.workers.dev/proof): held-out evals (12 bookings, 10 not-ready leads and 8 prompt injections, each run twice: 24 of 24, 20 of 20, 0 of 16), the evidence gate under attack (1,100 of 1,100 caught), a budget simulation with its uncertainty ($1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs), live PayPal and Meta checks.
 6. Any MCP client: `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
 
 ## Try it in three minutes

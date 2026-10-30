@@ -41,6 +41,10 @@
   "ad_key_instead_of_name": {
    "tried": 100,
    "caught": 100
+  },
+  "wrong_refund_claim": {
+   "tried": 100,
+   "caught": 100
   }
  },
  "grounded": {

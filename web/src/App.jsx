@@ -258,7 +258,7 @@ export default function App() {
           <article><span className="step">1</span><b>Pay from an ad click</b><p>Open an ad link and pay in the PayPal sandbox. The click rides in the order.</p><a className="btn" href={adLink("trial_video", "fb")}>Open an ad link</a></article>
           <article><span className="step">2</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
           <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("week4")}>Or try a synthetic week with more orders</button></article>
-          <article><span className="step">4</span><b>Tell the ad platform</b><p>Paid orders become Meta and Google conversions. Refunds pull them back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
+          <article><span className="step">4</span><b>Tell the ad platform</b><p>Paid orders from Meta ads go to Meta's Conversions API; Google ones are previews here. Refunds pull them back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
         </section>
 
         <div className="cols">
@@ -294,7 +294,7 @@ export default function App() {
 
             <section id="signal" className="card">
               <div className="card-head"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Meta Purchase events · {state.google.conversions.length} Google rows</span>}</div>
-              <p className="muted">Paid orders as Meta Conversions API events and Google offline conversions, deduplicated by capture. Sent to a real Meta test dataset: Meta processed them and dropped a resent copy by event id.</p>
+              <p className="muted">Paid orders as Meta Conversions API events and Google offline conversions (previews, not uploaded), deduplicated by capture. Sent to a real Meta test dataset: Meta processed them and dropped a resent copy by event id.</p>
               {state?.metaLive && <div className="live-meta" role="status">
                 <span className="pulse" aria-hidden="true" />
                 {lastMeta ? <span><b>Live to Meta:</b> the last paid order (${lastMeta.value}) reached the shop's Meta dataset as a Purchase test event {clock(lastMeta.at)}; Meta answered events_received {lastMeta.events_received}.</span>

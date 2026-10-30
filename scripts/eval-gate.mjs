@@ -18,8 +18,11 @@ const pick = (xs) => xs[Math.floor(rnd() * xs.length)];
 const grounded = () => {
   const ad = pick(ads); const a = rec.ads.find((r) => r.ad === ad);
   const n = pick(allowed), money = /\.\d{2}$/.test(n) ? `$${n}` : n;
+  // a third of good recommendations also state, truthfully, which capture was refunded
+  const back = payments.filter((p) => Number(p.refunded_amount || 0) > 0);
   return { headline: `${adName(ad)} brought ${a.leads} leads and ${a.paid} paid orders on $${(a.spend_cents / 100).toFixed(2)} spend.`,
-    actions: [{ ad, change: a.paid >= 3 ? pick(["reduce", "keep", "increase"]) : pick(["keep", "fix_tracking"]), reason: `It has ${money} on record; the sample is small.`, evidence: [`row:${ad}`] }], caveats: "" };
+    actions: [{ ad, change: a.paid >= 3 ? pick(["reduce", "keep", "increase"]) : pick(["keep", "fix_tracking"]), reason: `It has ${money} on record; the sample is small.`, evidence: [`row:${ad}`] }],
+    caveats: rnd() < 1 / 3 && back.length ? `Capture ${pick(back).capture_id} was refunded, so it does not count.` : "" };
 };
 const stamp = [...new Set(payments.flatMap((p) => String(p.captured_at).match(/\d+/g) || []).map((d) => String(Number(d))))].filter((d) => !allowed.includes(d) && !payments.some((p) => [p.amount, p.refunded_amount].includes(d)));
 const invented = () => { let v; do v = (rnd() * 500).toFixed(pick([0, 2])); while (allowed.includes(v) || allowed.includes(v.replace(/\.00$/, ""))); return v; };
@@ -34,6 +37,8 @@ const plants = {
   calls_it_profit: (r) => ({ ...r, caveats: "This is the only clear profit in the account." }),
   money_without_dollar_sign: (r) => { const m = allowed.filter((x) => /\.\d{2}$/.test(x)); return { ...r, caveats: `Spend so far is ${pick(m)}.` }; },
   ad_key_instead_of_name: (r) => ({ ...r, actions: [{ ...r.actions[0], reason: `${r.actions[0].reason} Watch ${r.actions[0].ad} closely.` }] }),
+  wrong_refund_claim: (r) => { const kept = payments.filter((p) => !(Number(p.refunded_amount || 0) > 0));
+    return { ...r, caveats: rnd() < 0.5 ? `Capture ${pick(kept).capture_id} was refunded, so it does not count.` : `In each pair the ${pick(["first", "second"])} was refunded, so the other counts.` }; },
 };
 const N = 100, out = { date: new Date().toISOString().slice(0, 10), payments: payments.length, planted: {}, grounded: {} };
 for (const [name, plant] of Object.entries(plants)) {

@@ -78,6 +78,16 @@ export function checkRecommendation(rec, payments, out) {
   // a disclaimer ("not profit") is fine; calling a number profit is not
   if (/(?<!\b(?:not|no|isn't)\s(?:a\s)?)\bprofit/i.test(all)) problems.push(`"profit" is not known (product cost is not in the data); say "paid revenue minus ad spend".`);
   for (const m of all.matchAll(/(^|[^$\d.])(\d[\d,]*\.\d{2})\b/g)) problems.push(`Write "${m[2]}" as money with a dollar sign, e.g. $${m[2]}.`);
+  // which capture was refunded is a ledger fact: a refund sentence names the capture, and the ledger must agree
+  const refunded = Object.fromEntries(payments.map((p) => [p.capture_id, Number(p.refunded_amount || 0) > 0]));
+  for (const s of all.split(/(?<=[.!?;])\s+/).filter((x) => /refund/i.test(x))) {
+    const named = (s.match(/\b[A-Z0-9]{8,}\b/g) || []).filter((id) => id in refunded);
+    if (!named.length && /\b(first|second|earlier|later|original)\b/i.test(s)) problems.push(`"${s.trim()}" says which payment was refunded without naming it; give the capture id.`);
+    if (named.length === 1 && /refunded/i.test(s)) {
+      const saysNot = /\b(?:not|never|un)[\s-]?refunded\b|\bwas(?:n't| not) refunded\b/i.test(s);
+      if (saysNot === refunded[named[0]]) problems.push(`Capture ${named[0]} was ${refunded[named[0]] ? "" : "not "}refunded in the ledger.`);
+    }
+  }
   for (const a of out.actions || []) {
     const row = rec.ads.find((r) => r.ad === a.ad);
     if (row && ["pause", "reduce", "increase"].includes(a.change) && row.paid < 3)

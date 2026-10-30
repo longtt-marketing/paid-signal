@@ -210,3 +210,13 @@ test("Meta: an invoice payment is a chat conversion with no page URL; a checkout
   const inv = events.find((e) => e.event_id === "paypal:I1");
   assert.equal(inv.action_source, "chat"); assert.equal(inv.event_source_url, undefined);
 });
+
+test("gate: a refund claim must name the capture, and the ledger must agree", () => {
+  const ps = [pay({ capture_id: "CAPTUREAA1", refunded_amount: "49.00" }), pay({ capture_id: "CAPTUREBB2", captured_at: at(3.6) })];
+  const r = reconcile([{ ad: "trial", spend_cents: 9620, leads: 14 }], ps);
+  const say = (caveats) => checkRecommendation(r, ps, { headline: "Trial is steady.", caveats, actions: [] });
+  assert.deepEqual(say("Capture CAPTUREAA1 was refunded, so it does not count."), []);
+  assert.deepEqual(say("Capture CAPTUREBB2 was not refunded, so it counts."), []);
+  assert.match(say("Capture CAPTUREBB2 was refunded, so it does not count.").join(" "), /CAPTUREBB2 was not refunded/);
+  assert.match(say("In each pair the second was refunded, so the first counts.").join(" "), /without naming it/);
+});
