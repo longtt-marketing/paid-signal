@@ -124,7 +124,15 @@ export default function App() {
     catch (e) { setRevenue({ status: "error", error: e.message }); }
   };
   // the Studio assistant runs the same revenue agent; its decisions land in Approvals, and a notice says so
+  // the Studio nudge agent ran the chase agent: show its result under Invoices and refresh the list
+  const onNudge = useCallback((d) => { pinStudio(); if (d) setChase({ status: "done", ...d }); loadInvoices(); flash(`The nudge agent sent ${d?.reminded?.length || 0} friendly reminder(s).`); }, [flash, pinStudio, loadInvoices]);
   const onStudioInvoices = useCallback((d) => { pinStudio(); if (d) { setRevenue({ status: "done", ...d }); addDrafts(d.drafts); } loadInvoices(); flash("The revenue agent's drafts are waiting for your approval.", "approvals"); }, [loadInvoices, flash, pinStudio]);
+  // a synthetic week with enough paid orders, so the agent has a real budget decision to make (labelled everywhere)
+  const askWeek = async (id) => {
+    setAgent({ status: "running" }); scrollToId("approvals");
+    try { const out = await api("/api/agent", { scenario: id }); setAgent({ status: "done", ...out }); setDecisions({}); }
+    catch (e) { setAgent({ status: "error", error: e.message }); }
+  };
   const ask = async () => {
     setAgent({ status: "running" }); scrollToId("approvals");
     try { const out = await api("/api/agent", { csv }); setAgent({ status: "done", ...out }); setDecisions({}); }
@@ -238,7 +246,7 @@ export default function App() {
         <section className="loop" aria-label="Try the loop">
           <article><span className="step">1</span><b>Pay from an ad click</b><p>Open an ad link and pay in the PayPal sandbox. The click rides in the order.</p><a className="btn" href={adLink("trial_video", "fb")}>Open an ad link</a></article>
           <article><span className="step">2</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
-          <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button></article>
+          <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("week4")}>Or try a synthetic week with more orders</button></article>
           <article><span className="step">4</span><b>Teach the ad platform</b><p>Paid orders become Meta and Google conversions. Refunds pull them back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
         </section>
 
@@ -310,6 +318,7 @@ export default function App() {
               <div className="card-head"><h2>Approvals</h2>{agent.status === "done" && <span className={agent.grounded ? "ok" : "warn"}>{agent.grounded ? "Numbers checked in code" : "Number check flagged"}</span>}</div>
               <div id="actions">
                 {agent.status === "idle" && <p className="muted">Ask the agent for budget changes. The agent never changes a budget: you approve, and the decision is logged.</p>}
+                {/SYNTHETIC/.test(agent.source || "") && <p className="synthetic"><b>Synthetic week</b> {agent.synthetic?.story || agent.source.split("SYNTHETIC: ")[1]} Not PayPal payments: made up to show a real budget decision.{agent.grade ? (agent.grade.ok ? " Matches the known right answer." : " Differs from the known right answer.") : ""}</p>}
                 {agent.status === "running" && <div className="skel" aria-live="polite"><i /><i /><i /><span>Claude is reading the ledger…</span></div>}
                 {agent.status === "error" && <p className="err">{agent.error}</p>}
                 {agent.recommendation && <p className="headline">{agent.recommendation.headline}</p>}
@@ -397,13 +406,13 @@ export default function App() {
             </div>
           </div>
           <div className="studio-pages" role="tablist" aria-label="Report pages">
-            {[["overview", "Ads vs PayPal"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"]].map(([id, label]) => (
+            {[["overview", "Ads vs PayPal"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"]].map(([id, label]) => (
               <button key={id} role="tab" aria-selected={studioPage === id} className={studioPage === id ? "on" : ""} onClick={() => { setStudioPage(id); studio.current?.selectPage(id); }}>{label}</button>
             ))}
           </div>
           <div className="studio">
             {studioOn && license !== undefined
-              ? <Suspense fallback={<div className="studio-wait">Loading AG Studio…</div>}><StudioPanel ref={studio} state={state} invoices={invoices} license={license} csvRef={csvRef} onInvoices={onStudioInvoices} onRecommendation={onRecommendation} /></Suspense>
+              ? <Suspense fallback={<div className="studio-wait">Loading AG Studio…</div>}><StudioPanel ref={studio} state={state} invoices={invoices} license={license} csvRef={csvRef} onInvoices={onStudioInvoices} onNudge={onNudge} onRecommendation={onRecommendation} /></Suspense>
               : <a className="studio-wait" href="#report">Open the AG Studio report</a>}
           </div>
         </section>

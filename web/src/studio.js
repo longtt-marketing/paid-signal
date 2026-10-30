@@ -33,6 +33,14 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
       gross, refunded: back, net: hold ? 0 : Math.max(0, gross - back), paid: back >= gross || hold ? 0 : 1, held: hold ? 1 : 0, date: String(p.captured_at).slice(0, 10), capturedAt: p.captured_at,
     };
   });
+  // every invoice the shop sent, for the "who still owes" scoreboard; drafts are not owed yet
+  const DAY = 86400000;
+  const owed = invoices.filter((i) => ["SENT", "UNPAID", "PARTIALLY_PAID", "PAID"].includes(i.status)).map((i) => ({
+    id: i.id, who: String(i.lead || "").replace(" (fictional)", ""), adName: adName(i.ad), amount: Number(i.amount) || 0,
+    status: i.status === "PAID" ? "Paid" : i.reminded_at ? "Nudged" : "Waiting",
+    days: i.status === "PAID" || !i.sent_at ? 0 : Math.max(0, Math.floor((Date.now() - Date.parse(i.sent_at)) / DAY)),
+    nudge: i.status !== "PAID" && i.reminder?.note ? i.reminder.note : "",
+  }));
   const dates = caps.map((c) => c.date).sort();
   const today = new Date().toISOString().slice(0, 10);
   return {
@@ -48,6 +56,10 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
         fields: [f("id", "Capture", "textFormat"), f("ad", "Ad key", "textFormat", true), f("adName", "Ad", "textFormat"), f("status", "Status", "textFormat"), f("source", "Click source", "textFormat"),
           f("gross", "Captured", "currencyFormat"), f("refunded", "Refunded", "currencyFormat"), f("net", "Net paid", "currencyFormat"), f("paid", "Is paid", "integerFormat"), f("held", "Held as possible duplicate", "integerFormat"), f("date", "Capture date", "dateFormat"), f("capturedAt", "Captured at", "textFormat"),
           f("via", "Paid through", "textFormat"), f("lead", "Who paid", "textFormat"), f("meta", "Meta", "textFormat"), f("metaAt", "Meta received at (UTC)", "textFormat")],
+      },
+      {
+        id: "invoices", name: "Invoices sent", description: "One row per PayPal invoice the shop sent: who, how much, whether it is paid, how long it has waited, and the last friendly reminder the chase agent wrote.", data: owed,
+        fields: [f("id", "Invoice", "textFormat"), f("who", "Who", "textFormat"), f("adName", "Ad", "textFormat"), f("amount", "Amount", "currencyFormat"), f("status", "Status", "textFormat"), f("days", "Days waiting", "integerFormat"), f("nudge", "Last nudge", "textFormat")],
       },
     ],
     relations: [{ id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],
@@ -122,6 +134,17 @@ export const initialReport = {
       },
       widgetLayout: { path: at(0, 0, 24, 16), ledger: at(0, 16, 24, 20) },
     },
+    {
+      // AG Grid's "nudge-bot" idea: who still owes what, as a friendly scoreboard; the Nudge agent sends the reminders
+      id: "owes", name: "Who still owes",
+      widgets: {
+        board: { type: "who-still-owes", dataMapping: { who: [{ id: "invoices.who" }], status: [{ id: "invoices.status" }], amount: [sum("invoices.amount")], days: [{ id: "invoices.days", aggregation: "max" }], nudge: [{ id: "invoices.nudge" }] },
+          format: { title: { enabled: true, text: "Who still owes" } } },
+        list: { type: "grid", dataMapping: { cols: [{ id: "invoices.who" }, { id: "invoices.adName" }, { id: "invoices.status" }, sum("invoices.amount"), { id: "invoices.days", aggregation: "max" }] },
+          sort: [{ field: { id: "invoices.status" }, direction: "desc" }], format: { title: { enabled: true, text: "Every invoice sent" } } },
+      },
+      widgetLayout: { board: at(0, 0, 14, 30), list: at(14, 0, 10, 30) },
+    },
   ],
 };
 
@@ -151,6 +174,7 @@ export const phoneReport = {
     widgetLayout: pg.id === "overview"
       ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), claim: at(0, 14, 24, 16), table: at(0, 30, 24, 20), funnel: at(0, 50, 24, 16) }
       : pg.id === "ledger" ? { path: at(0, 0, 24, 20), ledger: at(0, 20, 24, 24) }
+      : pg.id === "owes" ? { board: at(0, 0, 24, 34), list: at(0, 34, 24, 20) }
       : { net: at(0, 0, 12, 7), refunded: at(12, 0, 12, 7), timeline: at(0, 7, 24, 16), list: at(0, 23, 24, 22) },
   })),
 };

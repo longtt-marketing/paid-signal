@@ -1,0 +1,179 @@
+{
+ "date": "2026-10-30",
+ "kind": "synthetic scenarios with known right answers",
+ "model": "claude-sonnet-5-5",
+ "runs_per_scenario": 2,
+ "summary": {
+  "scenarios": 5,
+  "leads_per_dollar_rule_right": 0,
+  "paid_orders_rule_right": 5,
+  "agent_runs_right": "9 of 10",
+  "agent_runs_with_a_wrong_move": 0
+ },
+ "scenarios": [
+  {
+   "scenario": "week4",
+   "name": "Week 4: two ads with enough orders",
+   "leads_rule": false,
+   "paid_orders_rule": true,
+   "agent": [
+    {
+     "grounded": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "trial_video: increase",
+      "free_guide: reduce",
+      "parent_carousel: keep",
+      "holiday_static: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "trial_video: increase",
+      "free_guide: reduce",
+      "parent_carousel: keep",
+      "holiday_static: keep"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "refunds",
+   "name": "Refunds hide behind captures",
+   "leads_rule": false,
+   "paid_orders_rule": true,
+   "agent": [
+    {
+     "grounded": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 1,
+     "moves_expected": 1,
+     "actions": [
+      "parent_carousel: increase",
+      "free_guide: keep",
+      "trial_video: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 1,
+     "moves_expected": 1,
+     "actions": [
+      "parent_carousel: increase",
+      "free_guide: keep",
+      "trial_video: keep"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "duplicate",
+   "name": "A double payment is not a third order",
+   "leads_rule": false,
+   "paid_orders_rule": true,
+   "agent": [
+    {
+     "grounded": true,
+     "ok": false,
+     "wrong": [],
+     "moves_made": 0,
+     "moves_expected": 1,
+     "actions": [
+      "holiday_static: keep",
+      "trial_video: keep",
+      "parent_carousel: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 1,
+     "moves_expected": 1,
+     "actions": [
+      "trial_video: increase",
+      "holiday_static: keep",
+      "parent_carousel: keep"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "lead_rich",
+   "name": "Most leads, least money",
+   "leads_rule": false,
+   "paid_orders_rule": true,
+   "agent": [
+    {
+     "grounded": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "parent_carousel: increase",
+      "free_guide: reduce",
+      "trial_video: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "parent_carousel: increase",
+      "free_guide: reduce",
+      "trial_video: keep"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "thin",
+   "name": "Too few orders everywhere",
+   "leads_rule": false,
+   "paid_orders_rule": true,
+   "agent": [
+    {
+     "grounded": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 0,
+     "moves_expected": 0,
+     "actions": [
+      "free_guide: keep",
+      "holiday_static: keep",
+      "parent_carousel: keep",
+      "trial_video: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 0,
+     "moves_expected": 0,
+     "actions": [
+      "free_guide: keep",
+      "holiday_static: keep",
+      "parent_carousel: keep",
+      "trial_video: keep"
+     ]
+    }
+   ]
+  }
+ ]
+}

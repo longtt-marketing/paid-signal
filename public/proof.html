@@ -75,6 +75,16 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     </div>
   </section>
 
+  <section aria-labelledby="weeks">
+    <h2 id="weeks">Budget decisions, on weeks with known answers</h2>
+    <p class="sub">The demo shop has too few paid orders for any budget move, so five synthetic weeks (labelled SYNTHETIC wherever they appear; none of their payments is a PayPal capture) test the decision itself: enough orders on two ads, refunds hiding behind captures, a double payment, the ad with the most leads and the least money, and too few orders everywhere. Each week lists the right change per ad. The weeks are written so the right answer follows from paid orders; they test whether the agent finds it and keeps to the evidence rule. Try one on the dashboard: "Or try a synthetic week".</p>
+    <div class="grid">
+      <div class="stat"><b>9 / 10</b><span>budget-agent runs with the right decision</span><small>Two runs per week, real Claude, same gate as the dashboard. The one miss kept every budget where one ad had earned an increase: too cautious, not wrong.</small></div>
+      <div class="stat"><b>0 / 10</b><span>runs that proposed a wrong budget move</span><small>No cut or raise on an ad without the evidence for it.</small></div>
+      <div class="stat"><b class="bad">0 / 5</b><span>weeks the ad platform's view gets right</span><small>Moving budget toward the most leads per dollar. Paid Signal's own split by paid orders: 5 / 5.</small></div>
+    </div>
+  </section>
+
   <section aria-labelledby="gate">
     <h2 id="gate">Evidence gate, under attack</h2>
     <p class="sub">The budget agent may only quote numbers the reconciliation produced. 100 recommendations per attack, each with one planted error, on the live ledger.</p>
@@ -115,7 +125,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     </div>
   </section>
 
-  <p class="foot">Reproduce: <code>node scripts/eval-budget-sim.mjs</code>, <code>node scripts/eval-revenue.mjs 2</code>, <code>node scripts/eval-gate.mjs</code>, <code>node scripts/eval-agent.mjs 10</code>, <code>npm test</code>. Raw results: <a href="https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof">docs/proof</a>. The ad export and leads are fictional demo data; PayPal calls are real sandbox calls; Meta events go to a real Meta dataset as test events.</p>
+  <p class="foot">Reproduce: <code>node scripts/eval-budget-sim.mjs</code>, <code>node scripts/eval-budget-scenarios.mjs 2</code>, <code>node scripts/eval-revenue.mjs 2</code>, <code>node scripts/eval-gate.mjs</code>, <code>node scripts/eval-agent.mjs 10</code>, <code>npm test</code>. Raw results: <a href="https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof">docs/proof</a>. The ad export and leads are fictional demo data; PayPal calls are real sandbox calls; Meta events go to a real Meta dataset as test events.</p>
 </main>
 <script src="/proof.js" defer></script>
 </body>

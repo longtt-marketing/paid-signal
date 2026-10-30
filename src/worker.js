@@ -8,6 +8,7 @@ import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
 import { runSendAgent, SEND_SYSTEM, SEND_TOOLS } from "./sendAgent.js";
 import { parseCsv, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS } from "./revenue.js";
 import { runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "./chaseAgent.js";
+import { scenario, grade } from "./scenarios.js";
 import { PayPalAgentToolkit } from "@paypal/agent-toolkit/ai-sdk";
 import { adName } from "../web/src/names.js";
 
@@ -20,7 +21,7 @@ const CLICK_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const STUDIO_TOOLS = new Set(["add_page_filter", "add_widget", "add_widget_filter", "clear_plan", "configure_widget", "create_expression", "create_plan",
   "delete_expression", "execute_query", "position_widget", "remove_page_filter", "remove_widget", "remove_widget_filter", "rename_thread", "update_expression",
   "update_plan", "view_page", "view_plan", "view_report", "view_schema", "view_widget", "delegate_to", "complete_task", "read_paid_signal", "list_unpaid_leads",
-  "draft_paypal_invoices", "check_paypal_ledger", "submit_budget_recommendation"]);
+  "draft_paypal_invoices", "check_paypal_ledger", "submit_budget_recommendation", "who_still_owes", "send_friendly_nudges"]);
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 const sha = async (s) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
@@ -558,15 +559,20 @@ const app = {
       }
 
       if (url.pathname === "/api/agent" && request.method === "POST") {
-        const { csv } = await request.json();
+        const body = await request.json();
         const stop = await guard(env, request, "agent runs", 4, Number(env.AGENT_DAILY || 40)); if (stop) return json({ error: `${stop} The reconciliation still works.` }, 429);
-        const payments = await listPayments(env);
-        const rec = reconcile(parseAdCsv(csv).rows, payments);
+        // a synthetic week (src/scenarios.js) has enough paid orders for a real decision; it never touches the PayPal ledger
+        const week = body.scenario ? scenario(String(body.scenario)) : null;
+        if (body.scenario && !week) return json({ error: "Unknown scenario." }, 400);
+        const payments = week ? week.payments : await listPayments(env);
+        const rec = reconcile(week ? week.ads : parseAdCsv(body.csv).rows, payments);
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined });
         const started = Date.now();
         const out = await runAgent({ llm, rec, payments });
-        const saved = out.recommendation && out.grounded ? await saveRecommendation(env, out.recommendation, "budget agent") : null;
-        return json({ ...out, rec_id: saved?.id || null, ms: Date.now() - started });
+        const source = week ? `budget agent · SYNTHETIC: ${week.name}` : "budget agent";
+        const saved = out.recommendation && out.grounded ? await saveRecommendation(env, out.recommendation, source) : null;
+        return json({ ...out, rec_id: saved?.id || null, source, ms: Date.now() - started,
+          ...(week ? { synthetic: { id: week.id, name: week.name, story: week.story, right_answer: week.right }, grade: grade(week, out.recommendation?.actions || []) } : {}) });
       }
 
       if (url.pathname === "/mcp") {
