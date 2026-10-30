@@ -8,6 +8,8 @@ export const DATA_EVENT = "paid-signal:data";
 
 const pick = (row, field, i) => row[field?.key] ?? row[field?.id] ?? Object.values(row)[i];
 const usd = (n) => "$" + Number(n || 0).toFixed(2);
+// days arrive as a decimal; under a day reads in hours
+const wait = (d) => (d < 1 ? `${Math.max(1, Math.round(d * 24))} h` : `${Math.floor(d)} day${Math.floor(d) === 1 ? "" : "s"}`);
 
 export function OwesWidget({ dataMapping, widgetApi, context }) {
   const [rows, setRows] = useState([]);
@@ -42,7 +44,7 @@ export function OwesWidget({ dataMapping, widgetApi, context }) {
       <ol className="owes-list">
         {rows.map((r, i) => (
           <li key={`${r.who}-${i}`} className={`owes-${r.status.toLowerCase()}`}>
-            <span className="owes-who"><b>{r.who}</b><small>{r.status === "Paid" ? "Paid, thank you" : r.status === "Nudged" ? `Nudged · waiting ${r.days} day${r.days === 1 ? "" : "s"}` : `Waiting ${r.days} day${r.days === 1 ? "" : "s"}`}</small></span>
+            <span className="owes-who"><b>{r.who}</b><small>{r.status === "Paid" ? "Paid, thank you" : `${r.status === "Nudged" ? "Nudged · waiting" : "Waiting"} ${wait(r.days)}`}</small></span>
             <span className="owes-amt">{usd(r.amount)}</span>
             {r.nudge && r.status !== "Paid" && <span className="owes-note">“{r.nudge}”</span>}
           </li>

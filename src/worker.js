@@ -33,7 +33,7 @@ async function cachedList(env, prefix) {
   const hit = cache && (await cache.match(cacheKey(prefix)));
   if (hit) return hit.json();
   const out = await listPrefix(env, prefix);
-  if (cache) await cache.put(cacheKey(prefix), new Response(JSON.stringify(out), { headers: { "cache-control": "max-age=20" } }));
+  if (cache) await cache.put(cacheKey(prefix), new Response(JSON.stringify(out), { headers: { "cache-control": "max-age=120" } }));
   return out;
 }
 const forget = async (prefix) => { await globalThis.caches?.default?.delete(cacheKey(prefix)); };
@@ -41,7 +41,8 @@ const forget = async (prefix) => { await globalThis.caches?.default?.delete(cach
 /** Keep the latest gate-checked budget recommendation; the owner's decisions refer to it by id. */
 async function saveRecommendation(env, recommendation, source) {
   const saved = { id: `R-${Date.now().toString(36).toUpperCase()}`, at: new Date().toISOString(), source, recommendation };
-  await env.LEDGER.put("rec:latest", JSON.stringify(saved));
+  // the dashboard opens on the real shop's latest proposal; a synthetic week's is kept apart
+  await env.LEDGER.put(/SYNTHETIC/.test(source) ? "rec:synthetic" : "rec:latest", JSON.stringify(saved));
   return saved;
 }
 
@@ -386,9 +387,12 @@ const app = {
         const [payments, meta] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
         // the payer's email hash stays on the server (duplicate check, Meta match); the public ledger gets a salted key that
         // only says "same payer" and cannot be checked against a guessed email
-        const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, ...p }) => ({ ...p, payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));
+        const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, user_agent, ...p }) => ({ ...p, payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));
+        // a Google-click buyer sent to Meta before Google buyers were routed to Google only: still a fact, no longer counted
+        const source = Object.fromEntries(payments.map((p) => [p.capture_id, p.source]));
+        const sends = meta.map((m) => (m.ok && source[m.capture_id] === "g" ? { ...m, superseded: "Google click, sent before Google buyers went to Google only" } : m));
         return json({ payments: keyed,
-          duplicates: possibleDuplicates(payments), meta, meta_live: Boolean(env.META_CAPI_TOKEN && env.META_DATASET_ID) });
+          duplicates: possibleDuplicates(payments), meta: sends, meta_live: Boolean(env.META_CAPI_TOKEN && env.META_DATASET_ID) });
       }
 
       // Leads the ad export counted but PayPal never saw pay. The agent may draft invoices for them; a person sends.

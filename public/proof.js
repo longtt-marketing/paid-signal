@@ -10,9 +10,9 @@ get("/api/paypal-check").then((d) => {
 }).catch(() => { $("pp").textContent = "n/a"; $("pp-note").textContent = "Could not reach PayPal."; });
 
 get("/api/ledger").then((d) => {
-  const sent = (d.meta || []).filter((m) => m.ok), held = (d.duplicates || []).length;
-  const live = sent.filter((m) => !m.backfill).length;
+  const sent = (d.meta || []).filter((m) => m.ok && !m.superseded), held = (d.duplicates || []).length;
+  const live = sent.filter((m) => !m.backfill).length, early = (d.meta || []).filter((m) => m.superseded).length;
   $("meta").textContent = String(sent.length);
-  $("meta-note").textContent = `${live} sent live at capture, ${sent.length - live} sent once when live sending was added. Held captures are never sent.`;
+  $("meta-note").textContent = `${live} sent live at capture, ${sent.length - live} sent once when live sending was added. Held captures are never sent.${early ? ` Not counted: ${early} Google-click payment sent before Google buyers went to Google only.` : ""}`;
   $("held").textContent = String(held);
 }).catch(() => { $("meta").textContent = "n/a"; });

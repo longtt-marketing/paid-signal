@@ -367,6 +367,7 @@ export default function App() {
               </div>
               <div id="invoices">
                 <div className="sub-head"><b>Invoices</b><span className="row">{invoices.some((i) => i.status === "SENT" || i.status === "UNPAID") && <button className="mini" disabled={chase.status === "running"} onClick={askChase}>{chase.status === "running" ? "Chasing…" : "Chase unpaid"}</button>}<button className="mini" onClick={syncInvoices}>Refresh</button></span></div>
+                {invoices.some((i) => i.status === "SENT" || i.status === "UNPAID") && <p className="muted small">Demo clock: a reminder may go an hour after an invoice is sent (three days in a real shop), at most once a day.</p>}
                 {chase.status === "error" && <p className="err">{chase.error}</p>}
                 {chase.status === "done" && <div className="dec ok"><b>Chase agent: {chase.reminded.length} reminded{chase.eligible != null ? ` of ${chase.eligible} waiting` : ""}</b><small>{chase.summary}</small>
                   <small className="trace">{chase.trace.map((s) => s.refused ? `${s.tool} refused` : s.tool).join(" → ")}{chase.ms ? ` · ${(chase.ms / 1000).toFixed(1)} s` : ""} · reminders sent with PayPal's Agent Toolkit</small></div>}

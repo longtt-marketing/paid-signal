@@ -178,6 +178,7 @@ code{font-family:var(--code);font-size:12px}
 .owes-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card)}
 .owes-list li.owes-waiting{border-left:4px solid var(--gap)}.owes-list li.owes-nudged{border-left:4px solid #5b8def}.owes-list li.owes-paid{border-left:4px solid var(--paid);opacity:.75}
 .owes-who{display:flex;flex-direction:column}.owes-who b{font-size:15px}.owes-who small{font-size:12.5px;color:var(--mute)}.owes-amt{font-weight:700;font-variant-numeric:tabular-nums}
+.muted.small{font-size:12.5px;margin:2px 0 8px}
 .owes-note{grid-column:1/-1;font-size:13px;color:var(--mute);font-style:italic}
 @media (max-width:520px){.owes-score{grid-template-columns:1fr 1fr}}
 .funnel{display:flex;flex-direction:column;gap:10px;height:100%;font-family:var(--sans)}.fn-row{display:grid;grid-template-columns:170px 1fr 110px;align-items:center;gap:12px;font-size:14px}.fn-row span{text-align:right;color:var(--mute)}.fn-row em{font-style:normal;font-weight:600;color:var(--paid)}.fn-bars{display:flex;flex-direction:column;gap:3px}.fn-bars i{display:block;height:7px;border-radius:4px}i.fn-leads{background:var(--claimed)}i.fn-inv{background:var(--gap-line)}i.fn-paid{background:var(--paid)}.claim-key i.fn-leads,.claim-key i.fn-inv,.claim-key i.fn-paid{height:10px;width:10px;display:inline-block}

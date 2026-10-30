@@ -38,7 +38,7 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
   const owed = invoices.filter((i) => ["SENT", "UNPAID", "PARTIALLY_PAID", "PAID"].includes(i.status)).map((i) => ({
     id: i.id, who: String(i.lead || "").replace(" (fictional)", ""), adName: adName(i.ad), amount: Number(i.amount) || 0,
     status: i.status === "PAID" ? "Paid" : i.reminded_at ? "Nudged" : "Waiting",
-    days: i.status === "PAID" || !i.sent_at ? 0 : Math.max(0, Math.floor((Date.now() - Date.parse(i.sent_at)) / DAY)),
+    days: i.status === "PAID" || !i.sent_at ? 0 : Math.max(0, Math.round(((Date.now() - Date.parse(i.sent_at)) / DAY) * 10) / 10),
     nudge: i.status !== "PAID" && i.reminder?.note ? i.reminder.note : "",
   }));
   const dates = caps.map((c) => c.date).sort();
@@ -59,7 +59,7 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
       },
       {
         id: "invoices", name: "Invoices sent", description: "One row per PayPal invoice the shop sent: who, how much, whether it is paid, how long it has waited, and the last friendly reminder the chase agent wrote.", data: owed,
-        fields: [f("id", "Invoice", "textFormat"), f("who", "Who", "textFormat"), f("adName", "Ad", "textFormat"), f("amount", "Amount", "currencyFormat"), f("status", "Status", "textFormat"), f("days", "Days waiting", "integerFormat"), f("nudge", "Last nudge", "textFormat")],
+        fields: [f("id", "Invoice", "textFormat"), f("who", "Who", "textFormat"), f("adName", "Ad", "textFormat"), f("amount", "Amount", "currencyFormat"), f("status", "Status", "textFormat"), f("days", "Days waiting", "decimalFormat"), f("nudge", "Last nudge", "textFormat")],
       },
     ],
     relations: [{ id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],
@@ -67,7 +67,7 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
     expressions: [
       // named measures, so the grid shows "Spend" rather than "Spend (sum)"
       ...[["mSpend", "Spend", "ads.spend", "currencyFormat"], ["mLeads", "Leads", "ads.leads", "integerFormat"], ["mPaid", "Paid orders", "ads.payers", "integerFormat"],
-        ["mRefunds", "Fully refunded", "ads.refunds", "integerFormat"], ["mRevenue", "Revenue", "ads.revenue", "currencyFormat"],
+        ["mRefunds", "Refunded in full (not paid orders)", "ads.refunds", "integerFormat"], ["mRevenue", "Revenue", "ads.revenue", "currencyFormat"],
         ["cPaid", "Paid orders", "captures.paid", "integerFormat"], ["cNet", "Net paid", "captures.net", "currencyFormat"], ["cRefunded", "Refunded", "captures.refunded", "currencyFormat"]]
         .map(([id, name, field, format]) => ({ id, name, format, ...(format === "currencyFormat" ? { formatOptions: USD } : {}), isMeasure: true, expression: sum(field) })),
       { id: "costPerPayer", name: "Cost / paid order", description: "Ad spend divided by PayPal paid orders.", format: "currencyFormat", formatOptions: USD, isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
@@ -143,7 +143,7 @@ export const initialReport = {
         list: { type: "grid", dataMapping: { cols: [{ id: "invoices.who" }, { id: "invoices.adName" }, { id: "invoices.status" }, sum("invoices.amount"), { id: "invoices.days", aggregation: "max" }] },
           sort: [{ field: { id: "invoices.status" }, direction: "desc" }], format: { title: { enabled: true, text: "Every invoice sent" } } },
       },
-      widgetLayout: { board: at(0, 0, 14, 30), list: at(14, 0, 10, 30) },
+      widgetLayout: { board: at(0, 0, 24, 24), list: at(0, 24, 24, 18) },
     },
   ],
 };
