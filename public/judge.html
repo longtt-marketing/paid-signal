@@ -39,8 +39,12 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .btn.primary{background:var(--ink);color:#fff}.btn:disabled{opacity:.5;cursor:wait}
 .note{margin:10px 0 0;font-size:13px;color:var(--faint)}.err{color:var(--bad)}
 .contrast{display:grid;grid-template-columns:1fr 1fr;gap:12px}.contrast .side{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
-.contrast b{font-size:22px;letter-spacing:-.01em}.contrast small{font-size:13px;color:var(--faint)}.contrast .side.syn{border-style:dashed}
+.contrast b{font-size:22px;letter-spacing:-.01em}.contrast small{font-size:13px;color:var(--faint)}.contrast .side.syn{border-style:dashed}.contrast .tag{align-self:flex-start}
 @media (max-width:640px){.contrast{grid-template-columns:1fr}}
+.loop{display:flex;flex-direction:column;gap:0;margin-top:12px;border-left:2px solid var(--line);padding-left:16px}
+.loop-row{display:grid;grid-template-columns:minmax(150px,200px) 1fr;gap:4px 16px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}.loop-row:last-child{border-bottom:0}
+.loop-row b{font-weight:600}.loop-row span{color:var(--mute);overflow-wrap:anywhere}.loop-row a{grid-column:2;font-size:14px}
+@media (max-width:640px){.loop-row{grid-template-columns:1fr}.loop-row a{grid-column:1}}
 .more{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .more a{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none}
 .more a b{display:block}.more a span{font-size:13px;color:var(--faint)}
@@ -52,9 +56,10 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 <main>
   <div>
     <h1>The ad with the most leads is not always the ad worth funding.</h1>
-    <p class="lede">Sixty seconds, no login, no payment. A shop owner asks Claude to spend more on the ad that brings the most leads. Claude checks what PayPal says was actually paid, code checks the move, and you can open the PayPal capture behind the answer. PayPal confirms the payment; which ad it came from is our own click record inside the order, so that link is the app's, not PayPal's.</p>
+    <p class="lede">Sixty seconds, no login. The owner asks Claude to fund the ad with the most leads; Claude checks what PayPal says was paid, and code checks the move.</p>
   </div>
   <div class="vs" id="vs" aria-live="polite"><div><b>–</b><span>leads the ad report gives this ad</span></div><i>→</i><div class="paid"><b>–</b><span>paid orders PayPal confirms for it</span></div></div>
+  <p class="note">PayPal confirms each payment; which ad it came from is our own click record inside the order (<code>custom_id</code>), so that link is the app's, not PayPal's.</p>
 
   <div class="contrast" id="contrast" aria-live="polite">
     <div class="side"><span class="tag">Live PayPal sandbox ledger</span><b id="c-live">…</b><small id="c-live-why"></small></div>
@@ -65,6 +70,8 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section class="step" id="answer"><h2><em>2</em>Claude reads the payments and answers; code checks the move</h2></section>
   <section class="step" id="capture"><h2><em>3</em>Open the PayPal payment behind the answer</h2></section>
   <section class="step" id="week"><h2><em>4</em>When the payments do support a move</h2><p class="note">The demo shop has too few paid orders for any move, so this is a labelled synthetic week: its payments are made up, not PayPal captures.</p></section>
+
+  <section class="step" id="loop"><h2><em>5</em>The invoice loop: a chat lead becomes a PayPal payment</h2><p class="note">Loading the ledger…</p></section>
 
   <div class="more">
     <a href="/trail"><b>Money trail</b><span>One payment from ad click to PayPal to Meta, read live</span></a>

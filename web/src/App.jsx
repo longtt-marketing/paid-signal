@@ -16,7 +16,7 @@ const signed = (c) => (c < 0 ? "−" : c > 0 ? "+" : "") + usd(Math.abs(c));
 const money = (v) => "$" + Number(v || 0).toFixed(2);
 const CHANGE = { pause: "Pause", reduce: "Reduce budget", increase: "Increase budget", keep: "Keep and watch", fix_tracking: "Fix tracking" };
 const short = (name) => adName(name).split(" · ")[0];
-const clock = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? "" : d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); };
+const clock = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? "" : d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); };
 const AD_LINKS = [["trial_video", "fb"], ["free_guide", "fb"], ["parent_carousel", "fb"], ["holiday_static", "g"]];
 const adLink = (k, s) => `/shop.html?ad=${k}&${s === "fb" ? "fbclid=IwAR" : "gclid=Cj0K"}${Date.now().toString(36)}`;
 const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -283,6 +283,7 @@ export default function App({ first = null }) {
                   </tbody>
                 </table>
               </div>
+              <p className="muted small legend">Covers its spend? is the chance, computed in code, that the ad's paid revenue covers its ad spend going forward. With one or two paid orders it stays close to 50% whatever the ad made so far, because so few orders say little; that is why no budget moves on fewer than 3. The cut point below it is what would settle the question.</p>
             </section>
 
             <section id="payments" className="card">
@@ -347,7 +348,7 @@ export default function App({ first = null }) {
                     <b>{adName(a.ad)}</b>
                     <p>{a.reason}</p>
                     <div className="chips">{a.evidence.map((e) => <span key={e} className="chip">{e.startsWith("row:") ? `${short(e.slice(4))} row` : `capture ${e}`}</span>)}</div>
-                    {decisions[i] ? <p className="decided">{decisions[i].verdict === "approved" ? (a.change === "keep" ? "Agreed: no change" : "Approved") : "Dismissed"} · logged {new Date(decisions[i].at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {decisions[i].id}</p>
+                    {decisions[i] ? <p className="decided">{decisions[i].verdict === "approved" ? (a.change === "keep" ? "Agreed: no change" : "Approved") : "Dismissed"} · logged {new Date(decisions[i].at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} · {decisions[i].id}</p>
                       : <div className="row"><button className="primary" onClick={() => decide(i, "approved")}>{a.change === "keep" ? "Agree, no change" : "Approve"}</button><button onClick={() => decide(i, "dismissed")}>Dismiss</button></div>}
                   </article>
                 ))}
@@ -381,11 +382,12 @@ export default function App({ first = null }) {
                   <small className="trace">{chase.trace.map((s) => s.refused ? `${s.tool} refused` : s.tool).join(" → ")}{chase.ms ? ` · ${(chase.ms / 1000).toFixed(1)} s` : ""} · reminders sent with PayPal's Agent Toolkit</small></div>}
                 {syncNote && <p className="note" role="status">Could not re-check sent invoices with PayPal: {syncNote}</p>}
                 {invoices.length === 0 && <p className="muted">No drafts yet. Open the Studio assistant and choose "Invoice warm leads".</p>}
-                {invoices.map((i) => (
+                {[...invoices].sort((x, y) => (x.status === "CANCELLED") - (y.status === "CANCELLED")).map((i) => (
                   <div key={i.id} className={`cap inv ${i.sent_by ? "agent" : ""}`}>
-                    <span><b>{i.lead.replace(" (fictional)", "")}</b><small>{short(i.ad)} · {money(i.amount)}{i.lines?.length > 1 ? ` · ${i.lines.length} children, sibling 20% off` : ""}{i.sent_by ? " · sent by the agent" : i.status === "DRAFT" ? (i.drafted_by ? " · drafted by the agent" : " · draft") : ""}{i.reminded_at && i.status !== "PAID" ? ` · reminded ${clock(i.reminded_at)}` : ""}</small>{i.reminder && i.status !== "PAID" && <small className="agent-say" title={i.reminder.subject}>“{i.reminder.note}”</small>}{sending[i.id] && <small className="agent-say" role="status">{sending[i.id]}</small>}</span>
+                    <span><b>{i.lead.replace(" (fictional)", "")}</b><small>{short(i.ad)} · {money(i.amount)}{i.lines?.length > 1 ? ` · ${i.lines.length} children, sibling 20% off` : ""}{i.sent_by ? " · sent by the agent" : i.status === "DRAFT" ? (i.drafted_by ? " · drafted by the agent" : " · draft") : ""}{i.reminded_at && !["PAID", "CANCELLED"].includes(i.status) ? ` · reminded ${clock(i.reminded_at)}` : ""}</small>{i.reminder && i.status !== "PAID" && <small className="agent-say" title={i.reminder.subject}>“{i.reminder.note}”</small>}{sending[i.id] && <small className="agent-say" role="status">{sending[i.id]}</small>}</span>
                     {i.status === "DRAFT" ? <button className="mini go" disabled={sending[i.id] === "Agent checking and sending…"} onClick={() => send(i.id)}>Approve</button>
                       : i.status === "PAID" ? <span className="ok">Paid</span>
+                      : i.status === "CANCELLED" ? <span className="muted">Cancelled, not owed</span>
                       : i.pay_url ? <a href={i.pay_url} target="_blank" rel="noopener noreferrer">Sent ↗</a> : <span className="muted">{i.status}</span>}
                   </div>
                 ))}
@@ -419,7 +421,7 @@ export default function App({ first = null }) {
 
         <section id="studio" className="card studio-card" ref={studioBox} aria-label="AG Studio">
           <div className="card-head">
-            <div><h2>{view === "report" ? "Report · AG Studio" : "The full report, in AG Studio"}</h2><p className="muted">Three custom widgets, a custom budget agent and Studio's own agents, running on Claude.</p></div>
+            <div><h2>{view === "report" ? "Report · AG Studio" : "The full report, in AG Studio"}</h2><p className="muted">Four custom widgets, a custom budget agent and Studio's own agents, running on Claude.</p></div>
             <div className="row">
               {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {waiting > 0 && <span className="count">{waiting}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
               <button className="btn dark" onClick={openAssistant}>Open the Studio assistant</button>

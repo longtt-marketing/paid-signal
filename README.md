@@ -35,7 +35,7 @@ Paid Signal closes that loop on the PayPal developer platform:
    Test Events tab shows them processed and a resent copy deduplicated by `event_id`
    ([`scripts/meta-test-event.mjs`](scripts/meta-test-event.mjs), [screenshot](docs/proof/meta-test-events.png)).
 
-Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev** · Test scenarios: https://paid-signal.thelongmarketing.workers.dev/scenarios.html (nine cases: duplicates, partial refunds, payments with no click, late payments; marked live in the sandbox or automated test)
+Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev** · Test scenarios: https://paid-signal.thelongmarketing.workers.dev/scenarios.html (ten cases: duplicates, partial refunds, payments with no click, late payments, disputes; marked live in the sandbox or automated test)
 
 ## Judge it in 60 seconds
 
@@ -112,9 +112,10 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
 ## AG Studio
 
 `web/` is a React app on AG Studio: data sources for ads and PayPal captures joined on the ad key, calculated measures
-(cost per paid order, paid revenue per ad dollar), a themed report, and three custom widgets, **Claimed vs confirmed**
+(cost per paid order, paid revenue per ad dollar), a themed report, and four custom widgets, **Claimed vs confirmed**
 (`web/src/ClaimWidget.jsx`), a **payment timeline** (`web/src/TimelineWidget.jsx`: paid, partly refunded and refunded
-payments per ad) and **leads, PayPal invoices and paid orders per ad** (`web/src/FunnelWidget.jsx`), that read through
+payments per ad), **leads, PayPal invoices and paid orders per ad** (`web/src/FunnelWidget.jsx`) and **Who still owes**
+(`web/src/OwesWidget.jsx`: every sent invoice, how long it has waited and the chase agent's last nudge), that read through
 Studio's widget API so page filters and cross-filters apply to them.
 
 ## MCP server

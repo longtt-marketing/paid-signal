@@ -1,6 +1,6 @@
 // Money trail: one payment, step by step, from /api/trail. Text only through textContent; no HTML from the API.
 const $ = (tag, props = {}, kids = []) => { const e = Object.assign(document.createElement(tag), props); for (const k of [].concat(kids)) if (k != null) e.append(k); return e; };
-const when = (v) => (v ? new Date(typeof v === "number" ? v : Date.parse(v)).toLocaleString([], { dateStyle: "medium", timeStyle: "medium" }) : "–");
+const when = (v) => (v ? new Date(typeof v === "number" ? v : Date.parse(v)).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "medium" }) : "–");
 const money = (v, c = "USD") => (v == null ? "–" : `$${Number(v).toFixed(2)}${c && c !== "USD" ? ` ${c}` : ""}`);
 const code = (v) => (v ? $("code", { textContent: String(v) }) : "–");
 const dl = (rows) => $("dl", {}, rows.filter(Boolean).flatMap(([k, v]) => [$("dt", { textContent: k }), $("dd", {}, v ?? "–")]));

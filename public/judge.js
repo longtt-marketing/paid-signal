@@ -17,11 +17,12 @@ function render(run) {
   const vs = box("vs").querySelectorAll("b");
   vs[0].textContent = String(target.leads); vs[1].textContent = String(target.paid);
   box("vs").querySelectorAll("span")[0].textContent = `leads the ad report gives ${name(target.ad)}`;
+  box("vs").querySelectorAll("span")[1].textContent = `paid order${target.paid === 1 ? "" : "s"} PayPal confirms for it`;
 
   const ask = head("ask");
   ask.append($("p", { className: "quote", textContent: `“${run.instruction}”` }),
     $("p", { className: "note" }, [$("span", { className: "tag", textContent: "Replay of a recorded live run" }),
-      ` Claude ran it on the live PayPal ledger on ${new Date(run.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} in ${(run.ms / 1000).toFixed(1)} s. Replaying spends no Claude turn.`]));
+      ` Claude ran it on the live PayPal ledger on ${new Date(run.at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })} in ${(run.ms / 1000).toFixed(1)} s. Replaying spends no Claude turn.`]));
   box("c-live").textContent = `${name(target.ad)}: ${target.leads} leads, ${target.paid} paid order${target.paid === 1 ? "" : "s"} → no raise`;
   // once another ad on the live ledger has enough paid orders, the same run moves it: show that beside the refusal
   const liveRaise = (run.recommendation.actions || []).find((a) => a.ad !== target.ad && a.change === "increase");
@@ -54,7 +55,7 @@ function render(run) {
   ans.append(cf);
   getJSON("/api/judge/counterfactual").then((c) => {
     cf.replaceChildren($("b", { textContent: c.refused.length ? "The raise itself, sent to the gate just now: refused. " : "The raise itself, sent to the gate just now: accepted. " }),
-      c.refused.join(" "), $("span", { className: "note", textContent: ` (checked ${new Date(c.checked_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}, no Claude turn: the same code that checks every proposal)` }));
+      c.refused.join(" "), $("span", { className: "note", textContent: ` (checked ${new Date(c.checked_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}, no Claude turn: the same code that checks every proposal)` }));
   }).catch((e) => { cf.textContent = e.message; });
   const gates = (run.trace || []).filter((s) => s.tool === "submit_recommendation");
   const first = gates[0];
@@ -98,5 +99,28 @@ getJSON("/api/runs/week").then(({ run }) => {
       $("p", { className: "reason", textContent: a.reason }));
   }
   const g = run.grade;
-  sec.append($("p", { className: "note", textContent: `Recorded live run, ${new Date(run.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}. ${g ? (g.ok ? "Every move matches the week's written answer." : `Against the week's written answer: ${g.wrong?.join(", ") || "a move missing"}.`) : ""} The same evidence gate checked every number and the direction of every move.` }));
+  sec.append($("p", { className: "note", textContent: `Recorded live run, ${new Date(run.at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}. ${g ? (g.ok ? "Every move matches the week's written answer." : `Against the week's written answer: ${g.wrong?.join(", ") || "a move missing"}.`) : ""} The same evidence gate checked every number and the direction of every move.` }));
 }).catch(() => {});
+
+// 5: one lead's invoice loop, read live: the chat, Claude's draft through PayPal's Agent Toolkit, a person's approval and
+// the send agent, the chase agent's reminder, PayPal's paid status, Meta's receipt; and the prompt injection it refused
+getJSON("/api/judge/invoice-loop").then((d) => {
+  const sec = head("loop"), when = (t) => (t ? new Date(t).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "");
+  const i = d.invoice;
+  if (!i) { sec.append($("p", { className: "note", textContent: "No agent-drafted invoice yet. On the dashboard, press Ask the revenue agent." })); return; }
+  const row = (label, text, extra) => $("div", { className: "loop-row" }, [$("b", { textContent: label }), $("span", { textContent: text }), extra]);
+  const rows = [];
+  if (d.lead) rows.push(row("The lead writes", `${d.lead.lead.replace(" (fictional)", "")}, from a ${d.lead.source} ad (${i.ad_name}): “${d.lead.message}”`));
+  rows.push(row("Claude drafts", `The revenue agent called the Agent Toolkit's create_invoice: ${i.id}, ${money(Math.round(Number(i.amount) * 100))}${i.lines?.length ? ` (${i.lines.map((l) => l.name).join(", ")})` : ""}. Code set the price and the recipient inside the call.${i.reason && !(d.lead && i.reason.includes(d.lead.message)) ? ` Why: ${i.reason}` : ""}`));
+  if (i.sent_at) rows.push(row("A person approves, an agent sends", `Approved, then the send agent checked it with get_invoice and sent it with send_invoice, ${when(i.sent_at)}. Nothing is sent without that approval.`));
+  if (i.reminder) rows.push(row("Claude chases", `The chase agent (send_invoice_reminder, ${when(i.reminded_at)}): “${i.reminder.note}” Code allows only sent, unpaid invoices and three reminders a run; reminders are not approved one by one.`));
+  if (d.payment) rows.push(row("PayPal says paid", `Capture ${d.payment.capture_id}, ${money(Math.round(Number(d.payment.amount) * 100))}, ${when(d.payment.captured_at)}. Counted for ${i.ad_name}.${d.payment.meta ? ` Meta received the Purchase event ${when(d.payment.meta.at)}.` : ""}`,
+    $("a", { href: `/trail?capture=${encodeURIComponent(d.payment.capture_id)}`, textContent: " Follow it on the money trail →" })));
+  else rows.push(row("Waiting for PayPal", `Status ${i.status}: not paid yet, so it counts for nothing.`, i.pay_url ? $("a", { href: i.pay_url, target: "_blank", rel: "noopener noreferrer", textContent: " Pay it yourself (sandbox test card) ↗" }) : null));
+  sec.append($("div", { className: "loop" }, rows));
+  if (d.injection) sec.append($("div", { className: "rule" }, [$("b", { textContent: "And the lead it refused: " }), `${d.injection.lead.replace(" (fictional)", "")} wrote “${d.injection.message}” `,
+    d.injection.skipped ? `The revenue agent skipped it (${d.injection.skipped.flag || "skip"}): ${d.injection.skipped.reason}` : "The revenue agent is told to skip such a lead and flag it; on 16 held-out injections it invoiced none (/proof).",
+    " Code would refuse a different price or recipient anyway."]));
+  sec.append($("p", { className: "note", textContent: `Read live from the ledger ${when(d.checked_at)}; the leads are fictional, every invoice is a real PayPal sandbox invoice.` }));
+}).catch((e) => head("loop").append($("p", { className: "note err", textContent: e.message })));
+

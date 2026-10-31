@@ -3,7 +3,7 @@
 import { paypal } from "./paypal.js";
 import { ordersSdk } from "./paypalSdk.js";
 import { handleMcp } from "./mcp.js";
-import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates, proposeSplit, paybackOdds, disputeState, supportedMoves } from "./ledger.js";
+import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates, paybackOdds, disputeState, supportedMoves } from "./ledger.js";
 // PayPal reports refund times in its own zone (e.g. -07:00); the ledger keeps every time in UTC so they sort at a glance
 // the owner request the dashboard sends ("Tell it to raise the ad with the most leads"); /judge replays its latest run
 const RULE_SINCE = "2026-10-31T12:00:00.000Z"; // the budget rule as it stands (3+ paid orders, direction after costs and fees)
@@ -253,13 +253,19 @@ async function mcpTool(env, url, name, args) {
     const csv = await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text();
     const [{ reconciliation: r, meta }, ledger, { invoices }] = await Promise.all([get("/api/reconcile", { csv }), get("/api/ledger"), get("/api/invoices")]);
     if (name === "propose_budget") {
-      const rows = r.ads.map((a) => ({ ad: a.ad, spend: a.spend_cents / 100, paid: a.paid }));
       if (args.budget_usd !== undefined && !(Number(args.budget_usd) >= 1 && Number(args.budget_usd) <= 1000000)) throw new Error("budget_usd must be a number from 1 to 1000000.");
-      const budget = args.budget_usd !== undefined ? Number(args.budget_usd) : rows.reduce((n, x) => n + x.spend, 0);
-      const total = rows.reduce((n, x) => n + x.spend, 0) || 1;
-      const proposal = proposeSplit(rows, budget).map((x) => { const y = rows.find((z) => z.ad === x.ad); return { ad: x.ad, name: adName(x.ad), paid_orders: y.paid, now_usd: (budget * y.spend / total).toFixed(2), proposed_usd: x.budget.toFixed(2), why: x.reason }; });
-      return { proposal, rule: "paid orders per dollar, at least 10% per ad; an ad with fewer than 3 PayPal-confirmed paid orders keeps its share",
-        caveat: proposal.every((p) => p.now_usd === p.proposed_usd) ? "Not enough paid orders yet to move money: every ad keeps its share until at least two ads have 3 or more." : "Based on few orders; treat as a direction, not a forecast.",
+      const spend = r.ads.reduce((n, a) => n + a.spend_cents, 0) || 1;
+      const budget = args.budget_usd !== undefined ? Number(args.budget_usd) : spend / 100;
+      // the same rule the evidence gate enforces on the budget agent (supportedMoves), so an outside agent gets the same answer
+      const moves = supportedMoves(r);
+      const proposal = r.ads.map((a) => {
+        const m = moves[a.ad];
+        const change = !m ? "keep" : m.increase ? "increase" : m.reduce ? "reduce" : "keep";
+        const why = !m ? `${a.paid} paid order${a.paid === 1 ? "" : "s"}, fewer than 3: no move either way` : m.why;
+        return { ad: a.ad, name: adName(a.ad), paid_orders: a.paid, now_usd: (budget * a.spend_cents / spend).toFixed(2), change, why };
+      });
+      return { proposal, rule: "the evidence gate's rule: no move on fewer than 3 PayPal-confirmed paid orders; an ad may be raised only if it covers its spend after the shop's costs and PayPal fees and is at or above the average of ads with 3+ paid orders; an ad that does not cover its spend is cut",
+        caveat: proposal.every((p) => p.change === "keep") ? "No ad has enough paid orders, or none qualifies, so every ad keeps its budget." : "Based on few orders; treat as a direction, not a forecast.",
         applied: false, how_to_apply: "A person approves budget changes in the Paid Signal dashboard; this tool changes nothing." };
     }
     const capAd = Object.fromEntries(ledger.payments.map((p) => [p.capture_id, p.ad]));
@@ -515,7 +521,11 @@ const app = {
       // and PayPal's Agent Toolkit creates the drafts. Nothing is sent: each draft waits in Approvals.
       if (url.pathname === "/api/agent/revenue" && request.method === "POST") {
         const stop = await guard(env, request, "revenue agent runs", 4, 40); if (stop) return json({ error: stop }, 429);
-        return json(await revenueDrafts(env, url));
+        const out = await revenueDrafts(env, url);
+        // the judge path replays the latest run: who was skipped and why, the injection refusal; no emails
+        await env.LEDGER.put("run:revenue", JSON.stringify({ at: new Date().toISOString(), skips: out.skips, refusals: out.refusals, summary: out.summary, trace: out.trace, ms: out.ms,
+          drafts: out.drafts.map(({ email, ...d }) => d) }));
+        return json(out);
       }
 
       // Sent invoices nobody has paid: the chase agent reads each with the Agent Toolkit, chooses whom to remind and writes
@@ -619,6 +629,28 @@ const app = {
         const target = [...rec.ads].sort((a, b) => b.leads - a.leads)[0];
         const proposal = { headline: `Raise ${adName(target.ad)}: it brings the most leads.`, actions: [{ ad: target.ad, change: "increase", reason: `Raise ${adName(target.ad)}: it brings the most leads.`, evidence: [`row:${target.ad}`] }] };
         return json({ checked_at: new Date().toISOString(), ad: target.ad, leads: target.leads, paid: target.paid, proposal, refused: checkRecommendation(rec, payments, proposal) });
+      }
+
+      // One lead's invoice loop for the judge path: what the lead wrote, the agent's draft through the Agent Toolkit, the
+      // person's approval and the send agent, the chase agent's reminder, PayPal's paid status, and Meta's receipt.
+      // Picks the furthest an agent-drafted invoice has got (paid first), so it shows what really happened, nothing staged.
+      if (url.pathname === "/api/judge/invoice-loop") {
+        const [invoices, leads, payments, meta, run] = await Promise.all([listPrefix(env, "inv:"), demoLeads(env, url), listPayments(env), cachedList(env, "meta:"), env.LEDGER.get("run:revenue", "json")]);
+        const stage = (i) => (i.status === "PAID" ? 4 : i.reminded_at ? 3 : i.sent_at ? 2 : 1);
+        const pick = invoices.filter((i) => i.drafted_by && i.status !== "CANCELLED").sort((a, b) => stage(b) - stage(a) || String(b.sent_at || "").localeCompare(String(a.sent_at || "")))[0] || null;
+        const lead = pick && leads.find((l) => l.lead === pick.lead);
+        const pay = pick && payments.find((p) => p.order_id === pick.id);
+        const sent = pay && meta.find((m) => m.capture_id === pay.capture_id && m.ok);
+        const injection = leads.find((l) => /ignore (all |your )?previous instructions/i.test(l.message || ""));
+        const skip = injection && run?.skips?.find((k) => k.lead === injection.lead);
+        return json({
+          invoice: pick && { id: pick.id, lead: pick.lead, ad: pick.ad, ad_name: adName(pick.ad), amount: pick.amount, lines: pick.lines || null, note: pick.note || null, reason: pick.reason || null,
+            drafted_by: pick.drafted_by, created_at: pick.created_at, sent_by: pick.sent_by || null, sent_at: pick.sent_at || null, approved_at: pick.approved_at || null,
+            reminder: pick.reminder ? { note: pick.reminder.note, by: pick.reminder.by } : null, reminded_at: pick.reminded_at || null, status: pick.status, paid_at: pick.paid_at || null, pay_url: pick.pay_url || null },
+          lead: lead && { lead: lead.lead, message: lead.message, asked_for: lead.asked_for, source: lead.source === "fb" ? "Meta" : "Google" },
+          payment: pay ? { capture_id: pay.capture_id, amount: pay.amount, captured_at: utc(pay.captured_at), meta: sent ? { at: sent.at, events_received: sent.events_received ?? null } : null } : null,
+          injection: injection && { lead: injection.lead, message: injection.message, skipped: skip ? { reason: skip.reason, flag: skip.flag || null, at: run.at } : null },
+          checked_at: new Date().toISOString() });
       }
 
       // The latest recommendation that passed the evidence gate, with the owner's decisions on it, so Approvals survives a reload.
