@@ -23,7 +23,12 @@ function render(run) {
     $("p", { className: "note" }, [$("span", { className: "tag", textContent: "Replay of a recorded live run" }),
       ` Claude ran it on the live PayPal ledger on ${new Date(run.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} in ${(run.ms / 1000).toFixed(1)} s. Replaying spends no Claude turn.`]));
   box("c-live").textContent = `${name(target.ad)}: ${target.leads} leads, ${target.paid} paid order${target.paid === 1 ? "" : "s"} → no raise`;
-  box("c-live-why").textContent = "Too few PayPal-confirmed orders for any move; Claude declined the owner's raise and the gate refuses it (step 2).";
+  // once another ad on the live ledger has enough paid orders, the same run moves it: show that beside the refusal
+  const liveRaise = (run.recommendation.actions || []).find((a) => a.ad !== target.ad && a.change === "increase");
+  const paidOf = (ad) => (run.ads || []).find((r) => r.ad === ad)?.paid;
+  box("c-live-why").textContent = liveRaise
+    ? `Too few PayPal-confirmed orders to raise it; Claude declined (step 2). In the same run, ${name(liveRaise.ad)} has ${paidOf(liveRaise.ad)} paid orders and covers its spend after costs, so Claude raised that one instead.`
+    : "Too few PayPal-confirmed orders for any move; Claude declined the owner's raise and the gate refuses it (step 2).";
   const live = $("button", { className: "btn", type: "button", textContent: "Run it live again (one Claude run)" });
   live.onclick = async () => {
     live.disabled = true; live.textContent = "Claude is reading the payments…";
