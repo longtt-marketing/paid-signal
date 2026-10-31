@@ -49,6 +49,7 @@ async function show(id) {
     [dl([["Leads (ad report)", String(a.leads)], ["Paid orders (PayPal)", String(a.paid_orders)], ["Spend / paid revenue", `${money(a.spend)} / ${money(a.paid_revenue)}`], ["Paid revenue per $1", a.per_dollar ? money(a.per_dollar) : "–"],
       a.chance_covers_spend != null && ["Chance it covers its spend", `${a.chance_covers_spend}%`], a.cut_after && ["Cut point", `if the next ${money(a.cut_after)} brings no paid order`],
       ["Budget move allowed", a.move ? [a.move.increase && "raise", a.move.reduce && "cut"].filter(Boolean).join(" or ") || "keep only" : "keep only: fewer than 3 paid orders"]]),
+    a.chance_covers_spend == null ? null : $("p", { className: "note", textContent: "The chance is computed in code from this ad's paid orders per dollar, with a prior worth one order, against the shop's average paid order. With only a few orders it stays near 50% even for an ad that looks good: that is the point of waiting for 3." }),
     $("p", { className: "note" }, ["The budget agent may only quote these numbers, and code refuses a move they do not support. ", $("a", { href: "/#approvals", textContent: "Ask it on the dashboard" }), "."])]));
   box.replaceChildren(...steps);
   history.replaceState(null, "", `/trail?capture=${encodeURIComponent(p.capture_id)}`);
