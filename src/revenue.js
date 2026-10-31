@@ -149,6 +149,7 @@ export async function runRevenueAgent({ llm, leads, invoices, maxTurns = 8, crea
           results.push({ id: c.id, content: `Refused by code: ${problems.join(" ")}` }); continue;
         }
         const p = { lead: lead.lead, ad: lead.ad, email: lead.email, lines: priced.lines, total: priced.total, note: String(c.input.note || "").slice(0, 280), reason: String(c.input.reason || "").slice(0, 300) };
+        /** @type {{ id?: string, error?: string } | null} */
         const made = createDraft ? await createDraft(p).catch((e) => ({ error: String(e?.message || e).slice(0, 200) })) : null;
         if (made && !made.id) {
           refusals.push({ lead: lead.lead, problems: [`PayPal did not create the draft: ${made.error || "no id returned"}`] }); trace.push({ tool: c.name, lead: lead.lead, failed: true });

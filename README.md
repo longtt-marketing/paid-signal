@@ -70,6 +70,7 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
 | Payments v2: refund a capture (full or partial), through the server SDK | `src/paypalSdk.js`, `/api/refund` |
 | Invoicing v2: create draft (the lead's click kept with the invoice in the ledger), send, get; sent invoices are re-checked with PayPal on Refresh, because the sandbox does not always emit `INVOICING.INVOICE.PAID` | `/api/invoices/*`, agent tool `draft_paypal_invoices` |
 | Webhooks: registered by `scripts/register-webhook.py`, **verify-webhook-signature** for every delivery | `/api/webhook` |
+| Disputes: `CUSTOMER.DISPUTE.*` webhooks, plus the Agent Toolkit's `list_disputes` and `get_dispute` on every PayPal check and every night. An open dispute takes the payment out of paid orders and out of what Meta and Google are told; a dispute the buyer wins counts as refunded (Google gets a retraction) | `src/ledger.js` (`disputeState`), `/api/webhook`, `/api/paypal-check` |
 | Reporting: Transaction Search, to cross-check the webhook ledger against PayPal's own history (payments only) | `/api/paypal-check`, agent tool `check_paypal_ledger` |
 | JavaScript SDK buttons, plus a full-page approval fallback | `public/shop.html` |
 
@@ -134,7 +135,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 79 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
+npm test                              # 83 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

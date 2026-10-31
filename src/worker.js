@@ -80,6 +80,34 @@ async function revenueDrafts(env, url) {
   return ({ drafts, skips: run.skips, refusals: run.refusals, summary: run.summary, trace: run.trace, ms: Date.now() - t0 });
 }
 
+/** Mark the disputed capture(s) in the ledger with the dispute's state; reconcile and the ad-platform payloads read it. */
+async function applyDispute(env, d) {
+  const marked = [];
+  for (const t of d.disputed_transactions || []) {
+    const id = t.seller_transaction_id; const rec = id && (await env.LEDGER.get(`pay:${id}`, "json"));
+    if (!rec) continue;
+    rec.dispute = { id: d.dispute_id, status: d.status, reason: d.reason || null, amount: d.dispute_amount?.value || null,
+      outcome: d.dispute_outcome?.outcome_code || null, updated_at: d.update_time || new Date().toISOString() };
+    await env.LEDGER.put(`pay:${id}`, JSON.stringify(rec)); marked.push(id);
+  }
+  if (marked.length) await forget("pay:");
+  return marked;
+}
+
+/**
+ * Ask PayPal, through the Agent Toolkit's list_disputes and get_dispute, for every dispute on this account, and mark the
+ * ledger. The webhook does the same the moment a dispute opens; this catches any event the sandbox did not deliver.
+ */
+async function syncDisputes(env) {
+  const tk = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
+    configuration: { actions: { disputes: { list: true, get: true } }, context: { sandbox: true } } }).getTools();
+  const parse = (x) => { try { return typeof x === "string" ? JSON.parse(x) : x || {}; } catch { return {}; } };
+  const list = parse(await tk.list_disputes.execute({ page_size: 50 })).items || [];
+  const marked = [];
+  for (const item of list.slice(0, 20)) marked.push(...(await applyDispute(env, parse(await tk.get_dispute.execute({ dispute_id: item.dispute_id })))));
+  return { checked_at: new Date().toISOString(), disputes: list.length, open: list.filter((x) => x.status !== "RESOLVED").length, ledger_payments_marked: marked };
+}
+
 async function listPayments(env) {
   return (await cachedList(env, "pay:")).sort((a, b) => String(a.captured_at).localeCompare(String(b.captured_at)));
 }
@@ -348,7 +376,7 @@ const app = {
         if (amount !== undefined && !(Number(amount) > 0 && Number(amount) <= left)) return json({ error: `Refund between $0.01 and $${left.toFixed(2)}.` }, 400);
         // the seeded demo payments carry the scenarios page and the dashboard story through judging: preview, don't send
         const partial = amount !== undefined && Number(amount) < left;
-        if (String(cur.captured_at) < SEEDED_BEFORE) return json({ preview: true, message: `Capture ${capture_id} is one of the demo's seeded sandbox payments, so this refund is only previewed: its ad would lose $${amount ?? left} of paid revenue, and ${partial ? (cur.source === "g" ? "its Google row would become a restatement" : "its Meta event value would drop") : (cur.source === "g" ? "its Google row would become a retraction" : "its Meta event would be held back")}. To run a real sandbox refund, pay in the demo shop and refund that payment.` });
+        if (String(cur.captured_at) < SEEDED_BEFORE) return json({ preview: true, message: `Capture ${capture_id} is one of the demo's seeded sandbox payments, so this refund is only previewed: its ad would lose $${amount ?? left} of paid revenue, and ${partial ? (cur.source === "g" ? "its Google row would become a restatement" : "its paid revenue would drop here; a Meta event already sent keeps its value, as Meta's Conversions API has no retraction") : (cur.source === "g" ? "its Google row would become a retraction" : "its Meta event would be held back if not yet sent; one already sent stays, as Meta's Conversions API has no retraction")}. To run a real sandbox refund, pay in the demo shop and refund that payment.` });
         const stop = await guard(env, request, "refunds", 3, 30); if (stop) return json({ error: stop }, 429);
         // the same refund retried (double click, network retry) carries the same request id, so PayPal applies it once
         const refundKey = `refund-${capture_id}-${amount === undefined ? "full" : Number(amount).toFixed(2)}-${cur.refunded_amount || "0.00"}`;
@@ -375,6 +403,8 @@ const app = {
           else if (orderId) await sendToMeta(env, url, await recordCapture(env, await orders.getOrder(orderId)));
         }
         if (event.event_type === "INVOICING.INVOICE.PAID" && res.id) await recordInvoicePayment(env, await pp.getInvoice(res.id), url);
+        // a buyer's dispute takes the payment out of paid orders (and out of what the ad platforms are told) while it is open
+        if (/^CUSTOMER\.DISPUTE\./.test(event.event_type)) await applyDispute(env, res);
         if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
           const captureId = (res.links || []).find((l) => l.rel === "up")?.href?.split("/").pop();
           if (captureId) {
@@ -399,7 +429,9 @@ const app = {
       }
 
       // Leads the ad export counted but PayPal never saw pay. The agent may draft invoices for them; a person sends.
-      if (url.pathname === "/api/leads") return json({ leads: await demoLeads(env, url) });
+      // the email stays on the server (the invoice goes to it); the public list shows who wrote what, not where
+      if (url.pathname === "/api/leads") return json({ leads: (await demoLeads(env, url)).map(({ email, ...l }) => l) });
+      if (url.pathname === "/data/demo-leads.csv") return json({ error: "Not found" }, 404); // read only through ASSETS, above
 
       // the recipient's email stays on the server (PayPal sends to it); the public list shows who, not where
       if (url.pathname === "/api/invoices" && request.method === "GET") return json({ invoices: (await cachedList(env, "inv:")).map(({ email, ...i }) => i) });
@@ -475,6 +507,7 @@ const app = {
         let tx;
         try { tx = await pp.searchTransactions(iso(start), iso(end)); }
         catch (e) { return json({ status: "unavailable", reason: e.status === 403 ? "Transaction Search is not enabled on this PayPal app yet." : e.message }); }
+        let disputes; try { disputes = await syncDisputes(env); } catch (e) { disputes = { status: "unavailable", reason: String(e?.message || e).slice(0, 200) }; }
         const ledger = await listPayments(env);
         const ids = new Set(ledger.map((p) => p.capture_id));
         // T00xx are payments received; other codes (T1900 sandbox funding, fees, transfers) are not customer payments
@@ -484,7 +517,7 @@ const app = {
         const cutoff = Date.parse(tx.last_refreshed_datetime || "") || Date.now();
         const newer = (p) => Date.parse(p.captured_at) > cutoff || p.via === "invoice"; // invoice payments carry PayPal's local-day time
         return json({
-          status: "ok", checked_at: new Date().toISOString(), paypal_count: items.length, ledger_count: ledger.length,
+          status: "ok", checked_at: new Date().toISOString(), paypal_count: items.length, ledger_count: ledger.length, disputes,
           // PayPal states how current its report is; a payment newer than that is pending, not missing
           report_current_to: tx.last_refreshed_datetime || null,
           matched: ledger.filter((p) => seen.has(p.capture_id)).map((p) => p.capture_id),
@@ -614,5 +647,6 @@ app.scheduled = async (_event, env) => {
   await forget("inv:");
   // no draft waiting: the revenue agent reads the leads again and drafts only for the ones ready to pay, priced by code
   if (!invoices.some((i) => i.status === "DRAFT")) await revenueDrafts(env, new URL("https://paid-signal.thelongmarketing.workers.dev/"));
+  try { await syncDisputes(env); } catch (e) { console.warn("dispute sync failed", e?.message); }
 };
 export default app;

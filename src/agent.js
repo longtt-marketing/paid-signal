@@ -16,6 +16,7 @@ Rules:
 - For an ad with fewer than 3 paid orders, "keep" is not the whole answer. Its row has small_sample_read, computed in code: the chance its paid revenue covers its ad spend, a likely range (90%) for its cost per paid order, and, while that is unclear, how much more spend with no paid order would make it very likely (90%) below its ad spend. Tell the owner that point in plain words, e.g. "If the next $X brings no paid order, it is very likely below its ad spend: cut it then," with $X taken from the tool result. It assumes the shop's average paid order (average_paid_order_usd), so say so once.
 - Write for the shop owner in plain words ("cost per paid order", "spend with no paid order"), never field names such as spend_usd or paid_revenue_per_dollar.
 - In the headline, reasons and caveats call an ad by its name (the "name" field, e.g. "Holiday camp · static"), never its key; the key goes only in "ad" and in evidence.
+- in_open_dispute counts payments a buyer is disputing with PayPal: they are held out of paid orders and revenue until PayPal resolves them; a dispute the buyer won counts as fully refunded. If an ad has one, say so.
 - Paid revenue is already net of refunds; never suggest a refund may not be taken out. Call it "paid revenue minus ad spend" and do not use the word "profit" at all (product cost is unknown). Write money with a dollar sign: $118.40, a shortfall as "$41.50 below ad spend", paid revenue per dollar as "$0.41 per $1".
 - Finish by calling submit_recommendation once.`;
 
@@ -52,9 +53,9 @@ export function reconciliationView(rec, payments = []) {
     ...(o.more_spend_to_decide_cents !== null ? { more_spend_with_no_paid_order_that_settles_it_usd: dollars(o.more_spend_to_decide_cents) } : {}),
   } : "no spend";
   return {
-    totals: { leads: rec.totals.leads, paid_orders: rec.totals.paid, fully_refunded: rec.totals.refunded, held_as_possible_duplicate: rec.totals.held, spend_usd: dollars(rec.totals.spend_cents), paid_revenue_usd: dollars(rec.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: dollars(rec.totals.spend_without_paid_cents), paid_revenue_minus_ad_spend_usd: dollars(rec.totals.net_cents) },
+    totals: { leads: rec.totals.leads, paid_orders: rec.totals.paid, fully_refunded: rec.totals.refunded, held_as_possible_duplicate: rec.totals.held, spend_usd: dollars(rec.totals.spend_cents), paid_revenue_usd: dollars(rec.totals.revenue_cents), in_open_dispute: rec.totals.disputed, spend_on_ads_with_no_paid_order_usd: dollars(rec.totals.spend_without_paid_cents), paid_revenue_minus_ad_spend_usd: dollars(rec.totals.net_cents) },
     ads: rec.ads.map((r) => ({
-      ad: r.ad, name: adName(r.ad), spend_usd: dollars(r.spend_cents), leads: r.leads, paid_orders: r.paid, fully_refunded: r.refunded, held_as_possible_duplicate: r.held, paid_revenue_usd: dollars(r.revenue_cents),
+      ad: r.ad, name: adName(r.ad), spend_usd: dollars(r.spend_cents), leads: r.leads, paid_orders: r.paid, fully_refunded: r.refunded, held_as_possible_duplicate: r.held, in_open_dispute: r.disputed, paid_revenue_usd: dollars(r.revenue_cents),
       cost_per_paid_order_usd: r.cost_per_paid_cents === null ? "none paid" : dollars(r.cost_per_paid_cents),
       lead_to_paid: r.lead_to_paid === null ? "no leads" : Math.round(r.lead_to_paid * 100) + "%", paid_revenue_per_dollar: r.roas === null ? "no spend" : r.roas.toFixed(2),
       paid_revenue_minus_ad_spend_usd: dollars(r.net_cents),

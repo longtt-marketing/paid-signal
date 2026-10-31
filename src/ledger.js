@@ -41,12 +41,24 @@ export function parseAdCsv(text) {
 }
 
 /**
+ * A buyer's PayPal dispute on a capture: "open" until PayPal resolves it, "lost" when it was resolved for the buyer or the
+ * shop accepted the claim (the buyer has the money back), "won" otherwise.
+ * @param {{ dispute?: { status?: string, outcome?: string | null } }} p
+ */
+export function disputeState(p) {
+  const d = p.dispute;
+  if (!d) return null;
+  if (d.status !== "RESOLVED") return "open";
+  return /BUYER_FAVOUR|ACCEPTED/.test(String(d.outcome || "")) ? "lost" : "won";
+}
+
+/**
  * A capture counts as a paid order unless fully refunded; partial refunds reduce revenue. A possible duplicate (same
  * payer, same ad, minutes apart) is held: not a paid order and not revenue until it is refunded, the same
  * rule that keeps it back from Meta and Google.
  */
 export function reconcile(adRows, payments) {
-  const byAd = new Map(adRows.map((r) => [r.ad, { ad: r.ad, spend_cents: r.spend_cents, leads: r.leads, paid: 0, refunded: 0, held: 0, revenue_cents: 0, held_cents: 0, captures: [] }]));
+  const byAd = new Map(adRows.map((r) => [r.ad, { ad: r.ad, spend_cents: r.spend_cents, leads: r.leads, paid: 0, refunded: 0, held: 0, revenue_cents: 0, held_cents: 0, disputed: 0, disputed_cents: 0, captures: [] }]));
   const unmatched = [];
   const held = new Set(possibleDuplicates(payments).map((d) => d.capture_id));
   for (const p of payments) {
@@ -54,7 +66,11 @@ export function reconcile(adRows, payments) {
     if (!row) { unmatched.push(p.capture_id); continue; }
     const gross = cents(p.amount), back = cents(p.refunded_amount || 0);
     row.captures.push(p.capture_id);
+    // a dispute the buyer won is money back, like a refund; an open one is not a paid order until PayPal decides
+    const ds = disputeState(p);
+    if (ds === "lost") { row.refunded++; continue; }
     if (back >= gross) row.refunded++;
+    else if (ds === "open") { row.disputed++; row.disputed_cents += gross - back; continue; }
     else if (held.has(p.capture_id)) { row.held++; row.held_cents += gross - back; continue; }
     else row.paid++;
     row.revenue_cents += Math.max(0, gross - back);
@@ -72,6 +88,7 @@ export function reconcile(adRows, payments) {
     ads,
     totals: {
       spend_cents: sum("spend_cents"), leads: sum("leads"), paid: sum("paid"), refunded: sum("refunded"), held: sum("held"), revenue_cents: sum("revenue_cents"), held_cents: sum("held_cents"),
+      disputed: sum("disputed"), disputed_cents: sum("disputed_cents"),
       spend_without_paid_cents: ads.filter((r) => r.paid === 0).reduce((a, r) => a + r.spend_cents, 0),
       net_cents: sum("revenue_cents") - sum("spend_cents"),
     },
@@ -86,9 +103,9 @@ export function quotableNumbers(rec) {
   const t = rec.totals;
   // counts the agent can see in the table: how many ads, how many captures
   add(rec.ads.length); add(rec.ads.reduce((n, r) => n + r.captures.length, 0));
-  [t.leads, t.paid, t.refunded, t.held, dollars(t.spend_cents), dollars(t.revenue_cents), dollars(t.held_cents), dollars(t.spend_without_paid_cents), dollars(Math.abs(t.net_cents))].forEach(add);
+  [t.leads, t.paid, t.refunded, t.held, t.disputed, dollars(t.disputed_cents), dollars(t.spend_cents), dollars(t.revenue_cents), dollars(t.held_cents), dollars(t.spend_without_paid_cents), dollars(Math.abs(t.net_cents))].forEach(add);
   for (const r of rec.ads) {
-    [r.leads, r.paid, r.refunded, r.held, r.captures.length, dollars(r.spend_cents), dollars(r.revenue_cents), dollars(r.held_cents), dollars(Math.abs(r.net_cents))].forEach(add);
+    [r.leads, r.paid, r.refunded, r.held, r.disputed, dollars(r.disputed_cents), r.captures.length, dollars(r.spend_cents), dollars(r.revenue_cents), dollars(r.held_cents), dollars(Math.abs(r.net_cents))].forEach(add);
     if (r.cost_per_paid_cents !== null) add(dollars(r.cost_per_paid_cents));
     if (r.lead_to_paid !== null) add(Math.round(r.lead_to_paid * 100) + "%");
     if (r.roas !== null) add(r.roas.toFixed(2));
@@ -201,6 +218,8 @@ export async function metaEvents(payments, { sourceUrl, hold } = {}) {
   for (const p of payments) {
     const gross = cents(p.amount), back = cents(p.refunded_amount || 0);
     if (back >= gross) { held.push({ capture_id: p.capture_id, reason: "fully refunded" }); continue; }
+    const ds = disputeState(p);
+    if (ds === "open" || ds === "lost") { held.push({ capture_id: p.capture_id, reason: ds === "open" ? "open PayPal dispute" : "dispute lost: the buyer was refunded" }); continue; }
     // PayPal still confirms the money, but with no ad click there is no ad to teach
     if (!p.click_id) { held.push({ capture_id: p.capture_id, reason: "no ad click" }); continue; }
     if (hold?.has(p.capture_id)) { held.push({ capture_id: p.capture_id, reason: "possible duplicate" }); continue; }
@@ -237,10 +256,10 @@ const gTime = (iso) => String(iso).replace("T", " ").replace(/\.\d+/, "").replac
 export function googleRows(payments, conversionName = "PayPal paid order", { hold } = {}) {
   const conversions = [], adjustments = [];
   for (const p of payments) {
-    if (p.source !== "g" || !p.click_id || clickAge(p) > 90 * DAY || hold?.has(p.capture_id)) continue;
-    const gross = cents(p.amount), back = cents(p.refunded_amount || 0);
+    if (p.source !== "g" || !p.click_id || clickAge(p) > 90 * DAY || hold?.has(p.capture_id) || disputeState(p) === "open") continue;
+    const gross = cents(p.amount), back = disputeState(p) === "lost" ? gross : cents(p.refunded_amount || 0);
     conversions.push({ gclid: p.click_id, conversion_name: conversionName, conversion_time: gTime(p.captured_at), value: dollars(gross), currency: p.currency || "USD", order_id: p.capture_id });
-    if (back >= gross) adjustments.push({ order_id: p.capture_id, conversion_name: conversionName, adjustment_type: "RETRACTION", adjustment_time: gTime(p.refunded_at || p.captured_at) });
+    if (back >= gross) adjustments.push({ order_id: p.capture_id, conversion_name: conversionName, adjustment_type: "RETRACTION", adjustment_time: gTime(p.refunded_at || p.dispute?.updated_at || p.captured_at) });
     else if (back > 0) adjustments.push({ order_id: p.capture_id, conversion_name: conversionName, adjustment_type: "RESTATEMENT", adjusted_value: dollars(gross - back), adjustment_time: gTime(p.refunded_at || p.captured_at) });
   }
   return { conversions, adjustments };

@@ -244,7 +244,7 @@ export default function App() {
               <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
               {t.held > 0 && <span title="Same payer, same ad, minutes apart: not counted as a paid order, and kept from the ad platforms"><b>{t.held}</b> possible duplicate held</span>}
               <span><b>{usd(t.spend_cents)}</b> ad spend</span>
-              <span><b>{costPerPaid}</b> per paid order</span>
+              <span><b>{costPerPaid}</b> ad spend per paid order</span>
             </div>}
           </div>
           <div className="hero-bars">
@@ -259,7 +259,7 @@ export default function App() {
           <article><span className="step">1</span><b>Pay from an ad click</b><p>Open an ad link and pay in the PayPal sandbox. The click rides in the order.</p><a className="btn" href={adLink("trial_video", "fb")}>Open an ad link</a></article>
           <article><span className="step">2</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
           <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("week4")}>Or try a synthetic week with more orders</button></article>
-          <article><span className="step">4</span><b>Tell the ad platform</b><p>Paid orders from Meta ads go to Meta's Conversions API; Google ones are previews here. Refunds pull them back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
+          <article><span className="step">4</span><b>Tell the ad platform</b><p>Paid orders from Meta ads go to Meta's Conversions API; Google ones are previews here. A refund before the send holds the event back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
         </section>
 
         <div className="cols">
@@ -271,7 +271,7 @@ export default function App() {
                   <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Paid revenue after refunds, minus this ad's spend. Product cost is not included.">After ad spend</th><th>Per paid order</th><th title="Chance this ad's paid revenue covers its ad spend, from its paid orders so far at the shop's average paid order. While it is not clear, the spend with no paid order that would make 'below its ad spend' 90% likely.">Covers its spend?</th></tr></thead>
                   <tbody>
                     {byCost.map((a) => (
-                      <tr key={a.ad}><td>{adName(a.ad)}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td>{a.paid}{a.held > 0 && <small className="held"> +{a.held} held</small>}</td><td>{usd(a.revenue_cents)}</td><td className={a.net_cents < 0 ? "neg" : a.net_cents > 0 ? "pos" : ""}>{signed(a.net_cents)}</td>
+                      <tr key={a.ad}><td>{adName(a.ad)}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td>{a.paid}{a.held > 0 && <small className="held"> +{a.held} held</small>}{a.disputed > 0 && <small className="held"> +{a.disputed} disputed</small>}</td><td>{usd(a.revenue_cents)}</td><td className={a.net_cents < 0 ? "neg" : a.net_cents > 0 ? "pos" : ""}>{signed(a.net_cents)}</td>
                         <td>{a.cost_per_paid_cents == null ? <span className="pill warn">no paid order</span> : <span className={`pill ${a.ad === best ? "good" : a.ad === worst ? "warn" : ""}`}>{usd(a.cost_per_paid_cents)}</span>}</td>
                         <td className="odds-cell">{odds[a.ad] ? <>{Math.round(odds[a.ad].chance_covers_spend * 100)}%<small className="odds">{odds[a.ad].more_spend_to_decide_cents != null ? `cut if the next $${Math.round(odds[a.ad].more_spend_to_decide_cents / 100)} brings no paid order` : odds[a.ad].verdict}</small></> : "–"}</td></tr>
                     ))}
@@ -283,7 +283,7 @@ export default function App() {
 
             <section id="payments" className="card">
               <div className="card-head"><h2>Payments</h2>{state && <span className="ok">{state.payments.length} in the ledger · checked against PayPal</span>}</div>
-              <p className="muted">Refund one and its ad drops: a Google click becomes a retraction, a Meta event is held back. The seeded demo payments preview a refund; pay in the shop to refund one of your own.</p>
+              <p className="muted">Refund one and its ad drops: a Google click becomes a retraction; a Meta event not yet sent is held back (one already sent stays: Meta's Conversions API has no retraction). The seeded demo payments preview a refund; pay in the shop to refund one of your own.</p>
               <div id="captures" className="list">
                 {(state?.payments || []).slice().reverse().map((p) => (
                   <div key={p.capture_id} className="cap">

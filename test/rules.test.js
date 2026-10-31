@@ -1,7 +1,7 @@
 // Edge cases of the money rules: duplicates, refunds, attribution windows, payload formats and the evidence gate.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { packClick, unpackClick, parseAdCsv, reconcile, quotableNumbers, ungroundedNumbers, metaEvents, googleRows, possibleDuplicates, paybackOdds } from "../src/ledger.js";
+import { packClick, unpackClick, parseAdCsv, reconcile, quotableNumbers, ungroundedNumbers, metaEvents, googleRows, possibleDuplicates, paybackOdds, disputeState } from "../src/ledger.js";
 import { checkRecommendation, reconciliationView } from "../src/agent.js";
 import { runSendAgent } from "../src/sendAgent.js";
 
@@ -252,4 +252,29 @@ test("gate: the small-sample read can be quoted; a made-up settling spend cannot
   const rec1 = (s) => ({ headline: "Every ad has fewer than 3 paid orders.", actions: [{ ad: "c", change: "keep", reason: `${view.chance_paid_revenue_covers_ad_spend} chance it covers its ad spend; if the next $${s} brings no paid order, it is very likely (90%) below its ad spend.`, evidence: ["row:c"] }] });
   assert.deepEqual(checkRecommendation(rec, payments, rec1(S)), []);
   assert.ok(checkRecommendation(rec, payments, rec1("77.00")).some((p) => p.includes("77.00")));
+});
+
+// disputes: a buyer's PayPal dispute takes the payment out of the signal while open, and back like a refund if lost
+const open = { id: "PP-D-1", status: "WAITING_FOR_SELLER_RESPONSE" };
+test("disputes: open, lost (buyer favour or claim accepted) and won", () => {
+  assert.equal(disputeState(pay({})), null);
+  assert.equal(disputeState(pay({ dispute: open })), "open");
+  for (const outcome of ["RESOLVED_BUYER_FAVOUR", "ACCEPTED"]) assert.equal(disputeState(pay({ dispute: { status: "RESOLVED", outcome } })), "lost");
+  assert.equal(disputeState(pay({ dispute: { status: "RESOLVED", outcome: "RESOLVED_SELLER_FAVOUR" } })), "won");
+});
+
+test("disputes: an open one is not a paid order or revenue; a lost one counts as refunded; a won one counts", () => {
+  const rows = [{ ad: "trial", spend_cents: 10000, leads: 4 }];
+  const r = (d) => reconcile(rows, [pay({ capture_id: "C1", dispute: d }), pay({ capture_id: "C2", payer_email_sha256: "h2", captured_at: at(60) })]).ads[0];
+  assert.deepEqual(((x) => [x.paid, x.disputed, x.disputed_cents, x.revenue_cents])(r(open)), [1, 1, 4900, 4900]);
+  assert.deepEqual(((x) => [x.paid, x.refunded, x.revenue_cents])(r({ status: "RESOLVED", outcome: "RESOLVED_BUYER_FAVOUR" })), [1, 1, 4900]);
+  assert.deepEqual(((x) => [x.paid, x.disputed, x.revenue_cents])(r({ status: "RESOLVED", outcome: "RESOLVED_SELLER_FAVOUR" })), [2, 0, 9800]);
+});
+
+test("disputes: Meta is not sent an open or lost one; Google holds an open one and retracts a lost one", async () => {
+  const m = await metaEvents([pay({ capture_id: "C1", dispute: open }), pay({ capture_id: "C2", dispute: { status: "RESOLVED", outcome: "ACCEPTED" } })]);
+  assert.deepEqual([m.events.length, m.held.map((h) => h.reason)], [0, ["open PayPal dispute", "dispute lost: the buyer was refunded"]]);
+  const g = googleRows([pay({ capture_id: "G1", source: "g", dispute: open }), pay({ capture_id: "G2", source: "g", dispute: { status: "RESOLVED", outcome: "RESOLVED_BUYER_FAVOUR", updated_at: "2026-10-30T10:00:00Z" } })]);
+  assert.deepEqual(g.conversions.map((c) => c.order_id), ["G2"]);
+  assert.deepEqual(g.adjustments.map((a) => [a.order_id, a.adjustment_type]), [["G2", "RETRACTION"]]);
 });

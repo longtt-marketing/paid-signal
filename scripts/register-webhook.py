@@ -3,7 +3,8 @@ from .dev.vars; prints the webhook id to store as the PAYPAL_WEBHOOK_ID Worker s
 Usage: python scripts/register-webhook.py https://<your-worker>/api/webhook"""
 import base64, json, re, sys, urllib.request
 
-EVENTS = ["PAYMENT.CAPTURE.COMPLETED", "PAYMENT.CAPTURE.REFUNDED", "PAYMENT.CAPTURE.REVERSED", "INVOICING.INVOICE.PAID"]
+EVENTS = ["PAYMENT.CAPTURE.COMPLETED", "PAYMENT.CAPTURE.REFUNDED", "PAYMENT.CAPTURE.REVERSED", "INVOICING.INVOICE.PAID",
+          "CUSTOMER.DISPUTE.CREATED", "CUSTOMER.DISPUTE.UPDATED", "CUSTOMER.DISPUTE.RESOLVED"]
 B = "https://api-m.sandbox.paypal.com"
 v = {m.group(1): m.group(2).strip() for line in open(".dev.vars", encoding="utf-8-sig") if (m := re.match(r"\s*([A-Z_]+)\s*=\s*\"?([^\"#\r\n]*)\"?\s*$", line))}
 auth = base64.b64encode(f"{v['PAYPAL_CLIENT_ID']}:{v['PAYPAL_CLIENT_SECRET']}".encode()).decode()
