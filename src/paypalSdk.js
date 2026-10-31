@@ -25,6 +25,8 @@ export function ordersSdk({ clientId, secret }) {
       },
     })),
     getOrder: (id) => run(orders.getOrder({ id })),
+    /** PayPal's own record of one capture: status, amount, custom_id, fee and net, refunds so far. */
+    getCapture: (captureId) => run(payments.getCapturedPayment({ captureId })),
     /** Capture an approved order; the same PayPal-Request-Id on a retry returns the first capture instead of charging twice. */
     captureOrder: (id, requestId) => run(orders.captureOrder({ id, paypalRequestId: requestId, prefer: "return=representation" })),
     /** Full refund without an amount, partial with one. */

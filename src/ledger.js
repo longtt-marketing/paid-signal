@@ -110,6 +110,8 @@ export function quotableNumbers(rec) {
     if (r.lead_to_paid !== null) add(Math.round(r.lead_to_paid * 100) + "%");
     if (r.roas !== null) add(r.roas.toFixed(2));
   }
+  // the direction rule's average (supportedMoves), which the agent may quote when it explains a move or a refusal
+  for (const m of Object.values(supportedMoves(rec))) if (m.average !== null) add(m.average.toFixed(2));
   // the small-sample read the agent is shown (paybackOdds): chance, range, spend that settles it, the average paid order
   const odds = paybackOdds(rec);
   if (odds.average_paid_order_cents !== null) add(dollars(odds.average_paid_order_cents));
@@ -166,7 +168,7 @@ export function proposeSplit(rows, budget, floor = 0.1, minPaid = 3) {
  * spend" 90% likely. Same Gamma with a whole-number shape throughout, so the CDF is a finite Poisson sum, no special functions.
  * @param {ReturnType<typeof reconcile>} rec
  */
-export function paybackOdds(rec, sure = 0.9) {
+export function paybackOdds(rec, sure = 0.9, priorOrders = 1) {
   const t = rec.totals;
   if (!t.paid || !t.spend_cents || !t.revenue_cents) return { average_paid_order_cents: null, ads: {} };
   const aov = t.revenue_cents / t.paid / 100, be = 1 / aov, prior = t.spend_cents / 100 / t.paid; // dollars
@@ -176,7 +178,7 @@ export function paybackOdds(rec, sure = 0.9) {
   const ads = {};
   for (const r of rec.ads) {
     if (!r.spend_cents) continue;
-    const k = 1 + r.paid, b = prior + r.spend_cents / 100;
+    const k = priorOrders + r.paid, b = priorOrders * prior + r.spend_cents / 100; // priorOrders: how many orders the prior is worth (a whole number)
     const covers = 1 - cdf(k, b, be);
     const rateAt = (q) => solve((x) => cdf(k, b, x) >= q, 0, 100);
     const range = [Math.round(1 / rateAt(0.95)) * 100, Math.round(1 / rateAt(0.05)) * 100]; // whole dollars, in cents
@@ -185,6 +187,29 @@ export function paybackOdds(rec, sure = 0.9) {
     ads[r.ad] = { chance_covers_spend: covers, cost_per_paid_range_cents: range, more_spend_to_decide_cents: more, verdict: covers <= 1 - sure ? "likely below its ad spend" : covers >= sure ? "likely covers its ad spend" : "not clear yet" };
   }
   return { average_paid_order_cents: Math.round(aov * 100), ads };
+}
+
+/**
+ * Which budget moves the payments support, per ad with at least `minPaid` paid orders (the others may only be kept).
+ * Raise an ad only if it returns at least $1 of paid revenue per $1 of ad spend and at least the average of those ads;
+ * reduce or pause one below $1, or below that average. Paid revenue is not profit (product cost is unknown), so $1 per $1
+ * is a floor, not a target. The gate refuses any move against this, whatever words justify it.
+ * @param {ReturnType<typeof reconcile>} rec
+ */
+export function supportedMoves(rec, minPaid = 3) {
+  const ready = rec.ads.filter((r) => r.paid >= minPaid && r.spend_cents > 0);
+  const avg = ready.length >= 2 ? ready.reduce((n, r) => n + r.revenue_cents / r.spend_cents, 0) / ready.length : null;
+  /** @type {Record<string, { per_dollar: number, average: number | null, increase: boolean, reduce: boolean, why: string }>} */
+  const out = {};
+  for (const r of ready) {
+    const pd = r.revenue_cents / r.spend_cents;
+    const increase = pd >= 1 && (avg === null || pd >= avg - 1e-9);
+    const reduce = pd < 1 || (avg !== null && pd < avg - 1e-9);
+    const vs = avg === null ? "" : `, against an average of $${avg.toFixed(2)} for ads with ${minPaid}+ paid orders`;
+    out[r.ad] = { per_dollar: pd, average: avg, increase, reduce,
+      why: `$${pd.toFixed(2)} of paid revenue per $1 of ad spend${vs}` };
+  }
+  return out;
 }
 
 /** Two live captures from the same payer for the same ad within `windowMs` look like a double click at checkout. */

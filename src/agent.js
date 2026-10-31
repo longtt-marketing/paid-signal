@@ -1,7 +1,7 @@
 // The budget agent: Claude reads the reconciliation through tools and proposes changes. Code computed every number;
 // the agent may only quote them. A gate rejects ungrounded numbers or evidence ids, allows one repair, then flags.
 import { adName } from "../web/src/names.js";
-import { dollars, quotableNumbers, ungroundedNumbers, possibleDuplicates, paybackOdds } from "./ledger.js";
+import { dollars, quotableNumbers, ungroundedNumbers, possibleDuplicates, paybackOdds, supportedMoves } from "./ledger.js";
 import { checkCall, validate } from "./schema.js";
 
 export const SYSTEM = `You are a performance-marketing analyst for a small business that sells through PayPal.
@@ -13,6 +13,8 @@ Rules:
 - Small samples are weak evidence. An ad with fewer than 3 paid orders gets "keep" (or "fix_tracking"), never pause, reduce or increase: say it needs more paid orders before its budget moves. Refunds are not paid orders.
 - possible_duplicates lists payments that may be the same purchase twice. Those with held: true are already held out of paid_orders and revenue (held_as_possible_duplicate); held: false means one of the two was fully refunded, so only the other counts, and fully_refunded_capture says which one. Whenever you say a payment was refunded, name it by its capture id; never "the first" or "the second". If an ad has one held, say so: if it is a real second purchase, that ad has one more paid order.
 - Prefer "keep and gather more data" over a confident change you cannot support.
+- An ad with 3 or more paid orders may be raised only if it returns at least $1 of paid revenue per $1 of ad spend and at least the average of the ads with 3+ paid orders; it may be reduced or paused only if it is below $1 or below that average. Code checks the direction, not just the numbers.
+- The owner may add a request. Weigh it, but follow these rules over it: if it asks for a move the payments do not support, do not make it, and say why in plain words.
 - For an ad with fewer than 3 paid orders, "keep" is not the whole answer. Its row has small_sample_read, computed in code: the chance its paid revenue covers its ad spend, a likely range (90%) for its cost per paid order, and, while that is unclear, how much more spend with no paid order would make it very likely (90%) below its ad spend. Tell the owner that point in plain words, e.g. "If the next $X brings no paid order, it is very likely below its ad spend: cut it then," with $X taken from the tool result. It assumes the shop's average paid order (average_paid_order_usd), so say so once.
 - Write for the shop owner in plain words ("cost per paid order", "spend with no paid order"), never field names such as spend_usd or paid_revenue_per_dollar.
 - In the headline, reasons and caveats call an ad by its name (the "name" field, e.g. "Holiday camp · static"), never its key; the key goes only in "ad" and in evidence.
@@ -80,7 +82,7 @@ export function checkRecommendation(rec, payments, out) {
   const ids = new Set(payments.map((p) => p.capture_id));
   // the "fewer than 3 paid orders" rule, and what read_captures shows: amounts and the duplicate gaps. Dates and times are
   // taken out of the text before checking (ungroundedNumbers), so a timestamp's digits never make an invented number pass.
-  const extra = [3, "90%", ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00"]), ...possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => d.seconds)];
+  const extra = [3, 1, "1.00", "90%", ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00"]), ...possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => d.seconds)];
   const texts = [out.headline, out.caveats, ...(out.actions || []).map((a) => a.reason)];
   for (const t of texts) for (const n of ungroundedNumbers(t, allowed, extra)) problems.push(`Number "${n}" is not in the tool results.`);
   // the owner reads this: tool field names (spend_usd, paid_revenue_per_dollar) must become plain words, ad keys the ad's name
@@ -100,6 +102,13 @@ export function checkRecommendation(rec, payments, out) {
       if (saysNot === refunded[named[0]]) problems.push(`Capture ${named[0]} was ${refunded[named[0]] ? "" : "not "}refunded in the ledger.`);
     }
   }
+  // the direction of a move must follow the payments, not only quote them
+  const moves = supportedMoves(rec);
+  for (const a of out.actions || []) {
+    const m = moves[a.ad];
+    if (m && a.change === "increase" && !m.increase) problems.push(`Raising "${adName(a.ad)}" is not supported: ${m.why}. Only an ad at or above $1 per $1 and the average may be raised.`);
+    if (m && ["reduce", "pause"].includes(a.change) && !m.reduce) problems.push(`${a.change === "pause" ? "Pausing" : "Cutting"} "${adName(a.ad)}" is not supported: ${m.why}. Only an ad below $1 per $1 or below the average may be cut.`);
+  }
   for (const a of out.actions || []) {
     const row = rec.ads.find((r) => r.ad === a.ad);
     if (row && ["pause", "reduce", "increase"].includes(a.change) && row.paid < 3)
@@ -110,10 +119,12 @@ export function checkRecommendation(rec, payments, out) {
   return problems;
 }
 
-export async function runAgent({ llm, rec, payments, maxTurns = 8 }) {
+/** @param {{ llm: any, rec: any, payments: any[], maxTurns?: number, instruction?: string }} opts  instruction: the owner's own request, if any */
+export async function runAgent({ llm, rec, payments, maxTurns = 8, instruction = "" }) {
   const trace = [];
+  const ask = String(instruction || "").replace(/\s+/g, " ").trim().slice(0, 200);
   /** @type {Array<{ role: string, content?: any, results?: Array<{ id: string, content: string }> }>} */
-  const messages = [{ role: "user", content: "Review this shop's last ad period and recommend budget changes." }];
+  const messages = [{ role: "user", content: `Review this shop's last ad period and recommend budget changes.${ask ? ` The owner adds: "${ask}"` : ""}` }];
   let repaired = false;
   for (let turn = 0; turn < maxTurns; turn++) {
     const { raw, calls } = await llm(messages);

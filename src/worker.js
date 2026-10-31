@@ -3,7 +3,7 @@
 import { paypal } from "./paypal.js";
 import { ordersSdk } from "./paypalSdk.js";
 import { handleMcp } from "./mcp.js";
-import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates, proposeSplit, paybackOdds } from "./ledger.js";
+import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates, proposeSplit, paybackOdds, disputeState, supportedMoves } from "./ledger.js";
 import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
 import { runSendAgent, SEND_SYSTEM, SEND_TOOLS } from "./sendAgent.js";
 import { parseCsv, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS } from "./revenue.js";
@@ -416,6 +416,53 @@ const app = {
         return json({ ok: true });
       }
 
+      // The money trail of one payment: the ad click, what PayPal itself says about the capture (read now, not from the
+      // ledger), what Meta answered, and what the payment changes for its ad. Defaults to the payment Meta got at capture.
+      if (url.pathname === "/api/trail") {
+        const [payments, metas] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
+        const metaBy = Object.fromEntries(metas.map((m) => [m.capture_id, m]));
+        const want = url.searchParams.get("capture");
+        const p = payments.find((x) => x.capture_id === want) || payments.find((x) => metaBy[x.capture_id]?.ok && !metaBy[x.capture_id]?.backfill) || payments.at(-1);
+        if (!p) return json({ error: "No payments yet." }, 404);
+        let paypal = await env.LEDGER.get(`trailpp:${p.capture_id}`, "json");
+        if (!paypal) {
+          try {
+            if (p.via === "invoice") {
+              const inv = await pp.getInvoice(p.order_id);
+              paypal = { read: "Invoicing v2: GET /v2/invoicing/invoices/{id}", status: inv.status, amount: inv.amount?.value, currency: inv.amount?.currency_code, invoice_id: inv.id,
+                paid_at: inv.payments?.transactions?.[0]?.payment_date || null, payment_id: inv.payments?.transactions?.[0]?.payment_id || null };
+            } else {
+              const c = await orders.getCapture(p.capture_id), b = c.seller_receivable_breakdown || {};
+              paypal = { read: "Payments v2: GET /v2/payments/captures/{id}, through the server SDK", status: c.status, amount: c.amount?.value, currency: c.amount?.currency_code,
+                create_time: c.create_time, custom_id: c.custom_id || null, final_capture: c.final_capture ?? null,
+                fee: b.paypal_fee?.value || null, net: b.net_amount?.value || null, refunded: b.total_refunded_amount?.value || null };
+            }
+            paypal.read_at = new Date().toISOString();
+            await env.LEDGER.put(`trailpp:${p.capture_id}`, JSON.stringify(paypal), { expirationTtl: 600 }); // PayPal is asked at most every 10 minutes
+          } catch (e) { paypal = { error: String(e?.message || e).slice(0, 200) }; }
+        }
+        const csv = await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text();
+        const rec = reconcile(parseAdCsv(csv).rows, payments);
+        const row = rec.ads.find((a) => a.ad === p.ad), odds = paybackOdds(rec).ads[p.ad], move = supportedMoves(rec)[p.ad];
+        const m = metaBy[p.capture_id] || null, held = heldDuplicates(payments).has(p.capture_id);
+        const secs = (a, b) => (a && b ? Math.round((b - a) / 100) / 10 : null);
+        return json({
+          payment: { capture_id: p.capture_id, order_id: p.order_id, amount: p.amount, currency: p.currency, captured_at: p.captured_at, via: p.via || "checkout",
+            status: p.status, refunded_amount: p.refunded_amount || "0.00", refunded_at: p.refunded_at || null, dispute: p.dispute || null, dispute_state: disputeState(p), held_as_duplicate: held },
+          click: { ad: p.ad || null, ad_name: p.ad ? adName(p.ad) : null, source: p.source || null, click_id: p.click_id || null, clicked_at: p.clicked_at || null },
+          paypal,
+          meta: m && { ok: Boolean(m.ok), held: m.held || null, event_id: m.event_id || null, value: m.value ?? null, events_received: m.events_received ?? null, fbtrace_id: m.fbtrace_id || null,
+            test_event: m.test_event ?? null, backfill: Boolean(m.backfill), superseded: m.ok && p.source === "g", error: m.error || null, at: m.at || null },
+          timings: { click_to_capture_s: p.clicked_at ? secs(p.clicked_at, Date.parse(p.captured_at)) : null,
+            capture_to_meta_s: m?.ok && !m.backfill ? secs(Date.parse(p.captured_at), Date.parse(m.at)) : null },
+          ad_row: row && { leads: row.leads, paid_orders: row.paid, spend: (row.spend_cents / 100).toFixed(2), paid_revenue: (row.revenue_cents / 100).toFixed(2),
+            per_dollar: row.spend_cents ? (row.revenue_cents / row.spend_cents).toFixed(2) : null, chance_covers_spend: odds ? Math.round(odds.chance_covers_spend * 100) : null,
+            cut_after: odds?.more_spend_to_decide_cents != null ? (odds.more_spend_to_decide_cents / 100).toFixed(2) : null, move: move ? { increase: move.increase, reduce: move.reduce, why: move.why } : null },
+          payments: payments.map((x) => ({ capture_id: x.capture_id, ad_name: x.ad ? adName(x.ad) : "No ad click", amount: x.amount, captured_at: x.captured_at, via: x.via || "checkout",
+            meta: metaBy[x.capture_id]?.ok ? (metaBy[x.capture_id].backfill ? "sent in backfill" : "sent at capture") : metaBy[x.capture_id]?.held ? `held (${metaBy[x.capture_id].held})` : "not sent" })),
+        });
+      }
+
       if (url.pathname === "/api/ledger") {
         const [payments, meta] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
         // the payer's email hash stays on the server (duplicate check, Meta match); the public ledger gets a salted key that
@@ -607,7 +654,7 @@ const app = {
         const rec = reconcile(week ? week.ads : parseAdCsv(body.csv).rows, payments);
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined });
         const started = Date.now();
-        const out = await runAgent({ llm, rec, payments });
+        const out = await runAgent({ llm, rec, payments, instruction: typeof body.instruction === "string" ? body.instruction : "" });
         const source = week ? `budget agent · SYNTHETIC: ${week.name}` : "budget agent";
         const saved = out.recommendation && out.grounded ? await saveRecommendation(env, out.recommendation, source) : null;
         return json({ ...out, rec_id: saved?.id || null, source, ms: Date.now() - started,

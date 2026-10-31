@@ -278,3 +278,40 @@ test("disputes: Meta is not sent an open or lost one; Google holds an open one a
   assert.deepEqual(g.conversions.map((c) => c.order_id), ["G2"]);
   assert.deepEqual(g.adjustments.map((a) => [a.order_id, a.adjustment_type]), [["G2", "RETRACTION"]]);
 });
+
+// the gate checks the direction of a move, not only its numbers
+import { supportedMoves } from "../src/ledger.js";
+import { SCENARIOS } from "../src/scenarios.js";
+test("direction: every week's right answer passes, and the opposite move on a ready ad is refused", () => {
+  for (const s of SCENARIOS) {
+    const rec = reconcile(s.ads, s.payments), moves = supportedMoves(rec);
+    for (const [ad, change] of s.moves) {
+      const ok = { headline: "A week with enough paid orders.", actions: [{ ad, change, reason: "Paid orders support it.", evidence: [`row:${ad}`] }] };
+      assert.deepEqual(checkRecommendation(rec, s.payments, ok), [], `${s.id} ${ad} ${change}`);
+      const wrong = { ...ok, actions: [{ ...ok.actions[0], change: change === "increase" ? "reduce" : "increase" }] };
+      assert.ok(checkRecommendation(rec, s.payments, wrong).some((p) => /not supported/.test(p)), `${s.id} ${ad} opposite`);
+    }
+    assert.ok(Object.values(moves).every((m) => !(m.increase && m.reduce)));
+  }
+});
+
+test("direction: raising the ad with the most leads but less than $1 back per $1 is refused with the numbers", () => {
+  const s = SCENARIOS.find((x) => x.id === "lead_rich"), rec = reconcile(s.ads, s.payments);
+  const out = { headline: "Raise the free guide.", actions: [{ ad: "free_guide", change: "increase", reason: "It brings the most leads.", evidence: ["row:free_guide"] }] };
+  const p = checkRecommendation(rec, s.payments, out).join(" ");
+  assert.match(p, /Raising "Free guide · lead form" is not supported: \$0\.38 of paid revenue per \$1/);
+});
+
+import { runAgent } from "../src/agent.js";
+test("owner request: it reaches the agent as the owner's words, trimmed, and the gate still refuses an unsupported move", async () => {
+  const s = SCENARIOS.find((x) => x.id === "lead_rich"), rec = reconcile(s.ads, s.payments);
+  let first = "";
+  const raise = { headline: "Raised as asked.", actions: [{ ad: "free_guide", change: "increase", reason: "The owner asked.", evidence: ["row:free_guide"] }] };
+  const keep = { headline: "Kept: it returns too little per dollar.", actions: [{ ad: "free_guide", change: "keep", reason: "Not raised.", evidence: ["row:free_guide"] }] };
+  const turns = [raise, keep];
+  const llm = async (messages) => { first ||= messages[0].content; const input = turns.shift(); return { raw: [], calls: [{ id: String(turns.length), name: "submit_recommendation", input }] }; };
+  const out = await runAgent({ llm, rec, payments: s.payments, instruction: "  Raise the free guide,\n it brings the most leads. " + "x".repeat(300) });
+  assert.match(first, /The owner adds: "Raise the free guide, it brings the most leads\. x+"/);
+  assert.ok(first.length < 320);
+  assert.deepEqual([out.grounded, out.trace[0].problems, out.recommendation.actions[0].change], [true, 1, "keep"]);
+});

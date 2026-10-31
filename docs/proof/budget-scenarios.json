@@ -34,11 +34,11 @@
      "grounded": true,
      "ok": true,
      "wrong": [],
-     "moves_made": 1,
+     "moves_made": 2,
      "moves_expected": 2,
      "actions": [
       "trial_video: increase",
-      "free_guide: keep",
+      "free_guide: reduce",
       "parent_carousel: keep",
       "holiday_static: keep"
      ]
@@ -59,8 +59,8 @@
      "moves_expected": 1,
      "actions": [
       "parent_carousel: increase",
-      "trial_video: keep",
-      "free_guide: keep"
+      "free_guide: keep",
+      "trial_video: keep"
      ]
     },
     {

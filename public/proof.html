@@ -79,7 +79,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     <h2 id="weeks">Budget decisions, on weeks with known answers</h2>
     <p class="sub">The demo shop has too few paid orders for any budget move, so five synthetic weeks (labelled SYNTHETIC wherever they appear; none of their payments is a PayPal capture) test the decision itself: enough orders on two ads, refunds hiding behind captures, a double payment, the ad with the most leads and the least money, and too few orders everywhere. Each week lists the right change per ad. The weeks are written so the right answer follows from paid orders; they test whether the agent finds it and keeps to the evidence rule. Try one on the dashboard: "Or try a synthetic week".</p>
     <div class="grid">
-      <div class="stat"><b>10 / 10</b><span>budget-agent runs with the right decision</span><small>Two runs per week, real Claude, same gate as the dashboard (rerun 31 Oct with the small-sample read). Every change allowed by the week's answer; 11 of the 12 expected moves made, the one left out a cut it kept instead.</small></div>
+      <div class="stat"><b>10 / 10</b><span>budget-agent runs with the right decision</span><small>Two runs per week, real Claude, same gate as the dashboard (rerun 31 Oct with the direction rule). Every change allowed by the week's answer, and all 12 expected moves made.</small></div>
       <div class="stat"><b>0 / 10</b><span>runs that proposed a wrong budget move</span><small>No cut or raise on an ad without the evidence for it.</small></div>
       <div class="stat"><b class="bad">0 / 5</b><span>weeks the ad platform's view gets right</span><small>Moving budget toward the most leads per dollar. Paid Signal's own split by paid orders: 5 / 5.</small></div>
     </div>
@@ -90,14 +90,14 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     <p class="sub">Most small shops live here. The demo shop has 6 paid orders across 4 ads, so the rule above keeps every budget. Keeping is not the whole answer: for each ad the ledger works out, in code (<code>paybackOdds</code> in <code>src/ledger.js</code>), the chance its paid revenue covers its ad spend, a 90% range for its cost per paid order, and, while that is still unclear, how much more spend with no paid order would make "below its ad spend" 90% likely. The model is Gamma-Poisson: paid orders per dollar, a prior worth one order at the shop's own cost per paid order, and the shop's average paid order as the break-even. The budget agent quotes these numbers through the same evidence gate; it cannot make one up. The dashboard shows them in the "Covers its spend?" column.</p>
     <div class="grid">
       <div class="stat"><b>12%</b><span>chance the free guide covers its ad spend</span><small>1 paid order from 31 leads on $118.40, at the shop's average paid order of $47.50 (live ledger, 31 Oct).</small></div>
-      <div class="stat"><b>$12</b><span>more spend with no paid order, and the free guide is very likely below its spend</span><small>The cut point the budget agent gives the owner instead of a bare "keep". Unit-tested against the closed form.</small></div>
+      <div class="stat"><b>$12</b><span>more spend with no paid order, and the free guide is very likely below its spend</span><small>The cut point the budget agent gives the owner instead of a bare "keep". Unit-tested against the closed form. With a prior worth 2 or 3 orders instead of 1: 14% or 16%, and $26 or $36.</small></div>
       <div class="stat"><b class="bad">10 / 10</b><span>rows of the author's real Meta test very likely below their ad spend</span><small>About 11,075 VND of commission per completed order against about 223,652 VND of spend per completed order: the test should have stopped, which neither ranking by clicks nor by orders says (<a href="#real">below</a>).</small></div>
     </div>
   </section>
 
   <section aria-labelledby="gate">
     <h2 id="gate">Evidence gate, under attack</h2>
-    <p class="sub">The budget agent may only quote numbers the reconciliation produced. 100 recommendations per attack, each with one planted error, on the live ledger.</p>
+    <p class="sub">The budget agent may only quote numbers the reconciliation produced, and may only move budget the way the payments point. 100 script-built recommendations per attack, each with one planted error, on the live ledger. These are planted errors of known kinds, not a measure of every way a model can be wrong.</p>
     <div class="scroll"><table>
       <thead><tr><th>Planted error</th><th>Caught</th></tr></thead>
       <tbody>
@@ -109,10 +109,11 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
         <tr><td>Raw field name instead of plain words</td><td class="n">100 / 100</td></tr>
         <tr><td>Ad key instead of the ad's name</td><td class="n">100 / 100</td></tr>
         <tr><td>Budget moved on fewer than 3 paid orders</td><td class="n">100 / 100</td></tr>
+        <tr><td>Budget moved against the payments (raise an ad below $1 per $1 or below the average; cut one above), every such move on the five synthetic weeks; the 20 supported moves all pass</td><td class="n">12 / 12</td></tr>
         <tr><td>Calls revenue minus ad spend "profit"</td><td class="n">100 / 100</td></tr>
         <tr><td>Money written without a dollar sign</td><td class="n">100 / 100</td></tr>
         <tr><td>Wrong claim about which payment was refunded <small>(added after a live proposal got a duplicate pair backwards)</small></td><td class="n">100 / 100</td></tr>
-        <tr><td>Grounded recommendations wrongly rejected</td><td class="n">0 / 500</td></tr>
+        <tr><td>Script-built good recommendations wrongly rejected</td><td class="n">0 / 500</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -120,7 +121,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section aria-labelledby="agents">
     <h2 id="agents">The other agents</h2>
     <div class="grid">
-      <div class="stat"><b>10 / 10</b><span>live budget-agent runs passed the gate on the first submission</span><small>Rerun 31 Oct, after the refund rule and the small-sample read were added. A first try that day passed 5 / 10: the prompt itself called the first of a duplicate pair the refunded one, which is not always so. Code now names the refunded capture.</small></div>
+      <div class="stat"><b>9 / 10</b><span>live budget-agent runs passed the gate on the first submission; 10 / 10 after one repair</span><small>Rerun 31 Oct after the direction rule; the one repair was the word "profit". Earlier that day a run passed 5 / 10: the prompt itself called the first of a duplicate pair the refunded one, which is not always so. Code now names the refunded capture.</small></div>
       <div class="stat"><b>3 of 7</b><span>unpaid invoices the chase agent chose to remind in its first live run</span><small>The three leads who had asked to book. It read five with get_invoice first, skipped four, and noticed one invoice did not match what the lead asked for.</small></div>
       <div class="stat"><b>4 / 4</b><span>bad sends the send agent's code refuses</span><small>Not a draft, wrong amount, wrong currency, or PayPal did not return the invoice. Unit-tested; the model cannot override it.</small></div>
       <div class="stat"><b>1 answer</b><span>from Claude as an outside MCP client</span><small>Named the cheapest ad, warned it rests on one order, and found the held duplicate. <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-run.md">Transcript</a>.</small></div>

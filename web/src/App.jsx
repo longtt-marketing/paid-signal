@@ -139,9 +139,10 @@ export default function App({ first = null }) {
   const onNudge = useCallback((d) => { pinStudio(); if (d) setChase({ status: "done", ...d }); markReminded(d); setTimeout(loadInvoices, 4000); flash(`The nudge agent sent ${d?.reminded?.length || 0} friendly reminder(s).`); }, [flash, pinStudio, loadInvoices, markReminded]);
   const onStudioInvoices = useCallback((d) => { pinStudio(); if (d) { setRevenue({ status: "done", ...d }); addDrafts(d.drafts); } loadInvoices(); flash("The revenue agent's drafts are waiting for your approval.", "approvals"); }, [loadInvoices, flash, pinStudio]);
   // a synthetic week with enough paid orders, so the agent has a real budget decision to make (labelled everywhere)
-  const askWeek = async (id) => {
-    setAgent({ status: "running" }); scrollToId("approvals");
-    try { const out = await api("/api/agent", { scenario: id }); setAgent({ status: "done", ...out }); setDecisions({}); }
+  // instruction: the owner's own request; the agent weighs it, and code still refuses a move the payments do not support
+  const askWeek = async (id, instruction) => {
+    setAgent({ status: "running", instruction }); scrollToId("approvals");
+    try { const out = await api("/api/agent", { scenario: id, ...(instruction ? { instruction } : {}) }); setAgent({ status: "done", instruction, ...out }); setDecisions({}); }
     catch (e) { setAgent({ status: "error", error: e.message }); }
   };
   const ask = async () => {
@@ -219,6 +220,7 @@ export default function App({ first = null }) {
             <a href="#approvals" onClick={(e) => { e.preventDefault(); goDesk("approvals"); }}>Approvals {waiting > 0 && <span className="count">{waiting}</span>}</a>
             <a href="#payments" onClick={(e) => { e.preventDefault(); goDesk("payments"); }}>Payments</a>
             <a href="#signal" onClick={(e) => { e.preventDefault(); goDesk("signal"); }}>Ad signal</a>
+            <a href="/trail">Money trail</a>
             <a href="/scenarios.html">Scenarios</a>
             <a href="/proof.html">Proof</a>
           </nav>
@@ -258,7 +260,7 @@ export default function App({ first = null }) {
         <section className="loop" aria-label="Try the loop">
           <article><span className="step">1</span><b>Pay from an ad click</b><p>Open an ad link and pay in the PayPal sandbox. The click rides in the order.</p><a className="btn" href={adLink("trial_video", "fb")}>Open an ad link</a></article>
           <article><span className="step">2</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
-          <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("week4")}>Or try a synthetic week with more orders</button></article>
+          <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("week4")}>Or try a synthetic week with more orders</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("lead_rich", "Raise the free guide's budget: it brings the most leads.")}>Or tell it to raise the ad with the most leads</button></article>
           <article><span className="step">4</span><b>Tell the ad platform</b><p>Paid orders from Meta ads go to Meta's Conversions API; Google ones are previews here. A refund before the send holds the event back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
         </section>
 
@@ -332,7 +334,9 @@ export default function App({ first = null }) {
               <div id="actions">
                 {agent.status === "idle" && <p className="muted">Ask the agent for budget changes. The agent never changes a budget: you approve, and the decision is logged.</p>}
                 {/SYNTHETIC/.test(agent.source || "") && <p className="synthetic"><b>Synthetic week</b> {agent.synthetic?.story || agent.source.split("SYNTHETIC: ")[1]} Not PayPal payments: made up to show a real budget decision.{agent.grade ? (agent.grade.ok ? " Matches the known right answer." : " Differs from the known right answer.") : ""}</p>}
+                {agent.instruction && <p className="owner-ask"><b>Owner asked</b> “{agent.instruction}”</p>}
                 {agent.status === "running" && <div className="skel" aria-live="polite"><i /><i /><i /><span>Claude is reading the ledger…</span></div>}
+                {(agent.trace || []).filter((s) => s.tool === "submit_recommendation" && s.why).map((s, k) => <div key={k} className="dec bad"><b>Code refused Claude's {k === 0 ? "first" : "next"} proposal</b>{s.why.map((w) => <small key={w}>{w}</small>)}</div>)}
                 {agent.status === "error" && <p className="err">{agent.error}</p>}
                 {agent.recommendation && <p className="headline">{agent.recommendation.headline}</p>}
                 {actions.map((a, i) => (

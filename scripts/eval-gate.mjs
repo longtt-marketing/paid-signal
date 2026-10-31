@@ -4,7 +4,8 @@
 // Usage: node scripts/eval-gate.mjs > docs/proof/gate.json
 import { adName } from "../web/src/names.js";
 import { readFileSync } from "node:fs";
-import { parseAdCsv, reconcile, quotableNumbers } from "../src/ledger.js";
+import { parseAdCsv, reconcile, quotableNumbers, supportedMoves } from "../src/ledger.js";
+import { SCENARIOS } from "../src/scenarios.js";
 import { checkRecommendation } from "../src/agent.js";
 
 const BASE = "https://paid-signal.thelongmarketing.workers.dev";
@@ -47,4 +48,15 @@ for (const [name, plant] of Object.entries(plants)) {
 }
 let rejected = 0; for (let i = 0; i < 5 * N; i++) if (checkRecommendation(rec, payments, grounded()).length) rejected++;
 out.grounded = { tried: 5 * N, falsely_rejected: rejected };
+// direction: on the five synthetic weeks, every move on an ad with 3+ paid orders, against what its payments support
+const dir = { unsupported_tried: 0, unsupported_caught: 0, supported_tried: 0, supported_rejected: 0 };
+for (const s of SCENARIOS) {
+  const r = reconcile(s.ads, s.payments), moves = supportedMoves(r);
+  for (const [ad, m] of Object.entries(moves)) for (const change of ["increase", "reduce", "pause", "keep"]) {
+    const ok = change === "keep" || (change === "increase" ? m.increase : m.reduce);
+    const bad = checkRecommendation(r, s.payments, { headline: "A week with enough paid orders.", actions: [{ ad, change, reason: "From the paid orders.", evidence: [`row:${ad}`] }] }).length > 0;
+    if (ok) { dir.supported_tried++; if (bad) dir.supported_rejected++; } else { dir.unsupported_tried++; if (bad) dir.unsupported_caught++; }
+  }
+}
+out.direction = dir;
 console.log(JSON.stringify(out, null, 1));

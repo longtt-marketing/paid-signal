@@ -1,5 +1,5 @@
 {
- "date": "2026-10-30",
+ "date": "2026-10-31",
  "payments": 9,
  "planted": {
   "invented_number": {
@@ -50,5 +50,11 @@
  "grounded": {
   "tried": 500,
   "falsely_rejected": 0
+ },
+ "direction": {
+  "unsupported_tried": 12,
+  "unsupported_caught": 12,
+  "supported_tried": 20,
+  "supported_rejected": 0
  }
 }

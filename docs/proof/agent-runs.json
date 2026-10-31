@@ -4,7 +4,7 @@
  "payments": 9,
  "summary": {
   "runs": 10,
-  "first_pass": 10,
+  "first_pass": 9,
   "grounded_after_one_repair": 10,
   "flagged": 0
  },
@@ -17,7 +17,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.882
+   "seconds": 13.584
   },
   {
    "run": 2,
@@ -27,7 +27,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 12.626
+   "seconds": 14.209
   },
   {
    "run": 3,
@@ -37,7 +37,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 14.402
+   "seconds": 13.229
   },
   {
    "run": 4,
@@ -47,7 +47,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 15.544
+   "seconds": 13.686
   },
   {
    "run": 5,
@@ -57,7 +57,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 14.068
+   "seconds": 12.768
   },
   {
    "run": 6,
@@ -67,7 +67,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.256
+   "seconds": 14.538
   },
   {
    "run": 7,
@@ -77,7 +77,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.506
+   "seconds": 14.276
   },
   {
    "run": 8,
@@ -87,7 +87,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.057
+   "seconds": 13.784
   },
   {
    "run": 9,
@@ -97,17 +97,20 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.375
+   "seconds": 14.286
   },
   {
    "run": 10,
    "grounded": true,
-   "first_pass": true,
+   "first_pass": false,
    "submissions": [
+    1,
     0
    ],
-   "rejected_for": [],
-   "seconds": 13.995
+   "rejected_for": [
+    "\"profit\" is not known (product cost is not in the data); say \"paid revenue minus ad spend\"."
+   ],
+   "seconds": 20.882
   }
  ]
 }
