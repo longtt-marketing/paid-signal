@@ -4,7 +4,7 @@
 
 **Tell your ads who actually paid.**
 
-Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · Video (2:37): https://www.youtube.com/watch?v=NIo5Dtqikzo · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
+Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · Video (2:37): https://www.youtube.com/watch?v=NIo5Dtqikzo · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
 
 Ad platforms optimise for what they can see: clicks, leads, chat taps. For a small business that gets paid through
 PayPal, the thing that matters, a payment, never reaches the ad platform. So budgets drift toward ads that produce
@@ -86,6 +86,10 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
   a number: the chance its paid revenue covers its ad spend, a 90% range for its cost per paid order, and the spend with no
   paid order that would make "below its ad spend" 90% likely (Gamma-Poisson, prior worth one order at the shop's own cost
   per paid order). The agent quotes them through the gate; the dashboard shows them as "Covers its spend?".
+- **Direction of a move** (`supportedMoves` in `src/ledger.js`): on an ad with 3+ paid orders the gate refuses a raise unless
+  it returns at least $1 of paid revenue per $1 of spend and at least the average of those ads, and a cut unless it is
+  below either. The owner can add a request (`instruction` on `/api/agent`); the agent weighs it, and the gate still refuses a
+  move the payments do not support.
 - **Budget agent inside AG Studio** (`web/src/agentTools.js`): a custom Studio agent. Studio's lead agent delegates budget
   questions to it; it reads the ledger, submits through the same gate (`/api/agent/check`), and delegates to Studio's
   built-in page agent to add the evidence chart. Its accepted change lands in the approvals column.
@@ -137,7 +141,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 83 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
+npm test                              # 86 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy
