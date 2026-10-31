@@ -21,7 +21,7 @@ const AD_LINKS = [["trial_video", "fb"], ["free_guide", "fb"], ["parent_carousel
 const adLink = (k, s) => `/shop.html?ad=${k}&${s === "fb" ? "fbclid=IwAR" : "gclid=Cj0K"}${Date.now().toString(36)}`;
 const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-export default function App() {
+export default function App({ first = null }) {
   const studio = useRef(null);
   const studioBox = useRef(null);
   const [csv, setCsv] = useState("");
@@ -235,11 +235,11 @@ export default function App() {
             {t && <h1 className="sr">Ads report {t.leads} leads. PayPal confirms {t.paid} paid {t.paid === 1 ? "order" : "orders"}.</h1>}
             <p className="kicker">Kite Robotics Club · demo ad export · PayPal sandbox</p>
             <div className="duo">
-              <div><b className="n claimed">{t ? t.leads : "…"}</b><span>leads the ads report</span></div>
+              <div><b className="n claimed">{(t || first)?.leads ?? "…"}</b><span>leads the ads report</span></div>
               <svg width="56" height="40" viewBox="0 0 56 40" aria-hidden="true"><path d="M2 20h46M38 8l12 12-12 12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              <div><b className="n paid">{t ? t.paid : "…"}</b><span>paid {t?.paid === 1 ? "order" : "orders"} PayPal confirms</span></div>
+              <div><b className="n paid">{(t || first)?.paid ?? "…"}</b><span>paid {(t || first)?.paid === 1 ? "order" : "orders"} PayPal confirms</span></div>
             </div>
-            <p className="pitch">Ad platforms learn from the {t ? t.leads : "leads"}. Paid Signal sends them the {t ? t.paid : "paid orders"}, straight from PayPal.</p>
+            <p className="pitch">Ad platforms learn from the {(t || first)?.leads ?? "leads"}. Paid Signal sends them the {(t || first)?.paid ?? "paid orders"}, straight from PayPal.</p>
             {t && <div className="chips-row">
               <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
               {t.held > 0 && <span title="Same payer, same ad, minutes apart: not counted as a paid order, and kept from the ad platforms"><b>{t.held}</b> possible duplicate held</span>}
