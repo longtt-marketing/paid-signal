@@ -116,7 +116,7 @@ getJSON("/api/judge/invoice-loop").then((d) => {
   if (i.reminder) rows.push(row("Claude chases", `The chase agent (send_invoice_reminder, ${when(i.reminded_at)}): “${i.reminder.note}” Code allows only sent, unpaid invoices and three reminders a run; reminders are not approved one by one.`));
   if (d.payment) rows.push(row("PayPal says paid", `Capture ${d.payment.capture_id}, ${money(Math.round(Number(d.payment.amount) * 100))}, ${when(d.payment.captured_at)}. Counted for ${i.ad_name}.${d.payment.meta ? ` Meta received the Purchase event ${when(d.payment.meta.at)}.` : ""}`,
     $("a", { href: `/trail?capture=${encodeURIComponent(d.payment.capture_id)}`, textContent: " Follow it on the money trail →" })));
-  else rows.push(row("Waiting for PayPal", `Status ${i.status}: not paid yet, so it counts for nothing.`, i.pay_url ? $("a", { href: i.pay_url, target: "_blank", rel: "noopener noreferrer", textContent: " Pay it yourself (sandbox test card) ↗" }) : null));
+  else rows.push(row("Waiting for PayPal", `Status ${i.status}: not paid yet, so it counts for nothing.`, i.pay_url ? $("a", { href: i.pay_url, target: "_blank", rel: "noopener noreferrer", textContent: " Pay it yourself as the PayPal sandbox buyer ↗" }) : null));
   sec.append($("div", { className: "loop" }, rows));
   if (d.injection) sec.append($("div", { className: "rule" }, [$("b", { textContent: "And the lead it refused: " }), `${d.injection.lead.replace(" (fictional)", "")} wrote “${d.injection.message}” `,
     d.injection.skipped ? `The revenue agent skipped it (${d.injection.skipped.flag || "skip"}): ${d.injection.skipped.reason}` : "The revenue agent is told to skip such a lead and flag it; on 16 held-out injections it invoiced none (/proof).",

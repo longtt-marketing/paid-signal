@@ -46,8 +46,7 @@ carries no ad, and what the budget rule allows; nothing is uploaded. **Try it wi
 
 ## Judge it in 60 seconds
 
-No login is needed for any of this. To pay in the demo shop, press **Debit or Credit Card** and use a PayPal sandbox test card
-(for example Visa 4012000033330026, any future expiry, any CVV); the sandbox buyer in the testing notes also works.
+No login is needed for any of this; only paying in the demo shop needs the sandbox buyer from the testing notes.
 
 1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): the ads report 62 leads, PayPal confirms 6 paid orders; the flow chart follows each ad from the ad report, through PayPal, back to Meta.
 2. Press **Ask the revenue agent**: Claude reads what each unpaid lead wrote and drafts PayPal invoices (Agent Toolkit) for the ones ready to pay; code sets every price; a lead whose message tries to rewrite the price and recipient is flagged, never invoiced.
@@ -60,8 +59,8 @@ No login is needed for any of this. To pay in the demo shop, press **Debit or Cr
 
 1. Open the demo. The dashboard reconciles a demo ad export (fictional shop, labelled) against **real PayPal sandbox
    captures**.
-2. In **Ad links**, open an ad link. The shop page keeps the click id. Pay with a PayPal sandbox test card (Debit or
-   Credit Card) or the sandbox buyer from the Devpost testing notes. Back on the dashboard, the capture appears under the ad it came from.
+2. In **Ad links**, open an ad link. The shop page keeps the click id. Pay with the PayPal sandbox buyer (login in the
+   Devpost testing notes). Back on the dashboard, the capture appears under the ad it came from.
 3. Press **Ask the agent**: Claude reads the reconciliation and captures and proposes changes, each with evidence ids
    and an Approve / Dismiss.
 4. Press **Open the Studio assistant** and choose **Invoice warm leads**. Claude, running inside AG Studio's agent
