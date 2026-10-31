@@ -4,6 +4,8 @@
 
 **Tell your ads who actually paid.**
 
+Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · Video (2:37): https://www.youtube.com/watch?v=NIo5Dtqikzo · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
+
 Ad platforms optimise for what they can see: clicks, leads, chat taps. For a small business that gets paid through
 PayPal, the thing that matters, a payment, never reaches the ad platform. So budgets drift toward ads that produce
 leads nobody pays for.
