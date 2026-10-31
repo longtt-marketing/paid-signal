@@ -224,6 +224,7 @@ export default function App({ first = null }) {
             <a href="/trail">Money trail</a>
             <a href="/scenarios.html">Scenarios</a>
             <a href="/proof.html">Proof</a>
+            <a href="/audit">Audit your ads</a>
           </nav>
           <div className="top-end">
             <span className="live"><i />PayPal sandbox · live</span>

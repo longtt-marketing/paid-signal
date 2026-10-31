@@ -37,6 +37,13 @@ Paid Signal closes that loop on the PayPal developer platform:
 
 Live demo (PayPal sandbox): **https://paid-signal.thelongmarketing.workers.dev** · Test scenarios: https://paid-signal.thelongmarketing.workers.dev/scenarios.html (ten cases: duplicates, partial refunds, payments with no click, late payments, disputes; marked live in the sandbox or automated test)
 
+## Audit your own ads (no login)
+
+[/audit](https://paid-signal.thelongmarketing.workers.dev/audit) takes two files any shop can download today, an Ads Manager
+export and a PayPal activity download (CSV), and reads them in the browser with the same `src/ledger.js` the Worker runs
+(`public/lib/ledger.js`, kept identical by a test). It shows which ads brought PayPal-confirmed payments, how much paid revenue
+carries no ad, and what the budget rule allows; nothing is uploaded. **Try it with sample files** loads the demo shop.
+
 ## Judge it in 60 seconds
 
 No login is needed for any of this. To pay in the demo shop, press **Debit or Credit Card** and use a PayPal sandbox test card
@@ -152,7 +159,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 111 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
+npm test                              # 116 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Paid Signal: audit your own ads</title>
+<meta name="description" content="No login: drop your Ads Manager export and your PayPal activity download, and see which ads brought PayPal-confirmed payments, which payments no ad can claim, and what the budget rule allows. Your files stay in this browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f4f3ee;--card:#fff;--ink:#0e1116;--mute:#474c57;--faint:#666b78;--line:#e2dfd6;--chip:#f1efe8;--paid:#137a45;--paid-bg:#e6f4ec;--bad:#8c1d18;--bad-bg:#fdecea;--blue:#1d4f91;--blue-bg:#e5edf8;--go:#2fbf71}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 "Inter Tight",system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--ink)}a:hover{color:var(--paid)}:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 28px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--ink);text-decoration:none}
+.mark{width:28px;height:28px;border-radius:8px;background:var(--ink);display:grid;place-items:center}.mark i{width:10px;height:10px;border-radius:50%;background:var(--go)}
+.top nav{display:flex;gap:18px;flex-wrap:wrap}.top nav a{text-decoration:none;font-size:15px;color:var(--mute)}.top nav a:hover{color:var(--ink)}
+main{max-width:1040px;margin:0 auto;padding:44px 24px 96px;display:flex;flex-direction:column;gap:22px}
+h1{margin:0;font-size:clamp(30px,4.5vw,44px);line-height:1.08;font-weight:700;letter-spacing:-.03em;max-width:24ch}
+.lede{margin:12px 0 0;font-size:18px;color:var(--mute);max-width:64ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px}
+.card h2{margin:0 0 6px;font-size:20px;letter-spacing:-.01em}
+.files{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.drop{border:1.5px dashed var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px;background:var(--paper)}
+.drop b{font-size:15px}.drop small{color:var(--faint);font-size:13px}.drop .ok{color:var(--paid);font-weight:600;font-size:14px}
+.drop input{font:inherit;font-size:14px;max-width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.btn{font:600 14px "Inter Tight",sans-serif;border:1px solid var(--ink);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 14px;cursor:pointer;min-height:40px}
+.btn.primary{background:var(--ink);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}
+label.cost{font-size:14px;color:var(--mute);display:flex;gap:8px;align-items:center}label.cost input{width:64px;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px}
+.note{margin:8px 0 0;font-size:13px;color:var(--faint)}.err{color:var(--bad)}
+.head{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px}
+.stat{background:var(--paper);border-radius:12px;padding:12px 14px}.stat b{display:block;font-size:26px;letter-spacing:-.02em}.stat span{font-size:13px;color:var(--mute)}
+.stat.bad b{color:var(--bad)}.stat.good b{color:var(--paid)}
+.tbl{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:760px}th,td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th:first-child,td:first-child,th:last-child,td:last-child{text-align:left}th{font-weight:600;color:var(--mute);font-size:13px}
+.pill{display:inline-block;font-weight:600;font-size:12px;padding:3px 9px;border-radius:999px;background:var(--chip);color:var(--mute)}
+.pill.up{background:var(--paid-bg);color:var(--paid)}.pill.down{background:var(--bad-bg);color:var(--bad)}
+td small{display:block;color:var(--faint);font-size:12px;margin-top:2px;text-align:left}
+ul.todo{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+pre{margin:8px 0 0;background:#0e1116;color:#e8e6df;border-radius:12px;padding:12px 14px;overflow-x:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(--chip);padding:1px 6px;border-radius:6px}
+.tag{display:inline-block;font:600 12px "Inter Tight",sans-serif;padding:3px 9px;border-radius:999px;background:var(--blue-bg);color:var(--blue)}
+[hidden]{display:none!important}
+@media (max-width:700px){.top{padding:14px 16px}main{padding:28px 16px 64px}.files{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav><a href="/judge">Judge path</a><a href="/">Dashboard</a><a href="/proof">Proof</a><a href="/connect.html">Connect a shop</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></nav></header>
+<main>
+  <div>
+    <h1>Audit your own ads against your own PayPal payments.</h1>
+    <p class="lede">No login, no connection. Drop two files you can download today: your Ads Manager export and your PayPal activity download. Paid Signal shows which ads brought payments PayPal confirms, how much paid revenue no ad can claim, and what its budget rule would allow. The files never leave this browser.</p>
+  </div>
+
+  <section class="card">
+    <h2>Your two files</h2>
+    <div class="files">
+      <div class="drop"><b>1. Ads Manager export (CSV)</b><small>Meta: Ads Manager → Reports → Export table data → CSV, at ad level. Google Ads works too. Needs the ad name, amount spent and results (or leads, conversions).</small><input type="file" id="ads" accept=".csv,text/csv"><span class="ok" id="ads-ok"></span></div>
+      <div class="drop"><b>2. PayPal activity download (CSV)</b><small>PayPal: Activity → Statements and reports → Activity download → All transactions, CSV, same dates. The ad comes from the order's custom field (Custom Number), a utm_content tag, or an item title equal to the ad name.</small><input type="file" id="pp" accept=".csv,text/csv"><span class="ok" id="pp-ok"></span></div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="run" disabled>Audit</button>
+      <button class="btn" id="sample">Try it with sample files</button>
+      <label class="cost">Product and delivery cost <input type="number" id="cost" min="0" max="95" step="1" value="30">% of each order</label>
+    </div>
+    <p class="note">Everything runs in this page with the same code the Worker uses (<a href="/lib/ledger.js">ledger.js</a>); nothing is uploaded, and no AI reads your files. The sample files are the demo shop: a fictional ad export and its PayPal sandbox payments, read live.</p>
+    <p class="note err" id="msg" role="alert"></p>
+  </section>
+
+  <section class="card" id="out" hidden aria-live="polite">
+    <span class="tag" id="out-tag"></span>
+    <p class="head" id="headline"></p>
+    <div class="stats" id="stats"></div>
+    <div class="tbl"><table><thead><tr><th>Ad</th><th>Spend</th><th>Leads (ad report)</th><th>Paid orders (PayPal)</th><th>Refunded</th><th>Paid revenue</th><th>Per $1 of ads</th><th>After your costs and PayPal fees, per $1</th><th>What the budget rule allows</th></tr></thead><tbody id="rows"></tbody></table></div>
+    <h2 style="margin-top:18px">What to do next</h2>
+    <ul class="todo" id="todo"></ul>
+    <div class="row"><button class="btn" id="dl">Download this audit (text)</button></div>
+  </section>
+</main>
+<script type="module" src="/audit.js"></script>
+</body>
+</html>

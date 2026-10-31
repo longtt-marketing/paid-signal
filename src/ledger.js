@@ -41,6 +41,61 @@ export function parseAdCsv(text) {
 }
 
 /**
+ * A shop's own PayPal activity download (CSV) as ledger payments, for the no-login audit: completed incoming payments,
+ * refunds subtracted from the payment they refer to (Reference Txn ID), and the ad each payment came from when the shop
+ * put it in the order: Paid Signal's "a=<ad>;..." custom_id, a "utm_content=<ad>" tag, or a Custom Number, Item Title or
+ * Invoice Number that is exactly an ad in the export. Anything else stays unattributed: no ad is guessed.
+ * @param {string} text the CSV  @param {string[]} adKeys ads in the export
+ */
+export function parsePayPalCsv(text, adKeys = []) {
+  const lines = String(text ?? "").replace(/^\uFEFF/, "").replace(/\r/g, "").split("\n").filter((l) => l.trim());
+  if (!lines.length) return { payments: [], errors: ["The PayPal file is empty."], summary: null };
+  const split = (l) => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === "," && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map((x) => x.trim()); };
+  const head = split(lines[0]).map((h) => h.toLowerCase());
+  const at = (...names) => { for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; } return -1; };
+  const c = { date: at("date"), time: at("time"), type: at("type"), status: at("status"), currency: at("currency"), gross: at("gross"), fee: at("fee"), email: at("from email address"),
+    id: at("transaction id"), ref: at("reference txn id"), custom: at("custom number", "custom field", "custom"), item: at("item title"), invoice: at("invoice number") };
+  if (c.gross < 0 || c.id < 0 || c.type < 0) return { payments: [], errors: ["This does not look like a PayPal activity download: it needs Type, Gross and Transaction ID columns."], summary: null };
+  const keys = new Map(adKeys.map((k) => [String(k).trim().toLowerCase(), k]));
+  const adOf = (...vals) => {
+    for (const v of vals) {
+      const s = String(v ?? "").trim(); if (!s) continue;
+      if (/(^|;)a=/.test(s)) { const a = unpackClick(s).ad; if (a) return { ad: keys.get(a.toLowerCase()) ?? a, how: "custom_id" }; }
+      const u = s.match(/utm_content=([^&;\s]+)/i); if (u) { const a = decodeURIComponent(u[1]); return { ad: keys.get(a.toLowerCase()) ?? a, how: "utm_content" }; }
+      if (keys.has(s.toLowerCase())) return { ad: keys.get(s.toLowerCase()), how: "exact ad name" };
+    }
+    return { ad: "", how: null };
+  };
+  const skip = /withdraw|deposit|transfer|conversion|hold|authori[sz]ation|fee|reserve|bank|general credit card/i;
+  const byId = new Map(), refunds = [], errors = [];
+  for (const [n, l] of lines.slice(1).entries()) {
+    const r = split(l), type = r[c.type] || "", status = c.status >= 0 ? r[c.status] || "" : "Completed", gross = cents(r[c.gross]);
+    if (!r[c.id] || Number.isNaN(gross)) { errors.push(`Row ${n + 2} skipped: no transaction id or amount.`); continue; }
+    if (c.currency >= 0 && r[c.currency] && r[c.currency] !== "USD") { errors.push(`Row ${n + 2} skipped: ${r[c.currency]}, not USD.`); continue; }
+    if (gross < 0 && /refund|reversal/i.test(type)) { refunds.push({ ref: c.ref >= 0 ? r[c.ref] : "", back: -gross }); continue; }
+    if (gross <= 0 || skip.test(type) || !/^completed$/i.test(status)) continue;
+    const { ad, how } = adOf(c.custom >= 0 ? r[c.custom] : "", c.item >= 0 ? r[c.item] : "", c.invoice >= 0 ? r[c.invoice] : "");
+    const when = Date.parse(`${r[c.date] || ""} ${r[c.time] || ""}`.trim());
+    byId.set(r[c.id], { capture_id: r[c.id], status: "COMPLETED", amount: dollars(gross), refunded_amount: "0.00", fee: c.fee >= 0 && r[c.fee] ? dollars(Math.abs(cents(r[c.fee]))) : null,
+      ad, attributed_by: how, captured_at: Number.isNaN(when) ? null : new Date(when).toISOString(), payer_email_sha256: c.email >= 0 ? String(r[c.email] || "").trim().toLowerCase() || null : null });
+  }
+  let unlinked = 0;
+  for (const f of refunds) {
+    const p = byId.get(f.ref); if (!p) { unlinked++; continue; }
+    const back = cents(p.refunded_amount) + f.back;
+    p.refunded_amount = dollars(Math.min(back, cents(p.amount)));
+    p.status = back >= cents(p.amount) ? "REFUNDED" : "PARTIALLY_REFUNDED";
+  }
+  const payments = [...byId.values()], tagged = payments.filter((p) => p.ad);
+  const known = tagged.filter((p) => keys.has(p.ad.toLowerCase()));
+  const sum = (xs) => xs.reduce((n, p) => n + cents(p.amount) - cents(p.refunded_amount), 0);
+  const dates = payments.map((p) => p.captured_at).filter(Boolean).sort();
+  return { payments, errors, summary: { payments: payments.length, refunds: refunds.length, refunds_not_found: unlinked, tagged: tagged.length, matched_to_export: known.length,
+    tags_not_in_export: [...new Set(tagged.filter((p) => !keys.has(p.ad.toLowerCase())).map((p) => p.ad))], untagged_net_cents: sum(payments.filter((p) => !p.ad)), net_cents: sum(payments),
+    from: dates[0] || null, to: dates.at(-1) || null } };
+}
+
+/**
  * A buyer's PayPal dispute on a capture: "open" until PayPal resolves it, "lost" when it was resolved for the buyer or the
  * shop accepted the claim (the buyer has the money back), "won" otherwise.
  * @param {{ dispute?: { status?: string, outcome?: string | null } }} p
