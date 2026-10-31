@@ -676,7 +676,8 @@ const app = {
     } catch (e) {
       // a client error says what PayPal objected to; a server error says only that it failed (details stay in the logs)
       console.error(e);
-      if (e.status && e.status < 500) return json({ error: e.message, paypal: e.paypal?.name ? { name: e.paypal.name } : null }, 400);
+      // our own credentials or quota failing (401, 403, 429) is not the caller's mistake: it is a 502 like any PayPal outage
+      if (e.status && e.status < 500 && ![401, 403, 429].includes(e.status)) return json({ error: e.message, paypal: e.paypal?.name ? { name: e.paypal.name } : null }, 400);
       return json({ error: "Something went wrong talking to PayPal or Claude. Please try again." }, 502);
     }
   },

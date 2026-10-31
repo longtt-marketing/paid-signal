@@ -25,4 +25,20 @@ The measured results, with the scripts that reproduce them, are on [/proof](http
   sends) were fixed and are recorded in the commit history. ChatGPT was used as a second reviewer for strategy.
 - **PayPal's server SDK** for orders and refunds is the one PayPal generates with APIMatic (`@paypal/paypal-server-sdk`);
   the agents' PayPal tools come from PayPal's Agent Toolkit (`@paypal/agent-toolkit`).
+- **APIMatic's PayPal Context Plugin** (31 Oct 2026). The plugin's TypeScript skills
+  ([context-plugins/plugin-marketplace](https://github.com/context-plugins/plugin-marketplace/tree/main/plugins/paypal),
+  `typescript-error-handling`, `-configuration-resilience`, `-client-initialization`, `-testing`) were given to a coding
+  agent together with `src/paypalSdk.js`, to check our use of the SDK against what the SDK's own source says. The skills
+  are written for a newer generator than SDK 1.1.0, so each point was translated and checked against 1.1.0 with a stubbed
+  transport before anything changed. What it changed in `src/paypalSdk.js` (tests: `test/paypalSdk.test.js`, no network):
+  - **A capture PayPal accepted could be reported as a failure.** 1.1.0 throws `ResponseValidationError` on a 2xx whose
+    body does not match its schema; the Worker then answered the buyer 400 though the money was taken. Now the 2xx body is
+    used ("on a success status the call may have taken effect", error-handling skill).
+  - **Errors keep PayPal's name and `debug_id`**, from the body or, when a 5xx body is empty, from the `paypal-debug-id`
+    header; errors are told apart with `instanceof ApiError`, and our own 401, 403 and 429 become a 502, not the caller's 400.
+  - **One retry**, on `GET` and `POST`: safe because every `POST` carries a fixed `PayPal-Request-Id`, which the SDK re-sends
+    (verified in the test), so a retried capture or refund returns the first result. 1.1.0 retries nothing by default, and
+    `maximumRetryWaitTime: 0` silently disables retries, so it is set explicitly. Per-attempt timeout 10 s.
+  - **One client per credentials for the isolate's life**, so the OAuth token is reused instead of fetched before every
+    call ("serverless: module scope, not inside the handler", client-initialization skill).
 - No AI output reaches money without code checks and, for anything that sends or spends, a person's approval.
