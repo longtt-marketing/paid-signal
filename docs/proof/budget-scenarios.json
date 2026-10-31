@@ -103,7 +103,7 @@
      "moves_expected": 1,
      "actions": [
       "trial_video: increase",
-      "parent_carousel: reduce",
+      "parent_carousel: keep",
       "holiday_static: keep"
      ]
     }
@@ -122,8 +122,8 @@
      "moves_made": 2,
      "moves_expected": 2,
      "actions": [
-      "parent_carousel: increase",
       "free_guide: reduce",
+      "parent_carousel: increase",
       "trial_video: keep"
      ]
     },
@@ -134,8 +134,8 @@
      "moves_made": 2,
      "moves_expected": 2,
      "actions": [
-      "parent_carousel: increase",
       "free_guide: reduce",
+      "parent_carousel: increase",
       "trial_video: keep"
      ]
     }
@@ -167,10 +167,10 @@
      "moves_made": 0,
      "moves_expected": 0,
      "actions": [
-      "free_guide: keep",
-      "holiday_static: keep",
       "trial_video: keep",
-      "parent_carousel: keep"
+      "free_guide: keep",
+      "parent_carousel: keep",
+      "holiday_static: keep"
      ]
     }
    ]

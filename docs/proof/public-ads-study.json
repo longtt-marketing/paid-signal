@@ -1,0 +1,208 @@
+{
+ "date": "2026-10-31",
+ "kind": "observed historical conversion mismatch on a public dataset (no PayPal data, no revenue, no lift claimed)",
+ "source": {
+  "name": "Facebook ad campaign (madislemsalu, Kaggle), courtesy of Bunq",
+  "url": "https://www.kaggle.com/datasets/madislemsalu/facebook-ad-campaign",
+  "licence": "ODC Public Domain Dedication and Licence (PDDL)",
+  "file": "docs/data/facebook-ad-campaign-bunq.csv",
+  "sha256": "2a1d447f63715a32e3d5e566ab19f70648ab623ed88885310ce8ee68a91d20d6"
+ },
+ "definitions": {
+  "spend": "spent (Facebook spend)",
+  "signups": "total_conversion: sign-ups or installs",
+  "customers": "approved_conversion: those who became active users"
+ },
+ "rows": 1143,
+ "rows_shifted_read_as_campaign_1178": 382,
+ "zero_spend_rows": 207,
+ "totals": {
+  "spend": 58705.23,
+  "signups": 3264,
+  "customers": 1079
+ },
+ "per_ad": {
+  "unit": "ad_id",
+  "units": 1143,
+  "with_spend_and_signups": 931,
+  "signups_but_no_customer": {
+   "units": 418,
+   "spend_usd": 14520,
+   "share_of_spend": 0.248,
+   "share_expected_by_chance_at_one_rate": 0.218,
+   "account_signup_to_customer": 0.329
+  },
+  "by_minimum_customers": {
+   "1": {
+    "units": 513,
+    "pairs_ordered_opposite": 0.137,
+    "ci90": [
+     0.123,
+     0.153
+    ],
+    "cheapest_quarter_by_signup_not_cheapest_by_customer": 0.102,
+    "ci90_quarter": [
+     0.063,
+     0.141
+    ]
+   },
+   "3": {
+    "units": 95,
+    "pairs_ordered_opposite": 0.171,
+    "ci90": [
+     0.136,
+     0.204
+    ],
+    "cheapest_quarter_by_signup_not_cheapest_by_customer": 0.208,
+    "ci90_quarter": [
+     0.125,
+     0.333
+    ]
+   },
+   "5": {
+    "units": 36,
+    "pairs_ordered_opposite": 0.187,
+    "ci90": [
+     0.118,
+     0.262
+    ],
+    "cheapest_quarter_by_signup_not_cheapest_by_customer": 0.222,
+    "ci90_quarter": [
+     0,
+     0.444
+    ]
+   }
+  }
+ },
+ "per_ad_set": {
+  "unit": "fb_campaign_id (rows that carry it)",
+  "units": 488,
+  "with_spend_and_signups": 341,
+  "signups_but_no_customer": {
+   "units": 151,
+   "spend_usd": 2432,
+   "share_of_spend": 0.124,
+   "share_expected_by_chance_at_one_rate": 0.089,
+   "account_signup_to_customer": 0.356
+  },
+  "by_minimum_customers": {
+   "1": {
+    "units": 190,
+    "pairs_ordered_opposite": 0.1,
+    "ci90": [
+     0.088,
+     0.11
+    ],
+    "cheapest_quarter_by_signup_not_cheapest_by_customer": 0.146,
+    "ci90_quarter": [
+     0.083,
+     0.271
+    ]
+   },
+   "3": {
+    "units": 38,
+    "pairs_ordered_opposite": 0.139,
+    "ci90": [
+     0.096,
+     0.194
+    ],
+    "cheapest_quarter_by_signup_not_cheapest_by_customer": 0.2,
+    "ci90_quarter": [
+     0,
+     0.4
+    ]
+   },
+   "5": {
+    "units": 28,
+    "pairs_ordered_opposite": 0.151,
+    "ci90": [
+     0.091,
+     0.214
+    ],
+    "cheapest_quarter_by_signup_not_cheapest_by_customer": 0.286,
+    "ci90_quarter": [
+     0,
+     0.429
+    ]
+   }
+  }
+ },
+ "per_audience": {
+  "unit": "campaign × age × gender × interest",
+  "units": 454,
+  "with_spend_and_signups": 408,
+  "signups_but_no_customer": {
+   "units": 101,
+   "spend_usd": 4448,
+   "share_of_spend": 0.076,
+   "share_expected_by_chance_at_one_rate": 0.061,
+   "account_signup_to_customer": 0.33
+  },
+  "by_minimum_customers": {
+   "1": {
+    "units": 307,
+    "pairs_ordered_opposite": 0.134,
+    "ci90": [
+     0.117,
+     0.151
+    ],
+    "cheapest_quarter_by_signup_not_cheapest_by_customer": 0.13,
+    "ci90_quarter": [
+     0.078,
+     0.182
+    ]
+   },
+   "3": {
+    "units": 111,
+    "pairs_ordered_opposite": 0.119,
+    "ci90": [
+     0.094,
+     0.144
+    ],
+    "cheapest_quarter_by_signup_not_cheapest_by_customer": 0.107,
+    "ci90_quarter": [
+     0.071,
+     0.25
+    ]
+   },
+   "5": {
+    "units": 71,
+    "pairs_ordered_opposite": 0.124,
+    "ci90": [
+     0.092,
+     0.163
+    ],
+    "cheapest_quarter_by_signup_not_cheapest_by_customer": 0.167,
+    "ci90_quarter": [
+     0,
+     0.278
+    ]
+   }
+  }
+ },
+ "next_week_check": {
+  "split": "rank on 17-23 Aug 2017, score on 24-30 Aug 2017",
+  "per_audience": {
+   "units": 63,
+   "spend_weighted_pairs_right_next_week": {
+    "by_signups_per_dollar": 0.576,
+    "by_customers_per_dollar": 0.616
+   },
+   "customers_minus_signups_ci90": [
+    -0.055,
+    0.155
+   ]
+  },
+  "per_interest": {
+   "units": 60,
+   "spend_weighted_pairs_right_next_week": {
+    "by_signups_per_dollar": 0.552,
+    "by_customers_per_dollar": 0.583
+   },
+   "customers_minus_signups_ci90": [
+    -0.086,
+    0.167
+   ]
+  }
+ }
+}

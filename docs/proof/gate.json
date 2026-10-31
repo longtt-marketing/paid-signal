@@ -52,9 +52,9 @@
   "falsely_rejected": 0
  },
  "direction": {
-  "unsupported_tried": 12,
-  "unsupported_caught": 12,
-  "supported_tried": 20,
+  "unsupported_tried": 17,
+  "unsupported_caught": 17,
+  "supported_tried": 15,
   "supported_rejected": 0
  }
 }

@@ -1,0 +1,1322 @@
+[
+ {
+  "id": "b01",
+  "name": "Lead magnet that loses money",
+  "story": "The trial video pulls four times the leads of the carousel, but its few $49 sales do not cover its spend while the $99 carousel is very profitable.",
+  "ads": [
+   {
+    "ad": "trial_video",
+    "spend_usd": 150,
+    "leads": 40
+   },
+   {
+    "ad": "parent_carousel",
+    "spend_usd": 80,
+    "leads": 9
+   }
+  ],
+  "payments": [
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   }
+  ],
+  "right": {
+   "trial_video": [
+    "reduce",
+    "pause"
+   ],
+   "parent_carousel": [
+    "increase"
+   ]
+  },
+  "why": {
+   "trial_video": "3 payments -> 3 counted orders, paid revenue $147.00; contribution = 147.00 x 0.70 - 147.00 x 0.0299 - 0.49 x 3 = $97.03 vs spend $150 -> net -$52.97 (0.65 contribution per ad dollar). 40 leads look great, but on 3 counted orders it returns well under a dollar per ad dollar, so cut it (reduce, or pause until the lead-to-sale step is fixed); never increase on lead volume.",
+   "parent_carousel": "5 payments -> 5 counted orders, paid revenue $495.00; contribution = 495.00 x 0.70 - 495.00 x 0.0299 - 0.49 x 5 = $329.25 vs spend $80 -> net +$249.25 (4.12 contribution per ad dollar). Five clean orders and about four dollars of contribution per ad dollar: the clear place to move budget."
+  },
+  "must_moves": [
+   [
+    "trial_video",
+    "reduce"
+   ],
+   [
+    "parent_carousel",
+    "increase"
+   ]
+  ]
+ },
+ {
+  "id": "b02",
+  "name": "Revenue per dollar above 1 but still losing",
+  "story": "The free guide brings $1.17 of revenue per ad dollar, which looks profitable until the 30% teaching cost and PayPal fees are taken out.",
+  "ads": [
+   {
+    "ad": "free_guide",
+    "spend_usd": 200,
+    "leads": 25
+   },
+   {
+    "ad": "holiday_static",
+    "spend_usd": 100,
+    "leads": 6
+   },
+   {
+    "ad": "trial_video",
+    "spend_usd": 60,
+    "leads": 10
+   }
+  ],
+  "payments": [
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "79.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "79.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "79.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "79.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   }
+  ],
+  "right": {
+   "free_guide": [
+    "reduce",
+    "pause"
+   ],
+   "holiday_static": [
+    "increase",
+    "keep"
+   ],
+   "trial_video": [
+    "increase",
+    "keep"
+   ]
+  },
+  "why": {
+   "free_guide": "6 payments -> 6 counted orders, paid revenue $234.00; contribution = 234.00 x 0.70 - 234.00 x 0.0299 - 0.49 x 6 = $153.86 vs spend $200 -> net -$46.14 (0.77 contribution per ad dollar). Revenue/spend is 1.17, but break-even after the 30% cost and fees needs about 1.5, so it loses money: cut it.",
+   "holiday_static": "4 payments -> 4 counted orders, paid revenue $316.00; contribution = 316.00 x 0.70 - 316.00 x 0.0299 - 0.49 x 4 = $209.79 vs spend $100 -> net +$109.79 (2.10 contribution per ad dollar). Four clean $79 orders return about two dollars per ad dollar; increase is the best use of money, keep is defensible.",
+   "trial_video": "3 payments -> 3 counted orders, paid revenue $147.00; contribution = 147.00 x 0.70 - 147.00 x 0.0299 - 0.49 x 3 = $97.03 vs spend $60 -> net +$37.03 (1.62 contribution per ad dollar). Profitable on exactly 3 counted orders; a cautious increase or keep are both reasonable, never a cut."
+  },
+  "must_moves": [
+   [
+    "free_guide",
+    "reduce"
+   ],
+   [
+    "holiday_static",
+    "increase"
+   ]
+  ]
+ },
+ {
+  "id": "b03",
+  "name": "Refunds wipe out the best seller",
+  "story": "The trial video took twelve $49 payments, but nine were fully refunded, so the apparent top ad is really a loser.",
+  "ads": [
+   {
+    "ad": "trial_video",
+    "spend_usd": 150,
+    "leads": 22
+   },
+   {
+    "ad": "parent_carousel",
+    "spend_usd": 90,
+    "leads": 8
+   }
+  ],
+  "payments": [
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "49.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "49.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "49.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "49.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "49.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "49.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "49.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "49.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "49.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   }
+  ],
+  "right": {
+   "trial_video": [
+    "reduce",
+    "pause"
+   ],
+   "parent_carousel": [
+    "increase"
+   ]
+  },
+  "why": {
+   "trial_video": "12 payments (excluded: 9 fully refunded) -> 3 counted orders, paid revenue $147.00; contribution = 147.00 x 0.70 - 147.00 x 0.0299 - 0.49 x 3 = $97.03 vs spend $150 -> net -$52.97 (0.65 contribution per ad dollar). Gross $588 would look like a winner, but after 9 full refunds it loses money and a 75% refund rate says the ad attracts the wrong buyers: reduce or pause, never increase.",
+   "parent_carousel": "4 payments -> 4 counted orders, paid revenue $396.00; contribution = 396.00 x 0.70 - 396.00 x 0.0299 - 0.49 x 4 = $263.40 vs spend $90 -> net +$173.40 (2.93 contribution per ad dollar). Four clean $99 orders, about three dollars of contribution per ad dollar: move budget here."
+  },
+  "must_moves": [
+   [
+    "trial_video",
+    "reduce"
+   ],
+   [
+    "parent_carousel",
+    "increase"
+   ]
+  ]
+ },
+ {
+  "id": "b04",
+  "name": "Partial refunds and a double payment",
+  "story": "The $99 kit bundle had $80 refunded on four of five orders, and one free-guide buyer paid twice within four minutes.",
+  "ads": [
+   {
+    "ad": "free_guide",
+    "spend_usd": 50,
+    "leads": 15
+   },
+   {
+    "ad": "holiday_static",
+    "spend_usd": 160,
+    "leads": 10
+   },
+   {
+    "ad": "parent_carousel",
+    "spend_usd": 100,
+    "leads": 7
+   }
+  ],
+  "payments": [
+   {
+    "ad": "free_guide",
+    "amount": "59.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "59.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": 4,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "59.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "99.00",
+    "refunded": "80.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "99.00",
+    "refunded": "80.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "99.00",
+    "refunded": "80.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "99.00",
+    "refunded": "80.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "149.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "149.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "149.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "149.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   }
+  ],
+  "right": {
+   "free_guide": [
+    "keep"
+   ],
+   "holiday_static": [
+    "reduce",
+    "pause"
+   ],
+   "parent_carousel": [
+    "increase"
+   ]
+  },
+  "why": {
+   "free_guide": "3 payments (excluded: 1 duplicate) -> 2 counted orders, paid revenue $118.00; contribution = 118.00 x 0.70 - 118.00 x 0.0299 - 0.49 x 2 = $78.09 vs spend $50 -> net +$28.09 (1.56 contribution per ad dollar). The second $59 is the same payer 4 minutes later, a double payment, so only 2 real orders: too thin to scale or cut even though it is in profit, keep.",
+   "holiday_static": "5 payments -> 5 counted orders, incl. 4 partly refunded, paid revenue $175.00; contribution = 175.00 x 0.70 - 175.00 x 0.0299 - 0.49 x 5 = $114.82 vs spend $160 -> net -$45.18 (0.72 contribution per ad dollar). Gross $495 would show a healthy profit, but the partial refunds leave $175 of real revenue and the ad loses money: cut it.",
+   "parent_carousel": "4 payments -> 4 counted orders, paid revenue $596.00; contribution = 596.00 x 0.70 - 596.00 x 0.0299 - 0.49 x 4 = $397.42 vs spend $100 -> net +$297.42 (3.97 contribution per ad dollar). Four clean $149 orders, about four dollars of contribution per ad dollar: increase."
+  },
+  "must_moves": [
+   [
+    "holiday_static",
+    "reduce"
+   ],
+   [
+    "parent_carousel",
+    "increase"
+   ]
+  ]
+ },
+ {
+  "id": "b05",
+  "name": "Open disputes hold back the money",
+  "story": "Two of the trial video's four payments are in open disputes, while the carousel's $199 orders are strong even with its one dispute set aside.",
+  "ads": [
+   {
+    "ad": "trial_video",
+    "spend_usd": 100,
+    "leads": 20
+   },
+   {
+    "ad": "parent_carousel",
+    "spend_usd": 220,
+    "leads": 14
+   },
+   {
+    "ad": "free_guide",
+    "spend_usd": 60,
+    "leads": 30
+   }
+  ],
+  "payments": [
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": true
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": true
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "199.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "199.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "199.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "199.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "199.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": true
+   }
+  ],
+  "right": {
+   "trial_video": [
+    "keep"
+   ],
+   "parent_carousel": [
+    "increase"
+   ],
+   "free_guide": [
+    "keep",
+    "fix_tracking"
+   ]
+  },
+  "why": {
+   "trial_video": "4 payments (excluded: 2 in open dispute) -> 2 counted orders, paid revenue $98.00; contribution = 98.00 x 0.70 - 98.00 x 0.0299 - 0.49 x 2 = $64.69 vs spend $100 -> net -$35.31 (0.65 contribution per ad dollar). Counting the disputed money it would look profitable on 4 orders, but only 2 are settled: too thin to act on, keep until the disputes resolve.",
+   "parent_carousel": "5 payments (excluded: 1 in open dispute) -> 4 counted orders, paid revenue $796.00; contribution = 796.00 x 0.70 - 796.00 x 0.0299 - 0.49 x 4 = $531.44 vs spend $220 -> net +$311.44 (2.42 contribution per ad dollar). Even with the disputed $199 set aside, four settled orders return over two dollars per ad dollar: increase.",
+   "free_guide": "0 payments, 0 counted orders, contribution $0.00 vs spend $60, net -$60. 30 leads and no payments at all: too few orders to judge (keep), and checking that its clicks are attributed to PayPal payments (fix_tracking) is equally sensible."
+  },
+  "must_moves": [
+   [
+    "parent_carousel",
+    "increase"
+   ]
+  ]
+ },
+ {
+  "id": "b06",
+  "name": "Too few orders to call",
+  "story": "Every ad has only one or two paid orders this week, including a $199 ad that looks hugely profitable and a $19 ad that looks hopeless.",
+  "ads": [
+   {
+    "ad": "trial_video",
+    "spend_usd": 45,
+    "leads": 6
+   },
+   {
+    "ad": "holiday_static",
+    "spend_usd": 120,
+    "leads": 3
+   },
+   {
+    "ad": "free_guide",
+    "spend_usd": 80,
+    "leads": 12
+   }
+  ],
+  "payments": [
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "199.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "199.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   }
+  ],
+  "right": {
+   "trial_video": [
+    "keep"
+   ],
+   "holiday_static": [
+    "keep"
+   ],
+   "free_guide": [
+    "keep"
+   ]
+  },
+  "why": {
+   "trial_video": "1 payments -> 1 counted orders, paid revenue $49.00; contribution = 49.00 x 0.70 - 49.00 x 0.0299 - 0.49 x 1 = $32.34 vs spend $45 -> net -$12.66 (0.72 contribution per ad dollar). One order is no evidence either way: keep.",
+   "holiday_static": "2 payments -> 2 counted orders, paid revenue $398.00; contribution = 398.00 x 0.70 - 398.00 x 0.0299 - 0.49 x 2 = $265.72 vs spend $120 -> net +$145.72 (2.21 contribution per ad dollar). Two big orders make a large profit, but two sales can be luck: keep and wait for a third before scaling.",
+   "free_guide": "1 payments -> 1 counted orders, paid revenue $19.00; contribution = 19.00 x 0.70 - 19.00 x 0.0299 - 0.49 x 1 = $12.24 vs spend $80 -> net -$67.76 (0.15 contribution per ad dollar). It is losing money, but a single $19 order cannot separate a bad ad from a slow week: keep for another week rather than cut."
+  },
+  "must_moves": []
+ },
+ {
+  "id": "b07",
+  "name": "All profitable, one clearly best",
+  "story": "All three ads make money after costs, but the $149 carousel returns about six dollars of contribution per ad dollar, three times the others.",
+  "ads": [
+   {
+    "ad": "trial_video",
+    "spend_usd": 100,
+    "leads": 15
+   },
+   {
+    "ad": "parent_carousel",
+    "spend_usd": 100,
+    "leads": 10
+   },
+   {
+    "ad": "free_guide",
+    "spend_usd": 80,
+    "leads": 20
+   }
+  ],
+  "payments": [
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "149.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "149.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "149.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "149.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "149.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "149.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "39.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   }
+  ],
+  "right": {
+   "trial_video": [
+    "increase",
+    "keep"
+   ],
+   "parent_carousel": [
+    "increase"
+   ],
+   "free_guide": [
+    "keep",
+    "increase"
+   ]
+  },
+  "why": {
+   "trial_video": "6 payments -> 6 counted orders, paid revenue $294.00; contribution = 294.00 x 0.70 - 294.00 x 0.0299 - 0.49 x 6 = $194.07 vs spend $100 -> net +$94.07 (1.94 contribution per ad dollar). Solidly profitable on 6 orders: keep or increase; cutting a profitable ad would be wrong.",
+   "parent_carousel": "6 payments -> 6 counted orders, paid revenue $894.00; contribution = 894.00 x 0.70 - 894.00 x 0.0299 - 0.49 x 6 = $596.13 vs spend $100 -> net +$496.13 (5.96 contribution per ad dollar). By far the best return on solid evidence: extra money should go here first.",
+   "free_guide": "5 payments -> 5 counted orders, paid revenue $195.00; contribution = 195.00 x 0.70 - 195.00 x 0.0299 - 0.49 x 5 = $128.22 vs spend $80 -> net +$48.22 (1.60 contribution per ad dollar). Profitable but the weakest of the three: keep (or a modest increase), not a cut."
+  },
+  "must_moves": [
+   [
+    "parent_carousel",
+    "increase"
+   ]
+  ]
+ },
+ {
+  "id": "b08",
+  "name": "Every ad loses after costs",
+  "story": "Two of the three ads bring in more revenue than their ad spend, yet after the 30% cost and fees every ad loses money, and the $19 guide loses most of its budget.",
+  "ads": [
+   {
+    "ad": "trial_video",
+    "spend_usd": 150,
+    "leads": 25
+   },
+   {
+    "ad": "free_guide",
+    "spend_usd": 150,
+    "leads": 30
+   },
+   {
+    "ad": "parent_carousel",
+    "spend_usd": 250,
+    "leads": 12
+   }
+  ],
+  "payments": [
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "parent_carousel",
+    "amount": "99.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   }
+  ],
+  "right": {
+   "trial_video": [
+    "reduce",
+    "pause"
+   ],
+   "free_guide": [
+    "pause"
+   ],
+   "parent_carousel": [
+    "reduce",
+    "pause"
+   ]
+  },
+  "why": {
+   "trial_video": "4 payments -> 4 counted orders, paid revenue $196.00; contribution = 196.00 x 0.70 - 196.00 x 0.0299 - 0.49 x 4 = $129.38 vs spend $150 -> net -$20.62 (0.86 contribution per ad dollar). Revenue/spend 1.31 but it returns under a dollar per ad dollar after costs: cut it.",
+   "free_guide": "3 payments -> 3 counted orders, paid revenue $57.00; contribution = 57.00 x 0.70 - 57.00 x 0.0299 - 0.49 x 3 = $36.73 vs spend $150 -> net -$113.27 (0.24 contribution per ad dollar). $19 orders return about 24 cents per ad dollar, so every dollar spent loses about 76 cents: pause; a mere reduction keeps burning money.",
+   "parent_carousel": "3 payments -> 3 counted orders, paid revenue $297.00; contribution = 297.00 x 0.70 - 297.00 x 0.0299 - 0.49 x 3 = $197.55 vs spend $250 -> net -$52.45 (0.79 contribution per ad dollar). Revenue/spend 1.19 and it loses money on the biggest budget: cut it; no ad deserves an increase this week."
+  },
+  "must_moves": [
+   [
+    "trial_video",
+    "reduce"
+   ],
+   [
+    "free_guide",
+    "pause"
+   ],
+   [
+    "parent_carousel",
+    "reduce"
+   ]
+  ]
+ },
+ {
+  "id": "b09",
+  "name": "The lead count tells the truth",
+  "story": "The ad with the most leads also has the most sales and the best profit, while the low-lead ad loses money.",
+  "ads": [
+   {
+    "ad": "trial_video",
+    "spend_usd": 100,
+    "leads": 30
+   },
+   {
+    "ad": "holiday_static",
+    "spend_usd": 150,
+    "leads": 6
+   }
+  ],
+  "payments": [
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "59.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "59.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "59.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   }
+  ],
+  "right": {
+   "trial_video": [
+    "increase"
+   ],
+   "holiday_static": [
+    "reduce",
+    "pause"
+   ]
+  },
+  "why": {
+   "trial_video": "9 payments -> 9 counted orders, paid revenue $441.00; contribution = 441.00 x 0.70 - 441.00 x 0.0299 - 0.49 x 9 = $291.10 vs spend $100 -> net +$191.10 (2.91 contribution per ad dollar). Nine clean orders and nearly three dollars of contribution per ad dollar: here the obvious answer (most leads, scale it) is right.",
+   "holiday_static": "3 payments -> 3 counted orders, paid revenue $177.00; contribution = 177.00 x 0.70 - 177.00 x 0.0299 - 0.49 x 3 = $117.14 vs spend $150 -> net -$32.86 (0.78 contribution per ad dollar). Few leads and a loss after costs: move money away from it."
+  },
+  "must_moves": [
+   [
+    "trial_video",
+    "increase"
+   ],
+   [
+    "holiday_static",
+    "reduce"
+   ]
+  ]
+ },
+ {
+  "id": "b10",
+  "name": "Low ticket fees, thin big ticket, missing payments",
+  "story": "A $19 guide sells a lot but costs and the per-order fee sink it, a $199 ad has only two sales, the carousel shows leads but no payments, and the trial video has a double payment and a partial refund.",
+  "ads": [
+   {
+    "ad": "free_guide",
+    "spend_usd": 200,
+    "leads": 35
+   },
+   {
+    "ad": "holiday_static",
+    "spend_usd": 60,
+    "leads": 4
+   },
+   {
+    "ad": "parent_carousel",
+    "spend_usd": 180,
+    "leads": 25
+   },
+   {
+    "ad": "trial_video",
+    "spend_usd": 70,
+    "leads": 12
+   }
+  ],
+  "payments": [
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "free_guide",
+    "amount": "19.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "199.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "holiday_static",
+    "amount": "199.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": 2,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "24.50",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   },
+   {
+    "ad": "trial_video",
+    "amount": "49.00",
+    "refunded": "0.00",
+    "same_payer_as_previous_minutes_apart": null,
+    "open_dispute": false
+   }
+  ],
+  "right": {
+   "free_guide": [
+    "reduce",
+    "pause"
+   ],
+   "holiday_static": [
+    "keep"
+   ],
+   "parent_carousel": [
+    "keep",
+    "fix_tracking"
+   ],
+   "trial_video": [
+    "increase",
+    "keep"
+   ]
+  },
+  "why": {
+   "free_guide": "12 payments -> 12 counted orders, paid revenue $228.00; contribution = 228.00 x 0.70 - 228.00 x 0.0299 - 0.49 x 12 = $146.90 vs spend $200 -> net -$53.10 (0.73 contribution per ad dollar). Twelve sales and revenue/spend 1.14 look busy, but at $19 the 30% cost plus $0.49 per order leave it losing money: cut it.",
+   "holiday_static": "2 payments -> 2 counted orders, paid revenue $398.00; contribution = 398.00 x 0.70 - 398.00 x 0.0299 - 0.49 x 2 = $265.72 vs spend $60 -> net +$205.72 (4.43 contribution per ad dollar). Very profitable on paper, but two orders is too thin to scale: keep.",
+   "parent_carousel": "0 payments, 0 counted orders, contribution $0.00 vs spend $180, net -$180. 25 leads and zero recorded payments while the other ads record theirs: too thin to cut; checking that its clicks reach PayPal attribution (fix_tracking) or keeping one more week are both right.",
+   "trial_video": "5 payments (excluded: 1 duplicate) -> 4 counted orders, incl. 1 partly refunded, paid revenue $171.50; contribution = 171.50 x 0.70 - 171.50 x 0.0299 - 0.49 x 4 = $112.96 vs spend $70 -> net +$42.96 (1.61 contribution per ad dollar). The double payment is not a second order and the half refund lowers revenue, yet it stays profitable on 4 real orders: increase or keep."
+  },
+  "must_moves": [
+   [
+    "free_guide",
+    "reduce"
+   ]
+  ]
+ }
+]

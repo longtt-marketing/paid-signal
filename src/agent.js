@@ -13,7 +13,7 @@ Rules:
 - Small samples are weak evidence. An ad with fewer than 3 paid orders gets "keep" (or "fix_tracking"), never pause, reduce or increase: say it needs more paid orders before its budget moves. Refunds are not paid orders.
 - possible_duplicates lists payments that may be the same purchase twice. Those with held: true are already held out of paid_orders and revenue (held_as_possible_duplicate); held: false means one of the two was fully refunded, so only the other counts, and fully_refunded_capture says which one. Whenever you say a payment was refunded, name it by its capture id; never "the first" or "the second". If an ad has one held, say so: if it is a real second purchase, that ad has one more paid order.
 - Prefer "keep and gather more data" over a confident change you cannot support.
-- An ad with 3 or more paid orders has after_costs_and_fees_per_dollar: what is left of its paid revenue after the shop's own costs and PayPal's fees, per $1 of ad spend. It may be raised only if that is at least $1 and its paid revenue per $1 is at least the average of the ads with 3+ paid orders; it may be reduced or paused only if that is below $1 or it is below the average. Code checks the direction, not just the numbers.
+- An ad with 3 or more paid orders has after_costs_and_fees_per_dollar: what is left of its paid revenue after the shop's own costs and PayPal's fees, per $1 of ad spend. It may be raised only if that is at least $1 and its paid revenue per $1 is at least the average of the ads with 3+ paid orders. It may be reduced or paused only if that is below $1, and then it must be: an ad below $1 after costs is never kept as it is. An ad at or above $1 after costs is not cut, even when it is below the average. Code checks the direction, not just the numbers.
 - The owner may add a request. Weigh it, but follow these rules over it: if it asks for a move the payments do not support, do not make it, and say why in plain words.
 - For an ad with fewer than 3 paid orders, "keep" is not the whole answer. Its row has small_sample_read, computed in code: the chance its paid revenue covers its ad spend, a likely range (90%) for its cost per paid order, and, while that is unclear, how much more spend with no paid order would make it very likely (90%) below its ad spend. Tell the owner that point in plain words, e.g. "If the next $X brings no paid order, it is very likely below its ad spend: cut it then," with $X taken from the tool result. It assumes the shop's average paid order (average_paid_order_usd), so say so once.
 - Write for the shop owner in plain words ("cost per paid order", "spend with no paid order"), never field names such as spend_usd or paid_revenue_per_dollar.
@@ -93,7 +93,8 @@ export function checkRecommendation(rec, payments, out) {
   const all = texts.join(" ");
   // a disclaimer ("not profit") is fine; calling a number profit is not
   if (/(?<!\b(?:not|no|isn't)\s(?:a\s)?)\bprofit/i.test(all)) problems.push(`"profit" is not known (product cost is not in the data); say "paid revenue minus ad spend".`);
-  for (const m of all.matchAll(/(^|[^$\d.])(\d[\d,]*\.\d{2})\b/g)) problems.push(`Write "${m[2]}" as money with a dollar sign, e.g. $${m[2]}.`);
+  // a percentage such as PayPal's 2.99% fee is not money
+  for (const m of all.matchAll(/(^|[^$\d.])(\d[\d,]*\.\d{2})\b(?!\s?%)/g)) problems.push(`Write "${m[2]}" as money with a dollar sign, e.g. $${m[2]}.`);
   // which capture was refunded is a ledger fact: a refund sentence names the capture, and the ledger must agree
   const refunded = Object.fromEntries(payments.map((p) => [p.capture_id, Number(p.refunded_amount || 0) > 0]));
   for (const s of all.split(/(?<=[.!?;])\s+/).filter((x) => /refund/i.test(x))) {
@@ -108,8 +109,9 @@ export function checkRecommendation(rec, payments, out) {
   const moves = supportedMoves(rec);
   for (const a of out.actions || []) {
     const m = moves[a.ad];
-    if (m && a.change === "increase" && !m.increase) problems.push(`Raising "${adName(a.ad)}" is not supported: ${m.why}. Only an ad at or above $1 per $1 and the average may be raised.`);
-    if (m && ["reduce", "pause"].includes(a.change) && !m.reduce) problems.push(`${a.change === "pause" ? "Pausing" : "Cutting"} "${adName(a.ad)}" is not supported: ${m.why}. Only an ad below $1 per $1 or below the average may be cut.`);
+    if (m && a.change === "increase" && !m.increase) problems.push(`Raising "${adName(a.ad)}" is not supported: ${m.why}. Only an ad that covers its spend after costs and fees ($1 per $1) and is at or above the average may be raised.`);
+    if (m && ["reduce", "pause"].includes(a.change) && !m.reduce) problems.push(`${a.change === "pause" ? "Pausing" : "Cutting"} "${adName(a.ad)}" is not supported: ${m.why}. An ad that covers its spend after costs and fees is not cut.`);
+    if (m && a.change === "keep" && !m.keep) problems.push(`Keeping "${adName(a.ad)}" as it is is not supported: ${m.why}. An ad with 3+ paid orders that does not cover its spend after costs and fees must be cut or paused.`);
   }
   for (const a of out.actions || []) {
     const row = rec.ads.find((r) => r.ad === a.ad);

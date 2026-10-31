@@ -61,7 +61,7 @@ export function disputeState(p) {
  * rule that keeps it back from Meta and Google.
  */
 export function reconcile(adRows, payments) {
-  const byAd = new Map(adRows.map((r) => [r.ad, { ad: r.ad, spend_cents: r.spend_cents, leads: r.leads, paid: 0, refunded: 0, held: 0, revenue_cents: 0, held_cents: 0, disputed: 0, disputed_cents: 0, captures: [] }]));
+  const byAd = new Map(adRows.map((r) => [r.ad, { ad: r.ad, spend_cents: r.spend_cents, leads: r.leads, paid: 0, refunded: 0, held: 0, revenue_cents: 0, held_cents: 0, disputed: 0, disputed_cents: 0, fee_cents: 0, fees_observed: 0, captures: [] }]));
   const unmatched = [];
   const held = new Set(possibleDuplicates(payments).map((d) => d.capture_id));
   for (const p of payments) {
@@ -77,6 +77,8 @@ export function reconcile(adRows, payments) {
     else if (held.has(p.capture_id)) { row.held++; row.held_cents += gross - back; continue; }
     else row.paid++;
     row.revenue_cents += Math.max(0, gross - back);
+    // PayPal's own fee on the capture when it was read at capture; otherwise PayPal's published rate (SHOP_COSTS)
+    if (back < gross) { if (p.fee != null) { row.fee_cents += cents(p.fee); row.fees_observed++; } else row.fee_cents += Math.round((gross - back) * SHOP_COSTS.fee_rate) + SHOP_COSTS.fee_fixed_cents; }
   }
   const ads = [...byAd.values()].map((r) => ({
     ...r,
@@ -201,26 +203,28 @@ export const SHOP_COSTS = { cost_share: 0.3, fee_rate: 0.0299, fee_fixed_cents: 
 
 /** Paid revenue left after the shop's costs and PayPal's fees, per $1 of the ad's spend. */
 export const afterCostsPerDollar = (r, c = SHOP_COSTS) =>
-  r.spend_cents ? (r.revenue_cents * (1 - c.cost_share) - r.revenue_cents * c.fee_rate - r.paid * c.fee_fixed_cents) / r.spend_cents : 0;
+  !r.spend_cents ? 0 : (r.revenue_cents * (1 - c.cost_share) - (r.fee_cents ?? (r.revenue_cents * c.fee_rate + r.paid * c.fee_fixed_cents))) / r.spend_cents;
 
 /**
  * Which budget moves the payments support, per ad with at least `minPaid` paid orders (the others may only be kept).
  * Raise an ad only if what is left of its paid revenue after the shop's costs and PayPal's fees covers its ad spend ($1 per
- * $1) and its paid revenue per $1 is at least the average of those ads; reduce or pause one that does not cover its spend
- * after costs, or is below that average. The gate refuses any move against this, whatever words justify it.
+ * $1) and its paid revenue per $1 is at least the average of those ads; reduce or pause only one that does not cover its
+ * spend after costs, and do not leave such an ad as it is. An ad that covers its spend but is below the average is kept, not
+ * cut. The gate refuses any move against this, whatever words justify it.
  * @param {ReturnType<typeof reconcile>} rec
  */
 export function supportedMoves(rec, minPaid = 3, costs = SHOP_COSTS) {
   const ready = rec.ads.filter((r) => r.paid >= minPaid && r.spend_cents > 0);
   const avg = ready.length >= 2 ? ready.reduce((n, r) => n + r.revenue_cents / r.spend_cents, 0) / ready.length : null;
-  /** @type {Record<string, { per_dollar: number, after_costs: number, average: number | null, increase: boolean, reduce: boolean, why: string }>} */
+  /** @type {Record<string, { per_dollar: number, after_costs: number, average: number | null, increase: boolean, reduce: boolean, keep: boolean, why: string }>} */
   const out = {};
   for (const r of ready) {
     const pd = r.revenue_cents / r.spend_cents, net = afterCostsPerDollar(r, costs);
     const increase = net >= 1 && (avg === null || pd >= avg - 1e-9);
-    const reduce = net < 1 || (avg !== null && pd < avg - 1e-9);
+    // an ad that covers its spend after costs is not cut, even below the average; one that does not is not kept as it is
+    const reduce = net < 1, keep = net >= 1;
     const vs = avg === null ? "" : `, against an average of $${avg.toFixed(2)} for ads with ${minPaid}+ paid orders`;
-    out[r.ad] = { per_dollar: pd, after_costs: net, average: avg, increase, reduce,
+    out[r.ad] = { per_dollar: pd, after_costs: net, average: avg, increase, reduce, keep,
       why: `$${pd.toFixed(2)} of paid revenue per $1 of ad spend, $${net.toFixed(2)} after the shop's costs and PayPal fees${vs}` };
   }
   return out;

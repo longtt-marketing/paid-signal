@@ -53,7 +53,9 @@ const dir = { unsupported_tried: 0, unsupported_caught: 0, supported_tried: 0, s
 for (const s of SCENARIOS) {
   const r = reconcile(s.ads, s.payments), moves = supportedMoves(r);
   for (const [ad, m] of Object.entries(moves)) for (const change of ["increase", "reduce", "pause", "keep"]) {
-    const ok = change === "keep" || (change === "increase" ? m.increase : m.reduce);
+    // labels come from the stated rule itself, so this checks the gate enforces it; whether the rule is right is tested
+    // against an independent analyst's answers in scripts/eval-blind-scenarios.mjs
+    const ok = change === "keep" ? m.keep : change === "increase" ? m.increase : m.reduce;
     const bad = checkRecommendation(r, s.payments, { headline: "A week with enough paid orders.", actions: [{ ad, change, reason: "From the paid orders.", evidence: [`row:${ad}`] }] }).length > 0;
     if (ok) { dir.supported_tried++; if (bad) dir.supported_rejected++; } else { dir.unsupported_tried++; if (bad) dir.unsupported_caught++; }
   }

@@ -87,10 +87,16 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
   paid order that would make "below its ad spend" 90% likely (Gamma-Poisson, prior worth one order at the shop's own cost
   per paid order). The agent quotes them through the gate; the dashboard shows them as "Covers its spend?".
 - **Direction of a move** (`supportedMoves` in `src/ledger.js`): on an ad with 3+ paid orders the gate refuses a raise unless
-  what its paid revenue leaves after the shop's costs and PayPal's fees (`SHOP_COSTS`: the fictional shop's stated 30% cost
-  of delivery, 2.99% + $0.49 per order) covers its spend and it is at or above the average of those ads, and a cut unless it
-  fails either. The owner can add a request (`instruction` on `/api/agent`); the agent weighs it, and the gate still refuses a
-  move the payments do not support.
+  what its paid revenue leaves after the shop's costs and PayPal's fees covers its spend and it is at or above the average of
+  those ads; it refuses a cut or pause of an ad that covers its spend, and refuses keeping as it is an ad that does not. The
+  shop's 30% cost of delivery is the fictional shop's stated assumption (`SHOP_COSTS`); PayPal's fee is the one PayPal
+  reports on each capture (read at capture, `fee` on the record), and PayPal's published 2.99% + $0.49 only where none was
+  reported (invoice payments). The owner can add a request (`instruction` on `/api/agent`, also on the live ledger from the
+  dashboard); the agent weighs it, and the gate still refuses a move the payments do not support.
+- **Is the rule right?** (`scripts/eval-blind-scenarios.mjs`): a separate analyst agent that never read this code wrote
+  synthetic weeks with its own answers from first principles. The first set exposed two places where the rule disagreed with
+  the analyst (it allowed cutting a profitable ad below the average, and keeping a money-losing one); the rule was changed,
+  and a second set, written afterwards, tests the changed rule. Results in `docs/proof/blind-scenarios-run-*.json`.
 - **Budget agent inside AG Studio** (`web/src/agentTools.js`): a custom Studio agent. Studio's lead agent delegates budget
   questions to it; it reads the ledger, submits through the same gate (`/api/agent/check`), and delegates to Studio's
   built-in page agent to add the evidence chart. Its accepted change lands in the approvals column.
@@ -156,7 +162,7 @@ npx wrangler dev                      # or: npx wrangler deploy
 - This is a public sandbox demo: refunds, invoice drafts and assistant turns are open to visitors and limited per
   visitor and per day. The AG Studio trial key is a front-end key and is served to the browser.
 - Matching relies on the click id reaching checkout. PayPal verifies the payment, not the click. Payments without one are shown as unmatched rather than guessed.
-- The evidence gate checks that numbers and ids exist and that a budget move goes the way the payments point (after the fictional shop's stated costs and PayPal fees), not every step of the reasoning; that rule is itself a choice, tested on synthetic weeks, not proven on a real shop. Approvals are demo approvals: logged on the server but, in this public demo, not tied to an owner login.
+- The evidence gate checks that numbers and ids exist and that a budget move goes the way the payments point (after the fictional shop's stated costs and PayPal fees), not every step of the reasoning; that rule is itself a choice, tested on synthetic weeks (including an independent analyst's), not proven on a real shop. On real public ads (Bunq's, 2017, `scripts/study-public-ads.mjs`) sign-ups were a fair stand-in for customers, so the case for the paid signal there is small; it is larger where lead quality varies. Approvals are demo approvals: logged on the server but, in this public demo, not tied to an owner login.
 - Small numbers are weak evidence; the agent is told to say so, and does.
 - Transaction Search reports how current it is (the sandbox refreshes about daily); payments newer than that are listed as pending, not missing.
 

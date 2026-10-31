@@ -307,13 +307,27 @@ test("owner request: it reaches the agent as the owner's words, trimmed, and the
   const s = SCENARIOS.find((x) => x.id === "lead_rich"), rec = reconcile(s.ads, s.payments);
   let first = "";
   const raise = { headline: "Raised as asked.", actions: [{ ad: "free_guide", change: "increase", reason: "The owner asked.", evidence: ["row:free_guide"] }] };
-  const keep = { headline: "Kept: it returns too little per dollar.", actions: [{ ad: "free_guide", change: "keep", reason: "Not raised.", evidence: ["row:free_guide"] }] };
-  const turns = [raise, keep];
+  // after costs the free guide does not cover its spend, so the repaired answer cuts it (keeping it as it is is refused too)
+  const cut = { headline: "Cut: it returns too little per dollar.", actions: [{ ad: "free_guide", change: "reduce", reason: "Not raised.", evidence: ["row:free_guide"] }] };
+  const turns = [raise, cut];
   const llm = async (messages) => { first ||= messages[0].content; const input = turns.shift(); return { raw: [], calls: [{ id: String(turns.length), name: "submit_recommendation", input }] }; };
   const out = await runAgent({ llm, rec, payments: s.payments, instruction: "  Raise the free guide,\n it brings the most leads. " + "x".repeat(300) });
   assert.match(first, /The owner adds: "Raise the free guide, it brings the most leads\. x+"/);
   assert.ok(first.length < 320);
-  assert.deepEqual([out.grounded, out.trace[0].problems, out.recommendation.actions[0].change], [true, 1, "keep"]);
+  assert.deepEqual([out.grounded, out.trace[0].problems, out.recommendation.actions[0].change], [true, 1, "reduce"]);
+});
+
+test("direction: a money-losing ad with 3+ orders may not be kept as it is, and a profitable one below the average may not be cut", () => {
+  const ads = [{ ad: "a", spend_cents: 13000, leads: 9 }, { ad: "b", spend_cents: 5000, leads: 4 }, { ad: "c", spend_cents: 9000, leads: 6 }];
+  const ps = [...[1, 2, 3].map((n) => pay({ capture_id: `A${n}`, ad: "a", payer_email_sha256: `pa${n}` })),
+    ...[1, 2, 3].map((n) => pay({ capture_id: `B${n}`, ad: "b", payer_email_sha256: `pb${n}` })), ...[1, 2, 3].map((n) => pay({ capture_id: `C${n}`, ad: "c", payer_email_sha256: `pc${n}` }))];
+  const rec = reconcile(ads, ps), m = supportedMoves(rec);
+  // a: $1.13 per $1, loses after costs; b: $2.94, the best; c: $1.63, covers its spend after costs but is below the average
+  assert.deepEqual([m.a.keep, m.a.reduce, m.c.after_costs >= 1, m.c.per_dollar < m.c.average, m.c.reduce, m.c.keep, m.c.increase], [false, true, true, true, false, true, false]);
+  const check = (ad, change) => checkRecommendation(rec, ps, { headline: "x", actions: [{ ad, change, reason: "x", evidence: [`row:${ad}`] }] });
+  assert.ok(check("a", "keep").some((p) => /must be cut or paused/.test(p)));
+  assert.ok(check("c", "reduce").some((p) => /is not cut/.test(p)));
+  assert.deepEqual(check("a", "pause"), []);
 });
 
 test("disputes: an outcome that is not clearly the shop's win is never counted as one", () => {
@@ -328,6 +342,23 @@ test("direction: an ad above $1 per $1 in paid revenue but below it after costs 
   // 3 orders of $49 on $130: $1.13 per $1 in paid revenue, $0.73 after 30% cost and 2.99% + $0.49 per order
   const rec = reconcile([{ ad: "a", spend_cents: 13000, leads: 9 }], [1, 2, 3].map((n) => pay({ capture_id: `A${n}`, ad: "a", payer_email_sha256: `p${n}` })));
   const row = rec.ads[0], m = supportedMoves(rec).a;
-  assert.ok(Math.abs(afterCostsPerDollar(row) - (14700 * (1 - SHOP_COSTS.cost_share) - 14700 * SHOP_COSTS.fee_rate - 3 * 49) / 13000) < 1e-12);
+  // the estimated fee is rounded to the cent per order, as PayPal charges it
+  assert.ok(Math.abs(afterCostsPerDollar(row) - (14700 * (1 - SHOP_COSTS.cost_share) - 14700 * SHOP_COSTS.fee_rate - 3 * 49) / 13000) < 0.001);
   assert.deepEqual([m.per_dollar > 1, m.after_costs < 1, m.increase, m.reduce], [true, true, false, true]);
+});
+
+test("fees: PayPal's own fee on a capture is used when known, the published rate only when it is not", () => {
+  const ads = [{ ad: "a", spend_cents: 10000, leads: 5 }];
+  const est = reconcile(ads, [1, 2, 3].map((n) => pay({ capture_id: `F${n}`, ad: "a", payer_email_sha256: `p${n}` })));
+  const seen = reconcile(ads, [1, 2, 3].map((n) => pay({ capture_id: `F${n}`, ad: "a", payer_email_sha256: `p${n}`, fee: "2.50" })));
+  assert.deepEqual([est.ads[0].fee_cents, est.ads[0].fees_observed], [3 * (147 + 49), 0]);
+  assert.deepEqual([seen.ads[0].fee_cents, seen.ads[0].fees_observed], [750, 3]);
+  assert.ok(afterCostsPerDollar(seen.ads[0]) < afterCostsPerDollar(est.ads[0]));
+});
+
+test("money format: a percentage with two decimals (PayPal's 2.99% fee) is not money missing its dollar sign", () => {
+  const s = SCENARIOS.find((x) => x.id === "week4"), rec = reconcile(s.ads, s.payments);
+  const out = (reason) => checkRecommendation(rec, s.payments, { headline: "Week 4.", actions: [{ ad: "trial_video", change: "keep", reason, evidence: ["row:trial_video"] }] });
+  assert.ok(!out("After the shop's 30% cost and PayPal's 2.99% + $0.49 fee.").some((p) => /dollar sign/.test(p)));
+  assert.ok(out("It took 49.00 from the ad.").some((p) => /dollar sign/.test(p)));
 });

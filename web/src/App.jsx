@@ -145,9 +145,10 @@ export default function App({ first = null }) {
     try { const out = await api("/api/agent", { scenario: id, ...(instruction ? { instruction } : {}) }); setAgent({ status: "done", instruction, ...out }); setDecisions({}); }
     catch (e) { setAgent({ status: "error", error: e.message }); }
   };
-  const ask = async () => {
-    setAgent({ status: "running" }); scrollToId("approvals");
-    try { const out = await api("/api/agent", { csv }); setAgent({ status: "done", ...out }); setDecisions({}); }
+  // on the live PayPal ledger too, the owner can add a request; the payments still decide what code lets through
+  const ask = async (instruction) => {
+    setAgent({ status: "running", instruction }); scrollToId("approvals");
+    try { const out = await api("/api/agent", { csv, ...(instruction ? { instruction } : {}) }); setAgent({ status: "done", instruction, ...out }); setDecisions({}); }
     catch (e) { setAgent({ status: "error", error: e.message }); }
   };
   const openAssistant = () => {
@@ -260,7 +261,7 @@ export default function App({ first = null }) {
         <section className="loop" aria-label="Try the loop">
           <article><span className="step">1</span><b>Pay from an ad click</b><p>Open an ad link and pay in the PayPal sandbox. The click rides in the order.</p><a className="btn" href={adLink("trial_video", "fb")}>Open an ad link</a></article>
           <article><span className="step">2</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
-          <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={ask}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("week4")}>Or try a synthetic week with more orders</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("lead_rich", "Raise the free guide's budget: it brings the most leads.")}>Or tell it to raise the ad with the most leads</button></article>
+          <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={() => ask()}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("week4")}>Or try a synthetic week with more orders</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => ask("Raise the free guide's budget: it brings the most leads.")}>Or tell it to raise the ad with the most leads</button></article>
           <article><span className="step">4</span><b>Tell the ad platform</b><p>Paid orders from Meta ads go to Meta's Conversions API; Google ones are previews here. A refund before the send holds the event back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
         </section>
 

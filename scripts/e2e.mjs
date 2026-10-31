@@ -49,7 +49,16 @@ try {
   await page.waitForFunction(() => document.querySelectorAll(".timeline circle").length >= 8, null, { timeout: 15000 }).catch(() => {});
   ok("payment timeline widget renders", await page.locator(".timeline circle").count() >= 8);
 
-  // 5. MCP: initialize, list tools, read the reconciliation
+  // 5. the money trail: one real capture from click to PayPal's own record (read through the server SDK) to Meta's reply
+  await page.goto(`${BASE}/trail?capture=3GY34151GC185303G`, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => document.body.innerText.includes("events_received"), null, { timeout: 30000 }).catch(() => {});
+  const trail = await page.textContent("body");
+  ok("money trail shows PayPal's record with the click in custom_id", trail.includes("3GY34151GC185303G") && trail.includes("COMPLETED") && trail.includes("c=IwARlive1030"));
+  ok("money trail shows Meta's reply", /events_received/.test(trail));
+  const unknown = await page.evaluate(async () => (await fetch("/api/trail?capture=NOSUCHCAPTURE00X")).status);
+  ok("an unknown capture is a 404, not another payment", unknown === 404, String(unknown));
+
+  // 6. MCP: initialize, list tools, read the reconciliation
   const mcp = async (body) => (await fetch(`${BASE}/mcp`, { method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream" }, body: JSON.stringify(body) })).json();
   const init = await mcp({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "e2e", version: "1" } } });
   ok("MCP initialize", init.result?.serverInfo?.name === "paid-signal");

@@ -123,12 +123,14 @@ async function recordCapture(env, order, userAgent) {
     capture_id: cap.id, order_id: order.id, status: cap.status, amount: cap.amount?.value, currency: cap.amount?.currency_code,
     ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt,
     captured_at: cap.create_time || new Date().toISOString(), refunded_amount: "0.00",
+    // PayPal's fee on this capture as PayPal reports it, so the budget rule uses the fee actually charged
+    fee: cap.seller_receivable_breakdown?.paypal_fee?.value ?? null,
     payer_email_sha256: email ? await sha(email.trim().toLowerCase()) : null,
   };
   if (userAgent) record.user_agent = userAgent.slice(0, 300); // the buyer's browser, for Meta's website events
   // a replayed capture must not wipe refunds already recorded against it
   const prev = await env.LEDGER.get(`pay:${cap.id}`, "json");
-  if (prev) { record.user_agent ??= prev.user_agent; record.refunded_amount = prev.refunded_amount; record.status = prev.status; if (prev.refunded_at) record.refunded_at = prev.refunded_at; }
+  if (prev) { record.user_agent ??= prev.user_agent; record.fee ??= prev.fee ?? null; record.refunded_amount = prev.refunded_amount; record.status = prev.status; if (prev.refunded_at) record.refunded_at = prev.refunded_at; }
   await env.LEDGER.put(`pay:${cap.id}`, JSON.stringify(record)); await forget("pay:");
   return record;
 }

@@ -1,0 +1,535 @@
+{
+ "date": "2026-10-31",
+ "kind": "blind synthetic weeks: written by a separate analyst agent that did not read the code",
+ "model": "claude-sonnet-5-5",
+ "runs_per_scenario": 2,
+ "summary": {
+  "scenarios": 10,
+  "leads_per_dollar_rule_weeks_right": 1,
+  "gate_rule_weeks_right": 8,
+  "agent_grounded_first_pass": "12 of 20",
+  "agent_grounded_after_one_repair": "20 of 20",
+  "agent_runs_with_a_wrong_move": 2,
+  "agent_must_moves_made": "29 of 32",
+  "agent_weeks_fully_right": "18 of 20"
+ },
+ "scenarios": [
+  {
+   "scenario": "b01",
+   "name": "Lead magnet that loses money",
+   "leads_rule": {
+    "ok": false,
+    "wrong": [
+     "trial_video: increase",
+     "parent_carousel: reduce"
+    ],
+    "moves_made": 0,
+    "moves_expected": 2
+   },
+   "gate_rule": {
+    "ok": true,
+    "wrong": [],
+    "moves_made": 2,
+    "moves_expected": 2,
+    "actions": [
+     "trial_video: reduce",
+     "parent_carousel: increase"
+    ]
+   },
+   "agent": [
+    {
+     "grounded": true,
+     "first_pass": false,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "parent_carousel: increase",
+      "trial_video: reduce"
+     ]
+    },
+    {
+     "grounded": true,
+     "first_pass": false,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "parent_carousel: increase",
+      "trial_video: reduce"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "b02",
+   "name": "Revenue per dollar above 1 but still losing",
+   "leads_rule": {
+    "ok": false,
+    "wrong": [
+     "holiday_static: reduce"
+    ],
+    "moves_made": 0,
+    "moves_expected": 2
+   },
+   "gate_rule": {
+    "ok": true,
+    "wrong": [],
+    "moves_made": 2,
+    "moves_expected": 2,
+    "actions": [
+     "free_guide: reduce",
+     "holiday_static: increase",
+     "trial_video: increase"
+    ]
+   },
+   "agent": [
+    {
+     "grounded": true,
+     "first_pass": false,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "holiday_static: increase",
+      "free_guide: reduce",
+      "trial_video: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "free_guide: reduce",
+      "holiday_static: increase",
+      "trial_video: keep"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "b03",
+   "name": "Refunds wipe out the best seller",
+   "leads_rule": {
+    "ok": false,
+    "wrong": [
+     "trial_video: increase",
+     "parent_carousel: reduce"
+    ],
+    "moves_made": 0,
+    "moves_expected": 2
+   },
+   "gate_rule": {
+    "ok": true,
+    "wrong": [],
+    "moves_made": 2,
+    "moves_expected": 2,
+    "actions": [
+     "trial_video: reduce",
+     "parent_carousel: increase"
+    ]
+   },
+   "agent": [
+    {
+     "grounded": true,
+     "first_pass": false,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "parent_carousel: increase",
+      "trial_video: reduce"
+     ]
+    },
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "parent_carousel: increase",
+      "trial_video: reduce"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "b04",
+   "name": "Partial refunds and a double payment",
+   "leads_rule": {
+    "ok": false,
+    "wrong": [
+     "free_guide: increase"
+    ],
+    "moves_made": 1,
+    "moves_expected": 2
+   },
+   "gate_rule": {
+    "ok": true,
+    "wrong": [],
+    "moves_made": 2,
+    "moves_expected": 2,
+    "actions": [
+     "free_guide: keep",
+     "holiday_static: reduce",
+     "parent_carousel: increase"
+    ]
+   },
+   "agent": [
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "parent_carousel: increase",
+      "holiday_static: reduce",
+      "free_guide: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "parent_carousel: increase",
+      "holiday_static: reduce",
+      "free_guide: keep"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "b05",
+   "name": "Open disputes hold back the money",
+   "leads_rule": {
+    "ok": false,
+    "wrong": [
+     "free_guide: increase",
+     "parent_carousel: reduce"
+    ],
+    "moves_made": 0,
+    "moves_expected": 1
+   },
+   "gate_rule": {
+    "ok": true,
+    "wrong": [],
+    "moves_made": 1,
+    "moves_expected": 1,
+    "actions": [
+     "trial_video: keep",
+     "parent_carousel: increase",
+     "free_guide: keep"
+    ]
+   },
+   "agent": [
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 1,
+     "moves_expected": 1,
+     "actions": [
+      "parent_carousel: increase",
+      "trial_video: keep",
+      "free_guide: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 1,
+     "moves_expected": 1,
+     "actions": [
+      "parent_carousel: increase",
+      "trial_video: keep",
+      "free_guide: keep"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "b06",
+   "name": "Too few orders to call",
+   "leads_rule": {
+    "ok": false,
+    "wrong": [
+     "free_guide: increase",
+     "holiday_static: reduce"
+    ],
+    "moves_made": 0,
+    "moves_expected": 0
+   },
+   "gate_rule": {
+    "ok": true,
+    "wrong": [],
+    "moves_made": 0,
+    "moves_expected": 0,
+    "actions": [
+     "trial_video: keep",
+     "holiday_static: keep",
+     "free_guide: keep"
+    ]
+   },
+   "agent": [
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 0,
+     "moves_expected": 0,
+     "actions": [
+      "holiday_static: keep",
+      "trial_video: keep",
+      "free_guide: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 0,
+     "moves_expected": 0,
+     "actions": [
+      "holiday_static: keep",
+      "trial_video: keep",
+      "free_guide: keep"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "b07",
+   "name": "All profitable, one clearly best",
+   "leads_rule": {
+    "ok": false,
+    "wrong": [
+     "parent_carousel: reduce"
+    ],
+    "moves_made": 0,
+    "moves_expected": 1
+   },
+   "gate_rule": {
+    "ok": false,
+    "wrong": [
+     "trial_video: reduce",
+     "free_guide: reduce"
+    ],
+    "moves_made": 1,
+    "moves_expected": 1,
+    "actions": [
+     "trial_video: reduce",
+     "parent_carousel: increase",
+     "free_guide: reduce"
+    ]
+   },
+   "agent": [
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 1,
+     "moves_expected": 1,
+     "actions": [
+      "parent_carousel: increase",
+      "trial_video: keep",
+      "free_guide: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 1,
+     "moves_expected": 1,
+     "actions": [
+      "parent_carousel: increase",
+      "trial_video: keep",
+      "free_guide: keep"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "b08",
+   "name": "Every ad loses after costs",
+   "leads_rule": {
+    "ok": false,
+    "wrong": [
+     "free_guide: increase"
+    ],
+    "moves_made": 1,
+    "moves_expected": 3
+   },
+   "gate_rule": {
+    "ok": false,
+    "wrong": [
+     "free_guide: reduce"
+    ],
+    "moves_made": 2,
+    "moves_expected": 3,
+    "actions": [
+     "trial_video: reduce",
+     "free_guide: reduce",
+     "parent_carousel: reduce"
+    ]
+   },
+   "agent": [
+    {
+     "grounded": true,
+     "first_pass": false,
+     "ok": false,
+     "wrong": [
+      "trial_video: keep"
+     ],
+     "moves_made": 2,
+     "moves_expected": 3,
+     "actions": [
+      "free_guide: pause",
+      "parent_carousel: reduce",
+      "trial_video: keep"
+     ]
+    },
+    {
+     "grounded": true,
+     "first_pass": false,
+     "ok": false,
+     "wrong": [
+      "free_guide: reduce",
+      "trial_video: keep"
+     ],
+     "moves_made": 1,
+     "moves_expected": 3,
+     "actions": [
+      "free_guide: reduce",
+      "parent_carousel: reduce",
+      "trial_video: keep"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "b09",
+   "name": "The lead count tells the truth",
+   "leads_rule": {
+    "ok": true,
+    "wrong": [],
+    "moves_made": 2,
+    "moves_expected": 2
+   },
+   "gate_rule": {
+    "ok": true,
+    "wrong": [],
+    "moves_made": 2,
+    "moves_expected": 2,
+    "actions": [
+     "trial_video: increase",
+     "holiday_static: reduce"
+    ]
+   },
+   "agent": [
+    {
+     "grounded": true,
+     "first_pass": false,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "trial_video: increase",
+      "holiday_static: reduce"
+     ]
+    },
+    {
+     "grounded": true,
+     "first_pass": false,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 2,
+     "moves_expected": 2,
+     "actions": [
+      "trial_video: increase",
+      "holiday_static: reduce"
+     ]
+    }
+   ]
+  },
+  {
+   "scenario": "b10",
+   "name": "Low ticket fees, thin big ticket, missing payments",
+   "leads_rule": {
+    "ok": false,
+    "wrong": [
+     "free_guide: increase",
+     "holiday_static: reduce"
+    ],
+    "moves_made": 0,
+    "moves_expected": 1
+   },
+   "gate_rule": {
+    "ok": true,
+    "wrong": [],
+    "moves_made": 1,
+    "moves_expected": 1,
+    "actions": [
+     "free_guide: reduce",
+     "holiday_static: keep",
+     "parent_carousel: keep",
+     "trial_video: increase"
+    ]
+   },
+   "agent": [
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 1,
+     "moves_expected": 1,
+     "actions": [
+      "trial_video: increase",
+      "free_guide: reduce",
+      "holiday_static: keep",
+      "parent_carousel: fix_tracking"
+     ]
+    },
+    {
+     "grounded": true,
+     "first_pass": true,
+     "ok": true,
+     "wrong": [],
+     "moves_made": 1,
+     "moves_expected": 1,
+     "actions": [
+      "trial_video: increase",
+      "free_guide: reduce",
+      "holiday_static: keep",
+      "parent_carousel: fix_tracking"
+     ]
+    }
+   ]
+  }
+ ]
+}

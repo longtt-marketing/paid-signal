@@ -79,9 +79,19 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     <h2 id="weeks">Budget decisions, on weeks with known answers</h2>
     <p class="sub">The demo shop has too few paid orders for any budget move, so five synthetic weeks (labelled SYNTHETIC wherever they appear; none of their payments is a PayPal capture) test the decision itself: enough orders on two ads, refunds hiding behind captures, a double payment, the ad with the most leads and the least money, and too few orders everywhere. Each week lists the right change per ad. The weeks are written so the right answer follows from paid orders; they test whether the agent finds it and keeps to the evidence rule. Try one on the dashboard: "Or try a synthetic week".</p>
     <div class="grid">
-      <div class="stat"><b>10 / 10</b><span>budget-agent runs with the right decision</span><small>Two runs per week, real Claude, same gate as the dashboard (rerun 31 Oct with the direction rule after costs). A run counts as right only if every change is allowed by the week's answer and every expected move is made: all 12 were.</small></div>
+      <div class="stat"><b>10 / 10</b><span>budget-agent runs with the right decision</span><small>Two runs per week, real Claude, same gate as the dashboard (rerun 31 Oct evening with the stricter direction rule). A run counts as right only if every change is allowed by the week's answer and every expected move is made: all 12 were.</small></div>
       <div class="stat"><b>0 / 10</b><span>runs that proposed a wrong budget move</span><small>No cut or raise on an ad without the evidence for it.</small></div>
       <div class="stat"><b class="bad">0 / 5</b><span>weeks the ad platform's view gets right</span><small>Moving budget toward the most leads per dollar. Paid Signal's own split by paid orders: 5 / 5.</small></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="blind">
+    <h2 id="blind">Blind test: answers we did not write</h2>
+    <p class="sub">The weeks above were written by us, so they cannot show our rule is right. A separate analyst agent that never read this code wrote synthetic weeks of its own, with its own answers from first principles: a paid order counts only if not refunded, not a double payment and not in an open dispute; contribution is paid revenue less a 30% cost and PayPal's fee; fewer than 3 orders is too thin to move. Prices from $19 to $199, refunds, disputes, break-even ads. <code>node scripts/eval-blind-scenarios.mjs</code>; the weeks and every answer with its arithmetic are in the repo.</p>
+    <div class="grid">
+      <div class="stat"><b>18 / 20</b><span>budget-agent runs fully right on the first set of 10 weeks</span><small>Every move allowed by the analyst and every must-move made; numbers grounded in 20 of 20 after one repair (12 first time). Moving budget by leads per dollar got 1 of 10 weeks right.</small></div>
+      <div class="stat"><b class="bad">8 / 10</b><span>weeks our own rule got right on that first set</span><small>It let a profitable ad below the average be cut, and a money-losing ad be kept as it was. Both rules were changed; on the same weeks the changed rule gets 9 of 10 (the analyst wants a pause, not a cut, for an ad returning 24 cents per dollar).</small></div>
+      <div class="stat"><b>12 / 12</b><span>runs fully right on a second set of 6 weeks, written after the change</span><small>All 18 must-moves made, none wrong; 11 of 12 grounded at the first submission. The first run of this set passed only 5 of 12 first time: the gate read PayPal's "2.99%" fee as money missing its dollar sign. That was the gate's bug, fixed and unit-tested, then the set was rerun. Leads per dollar: 1 of 6 weeks.</small></div>
     </div>
   </section>
 
@@ -109,7 +119,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
         <tr><td>Raw field name instead of plain words</td><td class="n">100 / 100</td></tr>
         <tr><td>Ad key instead of the ad's name</td><td class="n">100 / 100</td></tr>
         <tr><td>Budget moved on fewer than 3 paid orders</td><td class="n">100 / 100</td></tr>
-        <tr><td>Budget moved against the payments (raise an ad that does not cover its spend after the shop's costs and PayPal fees, or is below the average; cut one that does both), every such move on the five synthetic weeks; the 20 supported moves all pass</td><td class="n">12 / 12</td></tr>
+        <tr><td>Budget moved against the payments (raise an ad that does not cover its spend after the shop's costs and PayPal's fees, or is below the average; cut one that covers it; keep one that does not), every such move on the five synthetic weeks; the 15 supported moves all pass. This checks the gate enforces its rule; whether the rule is right is tested <a href="#blind">blind</a></td><td class="n">17 / 17</td></tr>
         <tr><td>Calls revenue minus ad spend "profit"</td><td class="n">100 / 100</td></tr>
         <tr><td>Money written without a dollar sign</td><td class="n">100 / 100</td></tr>
         <tr><td>Wrong claim about which payment was refunded <small>(added after a live proposal got a duplicate pair backwards)</small></td><td class="n">100 / 100</td></tr>
@@ -121,7 +131,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section aria-labelledby="agents">
     <h2 id="agents">The other agents</h2>
     <div class="grid">
-      <div class="stat"><b>9 / 10</b><span>live budget-agent runs passed the gate on the first submission; 10 / 10 after one repair</span><small>Rerun 31 Oct after the direction rule after costs; the one repair was "$36" written without its cents. Earlier that day a run passed 5 / 10: the prompt itself called the first of a duplicate pair the refunded one, which is not always so. Code now names the refunded capture.</small></div>
+      <div class="stat"><b>9 / 10</b><span>live budget-agent runs passed the gate on the first submission; 10 / 10 after one repair</span><small>Rerun 31 Oct evening with the stricter rule and PayPal's fees as charged; the one repair was an ad key written instead of the ad's name. Earlier that day a run passed 5 / 10: the prompt itself called the first of a duplicate pair the refunded one, which is not always so. Code now names the refunded capture.</small></div>
       <div class="stat"><b>3 of 7</b><span>unpaid invoices the chase agent chose to remind in its first live run</span><small>The three leads who had asked to book. It read five with get_invoice first, skipped four, and noticed one invoice did not match what the lead asked for.</small></div>
       <div class="stat"><b>4 / 4</b><span>bad sends the send agent's code refuses</span><small>Not a draft, wrong amount, wrong currency, or PayPal did not return the invoice. Unit-tested; the model cannot override it.</small></div>
       <div class="stat"><b>1 answer</b><span>from Claude as an outside MCP client</span><small>Named the cheapest ad, warned it rests on one order, and found the held duplicate. <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-run.md">Transcript</a>.</small></div>
@@ -131,10 +141,21 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section aria-labelledby="quality">
     <h2 id="quality">Tests and speed</h2>
     <div class="grid">
-      <div class="stat"><b>94</b><span>unit tests on money rules, the gate, the four agents, schema checks, MCP and every AG Studio tool name</span><small>CI on every push.</small></div>
-      <div class="stat"><b>14 + 20</b><span>browser checks and Postman assertions against the live app</span><small>The browser checks run daily.</small></div>
+      <div class="stat"><b>108</b><span>unit tests on money rules, the gate, the four agents, schema checks, MCP and every AG Studio tool name</span><small>CI on every push. One replays 11 PayPal events through the Worker's own webhook (a forged one, a partial refund and its replay, a full refund, a re-sent capture, a refunded double payment, disputes opened, won, lost and resolved with no clear outcome, a Google refund) and checks paid orders, revenue, what Meta and Google are told and which budget moves are allowed after each.</small></div>
+      <div class="stat"><b>17 + 20</b><span>browser checks and Postman assertions against the live app</span><small>The browser checks run daily, including the money trail of a real capture and a 404 for an unknown one.</small></div>
       <div class="stat"><b>2.3 s</b><span>to a usable dashboard on a throttled phone (4G, 4x CPU)</span><small>From 18 s with one bundle; measured with Playwright on 29 Oct. A cold first visit can take longer.</small></div>
     </div>
+  </section>
+
+  <section aria-labelledby="public">
+    <h2 id="public">Real public ads: how often do sign-ups and customers disagree?</h2>
+    <p class="sub">Real data, not ours: Bunq's Facebook ads, 17 to 30 August 2017, published on Kaggle under the ODC Public Domain licence (<a href="https://www.kaggle.com/datasets/madislemsalu/facebook-ad-campaign">source</a>, file and checksum in the repo). 1,143 ad rows, $58,705 of spend, 3,264 sign-ups and 1,079 that became active customers. Not PayPal data, no order values, no refunds: it tests the signal Paid Signal replaces, not Paid Signal, and claims no revenue gain. <code>node scripts/study-public-ads.mjs</code>.</p>
+    <div class="grid">
+      <div class="stat"><b>24.8%</b><span>of spend went to ads with sign-ups but no customer</span><small>Chance alone would give 21.8% if every ad's sign-ups became customers at the account's 33% rate, so most of it is noise; about 3 points is not.</small></div>
+      <div class="stat"><b>1 in 5</b><span>of the cheapest ads by cost per sign-up were not among the cheapest by cost per customer</span><small>Cheapest quarter of the 95 ads with 3+ customers: 21% (90% interval 13% to 33%). 17% of ad pairs were ordered the other way round.</small></div>
+      <div class="stat"><b>Not settled</b><span>whether ranking by customers picks next week's better ads</span><small>Ranked on the first week, scored on the second: by customers 61.6% of spend-weighted pairs right, by sign-ups 57.6%; the 90% interval of the difference runs from −5.5 to +15.5 points.</small></div>
+    </div>
+    <p class="sub">In this account, sign-ups were a fair stand-in for customers: their quality varied little from ad to ad. The paid signal matters where quality varies, as in the author's own test below, where the ads with the most clicks brought no orders. We report the result either way.</p>
   </section>
 
   <section aria-labelledby="real">

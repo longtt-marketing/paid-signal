@@ -17,7 +17,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 14.443
+   "seconds": 12.247
   },
   {
    "run": 2,
@@ -27,7 +27,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 12.832
+   "seconds": 11.558
   },
   {
    "run": 3,
@@ -37,7 +37,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.912
+   "seconds": 11.333
   },
   {
    "run": 4,
@@ -47,17 +47,20 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 11.775
+   "seconds": 12.205
   },
   {
    "run": 5,
    "grounded": true,
-   "first_pass": true,
+   "first_pass": false,
    "submissions": [
+    1,
     0
    ],
-   "rejected_for": [],
-   "seconds": 14.243
+   "rejected_for": [
+    "\"trial_video\" is an ad key; call the ad \"Trial class · video\"."
+   ],
+   "seconds": 19.723
   },
   {
    "run": 6,
@@ -67,7 +70,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 12.787
+   "seconds": 12.265
   },
   {
    "run": 7,
@@ -77,20 +80,17 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.963
+   "seconds": 12.286
   },
   {
    "run": 8,
    "grounded": true,
-   "first_pass": false,
+   "first_pass": true,
    "submissions": [
-    1,
     0
    ],
-   "rejected_for": [
-    "Number \"36\" is not in the tool results."
-   ],
-   "seconds": 19.275
+   "rejected_for": [],
+   "seconds": 12.365
   },
   {
    "run": 9,
@@ -100,7 +100,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.265
+   "seconds": 12.89
   },
   {
    "run": 10,
@@ -110,7 +110,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 11.081
+   "seconds": 12.398
   }
  ]
 }
