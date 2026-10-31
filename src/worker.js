@@ -362,8 +362,10 @@ const app = {
       if (url.pathname === "/api/capture" && request.method === "POST") {
         const { order_id } = await request.json();
         if (!/^[A-Z0-9]{10,24}$/.test(String(order_id))) return json({ error: "Bad order id." }, 400);
-        const order = await orders.captureOrder(order_id, `cap-${order_id}`);
-        const record = await recordCapture(env, order, request.headers.get("user-agent"));
+        let order = await orders.captureOrder(order_id, `cap-${order_id}`);
+        let record = await recordCapture(env, order, request.headers.get("user-agent"));
+        // a 2xx whose body lacked the capture (the SDK's schema check failed on it) is read back from PayPal before recording
+        if (!record) { order = await orders.getOrder(order_id); record = await recordCapture(env, order, request.headers.get("user-agent")); }
         const meta = await sendToMeta(env, url, record);
         return json({ status: order.status, payment: record, meta });
       }
@@ -422,6 +424,7 @@ const app = {
         const [payments, metas] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
         const metaBy = Object.fromEntries(metas.map((m) => [m.capture_id, m]));
         const want = url.searchParams.get("capture");
+        if (want && !payments.some((x) => x.capture_id === want)) return json({ error: `No payment ${want.slice(0, 40)} in the ledger.` }, 404);
         const p = payments.find((x) => x.capture_id === want) || payments.find((x) => metaBy[x.capture_id]?.ok && !metaBy[x.capture_id]?.backfill) || payments.at(-1);
         if (!p) return json({ error: "No payments yet." }, 404);
         let paypal = await env.LEDGER.get(`trailpp:${p.capture_id}`, "json");

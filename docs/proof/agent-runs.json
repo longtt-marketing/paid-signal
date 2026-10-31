@@ -17,7 +17,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.584
+   "seconds": 14.443
   },
   {
    "run": 2,
@@ -27,7 +27,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 14.209
+   "seconds": 12.832
   },
   {
    "run": 3,
@@ -37,7 +37,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.229
+   "seconds": 13.912
   },
   {
    "run": 4,
@@ -47,7 +47,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 13.686
+   "seconds": 11.775
   },
   {
    "run": 5,
@@ -57,7 +57,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 12.768
+   "seconds": 14.243
   },
   {
    "run": 6,
@@ -67,7 +67,7 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 14.538
+   "seconds": 12.787
   },
   {
    "run": 7,
@@ -77,17 +77,20 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 14.276
+   "seconds": 13.963
   },
   {
    "run": 8,
    "grounded": true,
-   "first_pass": true,
+   "first_pass": false,
    "submissions": [
+    1,
     0
    ],
-   "rejected_for": [],
-   "seconds": 13.784
+   "rejected_for": [
+    "Number \"36\" is not in the tool results."
+   ],
+   "seconds": 19.275
   },
   {
    "run": 9,
@@ -97,20 +100,17 @@
     0
    ],
    "rejected_for": [],
-   "seconds": 14.286
+   "seconds": 13.265
   },
   {
    "run": 10,
    "grounded": true,
-   "first_pass": false,
+   "first_pass": true,
    "submissions": [
-    1,
     0
    ],
-   "rejected_for": [
-    "\"profit\" is not known (product cost is not in the data); say \"paid revenue minus ad spend\"."
-   ],
-   "seconds": 20.882
+   "rejected_for": [],
+   "seconds": 11.081
   }
  ]
 }

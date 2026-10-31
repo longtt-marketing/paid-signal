@@ -315,3 +315,19 @@ test("owner request: it reaches the agent as the owner's words, trimmed, and the
   assert.ok(first.length < 320);
   assert.deepEqual([out.grounded, out.trace[0].problems, out.recommendation.actions[0].change], [true, 1, "keep"]);
 });
+
+test("disputes: an outcome that is not clearly the shop's win is never counted as one", () => {
+  for (const outcome of ["RESOLVED_WITH_PAYOUT", "NONE", "SOMETHING_NEW", null]) assert.equal(disputeState(pay({ dispute: { status: "RESOLVED", outcome } })), "unclear");
+  for (const outcome of ["CANCELED_BY_BUYER", "DENIED"]) assert.equal(disputeState(pay({ dispute: { status: "RESOLVED", outcome } })), "won");
+  const r = reconcile([{ ad: "trial", spend_cents: 10000, leads: 4 }], [pay({ dispute: { status: "RESOLVED", outcome: "RESOLVED_WITH_PAYOUT" } })]).ads[0];
+  assert.deepEqual([r.paid, r.disputed], [0, 1]);
+});
+
+import { afterCostsPerDollar, SHOP_COSTS } from "../src/ledger.js";
+test("direction: an ad above $1 per $1 in paid revenue but below it after costs and fees may not be raised", () => {
+  // 3 orders of $49 on $130: $1.13 per $1 in paid revenue, $0.73 after 30% cost and 2.99% + $0.49 per order
+  const rec = reconcile([{ ad: "a", spend_cents: 13000, leads: 9 }], [1, 2, 3].map((n) => pay({ capture_id: `A${n}`, ad: "a", payer_email_sha256: `p${n}` })));
+  const row = rec.ads[0], m = supportedMoves(rec).a;
+  assert.ok(Math.abs(afterCostsPerDollar(row) - (14700 * (1 - SHOP_COSTS.cost_share) - 14700 * SHOP_COSTS.fee_rate - 3 * 49) / 13000) < 1e-12);
+  assert.deepEqual([m.per_dollar > 1, m.after_costs < 1, m.increase, m.reduce], [true, true, false, true]);
+});

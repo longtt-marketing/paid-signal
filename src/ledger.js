@@ -49,7 +49,10 @@ export function disputeState(p) {
   const d = p.dispute;
   if (!d) return null;
   if (d.status !== "RESOLVED") return "open";
-  return /BUYER_FAVOUR|ACCEPTED/.test(String(d.outcome || "")) ? "lost" : "won";
+  const o = String(d.outcome || "");
+  if (/^(RESOLVED_BUYER_FAVOUR|ACCEPTED)$/.test(o)) return "lost";
+  if (/^(RESOLVED_SELLER_FAVOUR|CANCELED_BY_BUYER|DENIED)$/.test(o)) return "won";
+  return "unclear"; // RESOLVED_WITH_PAYOUT, NONE or anything new: never counted as a win, held like an open one
 }
 
 /**
@@ -70,7 +73,7 @@ export function reconcile(adRows, payments) {
     const ds = disputeState(p);
     if (ds === "lost") { row.refunded++; continue; }
     if (back >= gross) row.refunded++;
-    else if (ds === "open") { row.disputed++; row.disputed_cents += gross - back; continue; }
+    else if (ds === "open" || ds === "unclear") { row.disputed++; row.disputed_cents += gross - back; continue; }
     else if (held.has(p.capture_id)) { row.held++; row.held_cents += gross - back; continue; }
     else row.paid++;
     row.revenue_cents += Math.max(0, gross - back);
@@ -111,7 +114,7 @@ export function quotableNumbers(rec) {
     if (r.roas !== null) add(r.roas.toFixed(2));
   }
   // the direction rule's average (supportedMoves), which the agent may quote when it explains a move or a refusal
-  for (const m of Object.values(supportedMoves(rec))) if (m.average !== null) add(m.average.toFixed(2));
+  for (const m of Object.values(supportedMoves(rec))) { add(m.after_costs.toFixed(2)); if (m.average !== null) add(m.average.toFixed(2)); }
   // the small-sample read the agent is shown (paybackOdds): chance, range, spend that settles it, the average paid order
   const odds = paybackOdds(rec);
   if (odds.average_paid_order_cents !== null) add(dollars(odds.average_paid_order_cents));
@@ -190,24 +193,35 @@ export function paybackOdds(rec, sure = 0.9, priorOrders = 1) {
 }
 
 /**
+ * The shop's own costs, which the budget rule takes off paid revenue before comparing it with ad spend. The demo shop is
+ * fictional, so these are its stated assumptions: what delivering a class costs as a share of its price, and PayPal's
+ * standard checkout fee (the live captures show $1.97 on $49.00, close to 2.99% + $0.49). A real shop sets its own.
+ */
+export const SHOP_COSTS = { cost_share: 0.3, fee_rate: 0.0299, fee_fixed_cents: 49 };
+
+/** Paid revenue left after the shop's costs and PayPal's fees, per $1 of the ad's spend. */
+export const afterCostsPerDollar = (r, c = SHOP_COSTS) =>
+  r.spend_cents ? (r.revenue_cents * (1 - c.cost_share) - r.revenue_cents * c.fee_rate - r.paid * c.fee_fixed_cents) / r.spend_cents : 0;
+
+/**
  * Which budget moves the payments support, per ad with at least `minPaid` paid orders (the others may only be kept).
- * Raise an ad only if it returns at least $1 of paid revenue per $1 of ad spend and at least the average of those ads;
- * reduce or pause one below $1, or below that average. Paid revenue is not profit (product cost is unknown), so $1 per $1
- * is a floor, not a target. The gate refuses any move against this, whatever words justify it.
+ * Raise an ad only if what is left of its paid revenue after the shop's costs and PayPal's fees covers its ad spend ($1 per
+ * $1) and its paid revenue per $1 is at least the average of those ads; reduce or pause one that does not cover its spend
+ * after costs, or is below that average. The gate refuses any move against this, whatever words justify it.
  * @param {ReturnType<typeof reconcile>} rec
  */
-export function supportedMoves(rec, minPaid = 3) {
+export function supportedMoves(rec, minPaid = 3, costs = SHOP_COSTS) {
   const ready = rec.ads.filter((r) => r.paid >= minPaid && r.spend_cents > 0);
   const avg = ready.length >= 2 ? ready.reduce((n, r) => n + r.revenue_cents / r.spend_cents, 0) / ready.length : null;
-  /** @type {Record<string, { per_dollar: number, average: number | null, increase: boolean, reduce: boolean, why: string }>} */
+  /** @type {Record<string, { per_dollar: number, after_costs: number, average: number | null, increase: boolean, reduce: boolean, why: string }>} */
   const out = {};
   for (const r of ready) {
-    const pd = r.revenue_cents / r.spend_cents;
-    const increase = pd >= 1 && (avg === null || pd >= avg - 1e-9);
-    const reduce = pd < 1 || (avg !== null && pd < avg - 1e-9);
+    const pd = r.revenue_cents / r.spend_cents, net = afterCostsPerDollar(r, costs);
+    const increase = net >= 1 && (avg === null || pd >= avg - 1e-9);
+    const reduce = net < 1 || (avg !== null && pd < avg - 1e-9);
     const vs = avg === null ? "" : `, against an average of $${avg.toFixed(2)} for ads with ${minPaid}+ paid orders`;
-    out[r.ad] = { per_dollar: pd, average: avg, increase, reduce,
-      why: `$${pd.toFixed(2)} of paid revenue per $1 of ad spend${vs}` };
+    out[r.ad] = { per_dollar: pd, after_costs: net, average: avg, increase, reduce,
+      why: `$${pd.toFixed(2)} of paid revenue per $1 of ad spend, $${net.toFixed(2)} after the shop's costs and PayPal fees${vs}` };
   }
   return out;
 }
@@ -244,7 +258,7 @@ export async function metaEvents(payments, { sourceUrl, hold } = {}) {
     const gross = cents(p.amount), back = cents(p.refunded_amount || 0);
     if (back >= gross) { held.push({ capture_id: p.capture_id, reason: "fully refunded" }); continue; }
     const ds = disputeState(p);
-    if (ds === "open" || ds === "lost") { held.push({ capture_id: p.capture_id, reason: ds === "open" ? "open PayPal dispute" : "dispute lost: the buyer was refunded" }); continue; }
+    if (ds === "open" || ds === "unclear" || ds === "lost") { held.push({ capture_id: p.capture_id, reason: ds === "lost" ? "dispute lost: the buyer was refunded" : ds === "open" ? "open PayPal dispute" : "dispute resolved without a clear outcome" }); continue; }
     // PayPal still confirms the money, but with no ad click there is no ad to teach
     if (!p.click_id) { held.push({ capture_id: p.capture_id, reason: "no ad click" }); continue; }
     if (hold?.has(p.capture_id)) { held.push({ capture_id: p.capture_id, reason: "possible duplicate" }); continue; }
@@ -281,7 +295,7 @@ const gTime = (iso) => String(iso).replace("T", " ").replace(/\.\d+/, "").replac
 export function googleRows(payments, conversionName = "PayPal paid order", { hold } = {}) {
   const conversions = [], adjustments = [];
   for (const p of payments) {
-    if (p.source !== "g" || !p.click_id || clickAge(p) > 90 * DAY || hold?.has(p.capture_id) || disputeState(p) === "open") continue;
+    if (p.source !== "g" || !p.click_id || clickAge(p) > 90 * DAY || hold?.has(p.capture_id) || ["open", "unclear"].includes(disputeState(p))) continue;
     const gross = cents(p.amount), back = disputeState(p) === "lost" ? gross : cents(p.refunded_amount || 0);
     conversions.push({ gclid: p.click_id, conversion_name: conversionName, conversion_time: gTime(p.captured_at), value: dollars(gross), currency: p.currency || "USD", order_id: p.capture_id });
     if (back >= gross) adjustments.push({ order_id: p.capture_id, conversion_name: conversionName, adjustment_type: "RETRACTION", adjustment_time: gTime(p.refunded_at || p.dispute?.updated_at || p.captured_at) });

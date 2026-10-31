@@ -32,7 +32,7 @@ async function show(id) {
       Number(p.refunded_amount) > 0 && ["Refunded", `${money(p.refunded_amount)}${p.refunded_at ? ` · ${when(p.refunded_at)}` : ""}`],
       p.dispute && ["Dispute", `${p.dispute.status}${p.dispute.outcome ? ` · ${p.dispute.outcome}` : ""} (${p.dispute_state})`],
       p.held_as_duplicate && ["Held", "possible duplicate: same payer, same ad, minutes apart"]]),
-      $("p", { className: "note", textContent: `Read from PayPal ${pp?.read_at ? when(pp.read_at) : ""} with ${pp?.read || "the PayPal API"}. ${inv ? `The ledger recorded it ${when(p.captured_at)}, when PayPal's invoice record showed it paid.` : `The ledger recorded it ${when(p.captured_at)} from the capture response and a signature-verified webhook.`}` })];
+      $("p", { className: "note", textContent: `Read from PayPal ${pp?.read_at ? when(pp.read_at) : ""} with ${pp?.read || "the PayPal API"} (PayPal is asked again at most every 10 minutes). ${inv ? `The ledger recorded it ${when(p.captured_at)}, when PayPal's invoice record showed it paid.` : `The ledger recorded it ${when(p.captured_at)} from the capture response and a signature-verified webhook.`}` })];
   steps.push(step("2", "paid", "PayPal confirms the money", p.via === "invoice" ? "PayPal invoice, paid after a chat" : "PayPal Checkout, captured by the server SDK", ppBody,
     gap(p.status === "COMPLETED" && !(Number(p.refunded_amount) >= Number(p.amount)) && p.dispute_state !== "open" && p.dispute_state !== "lost" ? "paid" : "not counted", p.status === "COMPLETED" ? "" : "bad")));
 

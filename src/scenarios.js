@@ -84,7 +84,8 @@ export const scenario = (id) => SCENARIOS.find((s) => s.id === id) || null;
 export function grade(s, actions) {
   const wrong = actions.filter((a) => s.right[a.ad] && !s.right[a.ad].includes(a.change)).map((a) => `${a.ad}: ${a.change}`);
   const made = s.moves.filter(([ad, change]) => actions.some((a) => a.ad === ad && a.change === change));
-  return { ok: wrong.length === 0 && (s.moves.length === 0 || made.length > 0), wrong, moves_made: made.length, moves_expected: s.moves.length };
+  // right only if nothing contradicts the week's answer and every move it expects was made
+  return { ok: wrong.length === 0 && made.length === s.moves.length, wrong, moves_made: made.length, moves_expected: s.moves.length };
 }
 
 /** What an ad platform's own optimiser would do: move budget toward the most leads per dollar, away from the fewest. */

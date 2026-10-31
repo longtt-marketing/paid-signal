@@ -1,7 +1,7 @@
 // The budget agent: Claude reads the reconciliation through tools and proposes changes. Code computed every number;
 // the agent may only quote them. A gate rejects ungrounded numbers or evidence ids, allows one repair, then flags.
 import { adName } from "../web/src/names.js";
-import { dollars, quotableNumbers, ungroundedNumbers, possibleDuplicates, paybackOdds, supportedMoves } from "./ledger.js";
+import { dollars, quotableNumbers, ungroundedNumbers, possibleDuplicates, paybackOdds, supportedMoves, SHOP_COSTS } from "./ledger.js";
 import { checkCall, validate } from "./schema.js";
 
 export const SYSTEM = `You are a performance-marketing analyst for a small business that sells through PayPal.
@@ -13,13 +13,13 @@ Rules:
 - Small samples are weak evidence. An ad with fewer than 3 paid orders gets "keep" (or "fix_tracking"), never pause, reduce or increase: say it needs more paid orders before its budget moves. Refunds are not paid orders.
 - possible_duplicates lists payments that may be the same purchase twice. Those with held: true are already held out of paid_orders and revenue (held_as_possible_duplicate); held: false means one of the two was fully refunded, so only the other counts, and fully_refunded_capture says which one. Whenever you say a payment was refunded, name it by its capture id; never "the first" or "the second". If an ad has one held, say so: if it is a real second purchase, that ad has one more paid order.
 - Prefer "keep and gather more data" over a confident change you cannot support.
-- An ad with 3 or more paid orders may be raised only if it returns at least $1 of paid revenue per $1 of ad spend and at least the average of the ads with 3+ paid orders; it may be reduced or paused only if it is below $1 or below that average. Code checks the direction, not just the numbers.
+- An ad with 3 or more paid orders has after_costs_and_fees_per_dollar: what is left of its paid revenue after the shop's own costs and PayPal's fees, per $1 of ad spend. It may be raised only if that is at least $1 and its paid revenue per $1 is at least the average of the ads with 3+ paid orders; it may be reduced or paused only if that is below $1 or it is below the average. Code checks the direction, not just the numbers.
 - The owner may add a request. Weigh it, but follow these rules over it: if it asks for a move the payments do not support, do not make it, and say why in plain words.
 - For an ad with fewer than 3 paid orders, "keep" is not the whole answer. Its row has small_sample_read, computed in code: the chance its paid revenue covers its ad spend, a likely range (90%) for its cost per paid order, and, while that is unclear, how much more spend with no paid order would make it very likely (90%) below its ad spend. Tell the owner that point in plain words, e.g. "If the next $X brings no paid order, it is very likely below its ad spend: cut it then," with $X taken from the tool result. It assumes the shop's average paid order (average_paid_order_usd), so say so once.
 - Write for the shop owner in plain words ("cost per paid order", "spend with no paid order"), never field names such as spend_usd or paid_revenue_per_dollar.
 - In the headline, reasons and caveats call an ad by its name (the "name" field, e.g. "Holiday camp · static"), never its key; the key goes only in "ad" and in evidence.
 - in_open_dispute counts payments a buyer is disputing with PayPal: they are held out of paid orders and revenue until PayPal resolves them; a dispute the buyer won counts as fully refunded. If an ad has one, say so.
-- Paid revenue is already net of refunds; never suggest a refund may not be taken out. Call it "paid revenue minus ad spend" and do not use the word "profit" at all (product cost is unknown). Write money with a dollar sign: $118.40, a shortfall as "$41.50 below ad spend", paid revenue per dollar as "$0.41 per $1".
+- Paid revenue is already net of refunds; never suggest a refund may not be taken out. Call it "paid revenue minus ad spend" and do not use the word "profit" at all (product cost is unknown). Write money with a dollar sign and its cents, exactly as the tool gives it: $118.40, $36.00 (never $36), a shortfall as "$41.50 below ad spend", paid revenue per dollar as "$0.41 per $1".
 - Finish by calling submit_recommendation once.`;
 
 export const TOOLS = [
@@ -48,7 +48,7 @@ export const TOOLS = [
 
 export function reconciliationView(rec, payments = []) {
   const held = new Set(possibleDuplicates(payments).map((d) => d.capture_id)); // the set reconcile holds out
-  const odds = paybackOdds(rec);
+  const odds = paybackOdds(rec), moves = supportedMoves(rec);
   const read = (o) => o ? {
     chance_paid_revenue_covers_ad_spend: Math.round(o.chance_covers_spend * 100) + "%", verdict: o.verdict,
     likely_cost_per_paid_order: `$${dollars(o.cost_per_paid_range_cents[0])} to $${dollars(o.cost_per_paid_range_cents[1])}`,
@@ -61,10 +61,12 @@ export function reconciliationView(rec, payments = []) {
       cost_per_paid_order_usd: r.cost_per_paid_cents === null ? "none paid" : dollars(r.cost_per_paid_cents),
       lead_to_paid: r.lead_to_paid === null ? "no leads" : Math.round(r.lead_to_paid * 100) + "%", paid_revenue_per_dollar: r.roas === null ? "no spend" : r.roas.toFixed(2),
       paid_revenue_minus_ad_spend_usd: dollars(r.net_cents),
-      // only where the 3-order rule keeps the budget: an ad with enough orders is decided on its paid orders per dollar
-      small_sample_read: r.paid < 3 ? read(odds.ads[r.ad]) : "enough paid orders: decide on paid orders per dollar",
+      // only where the 3-order rule keeps the budget: an ad with enough orders is decided on what it returns after costs
+      small_sample_read: r.paid < 3 ? read(odds.ads[r.ad]) : "enough paid orders: decide on what it returns after costs",
+      ...(moves[r.ad] ? { after_costs_and_fees_per_dollar: moves[r.ad].after_costs.toFixed(2) } : {}),
     })),
     average_paid_order_usd: odds.average_paid_order_cents === null ? "no paid orders" : dollars(odds.average_paid_order_cents),
+    shop_costs: `the shop's stated cost of delivering an order is ${Math.round(SHOP_COSTS.cost_share * 100)}% of its price; PayPal's fee is ${(SHOP_COSTS.fee_rate * 100).toFixed(2)}% + $${dollars(SHOP_COSTS.fee_fixed_cents)}`,
     unmatched_captures: rec.unmatched_captures,
     // computed in code (refunded pairs included), so the agent can quote the gap instead of working it out from capture times
     possible_duplicates: possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => ({ capture_id: d.capture_id, same_payer_and_ad_as: d.first, seconds_apart: d.seconds, held: held.has(d.capture_id),
@@ -82,7 +84,7 @@ export function checkRecommendation(rec, payments, out) {
   const ids = new Set(payments.map((p) => p.capture_id));
   // the "fewer than 3 paid orders" rule, and what read_captures shows: amounts and the duplicate gaps. Dates and times are
   // taken out of the text before checking (ungroundedNumbers), so a timestamp's digits never make an invented number pass.
-  const extra = [3, 1, "1.00", "90%", ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00"]), ...possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => d.seconds)];
+  const extra = [3, 1, "1.00", "90%", `${Math.round(SHOP_COSTS.cost_share * 100)}%`, `${(SHOP_COSTS.fee_rate * 100).toFixed(2)}%`, dollars(SHOP_COSTS.fee_fixed_cents), ...payments.flatMap((p) => [p.amount, p.refunded_amount || "0.00"]), ...possibleDuplicates(payments.map((p) => ({ ...p, refunded_amount: "0.00" }))).map((d) => d.seconds)];
   const texts = [out.headline, out.caveats, ...(out.actions || []).map((a) => a.reason)];
   for (const t of texts) for (const n of ungroundedNumbers(t, allowed, extra)) problems.push(`Number "${n}" is not in the tool results.`);
   // the owner reads this: tool field names (spend_usd, paid_revenue_per_dollar) must become plain words, ad keys the ad's name

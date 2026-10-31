@@ -18,9 +18,11 @@ test("synthetic weeks: the paid-orders split finds every right answer; the leads
   }
 });
 
-test("grading: a budget move on an ad without the evidence is wrong; keeping everything misses a warranted move", () => {
+test("grading: a budget move on an ad without the evidence is wrong; a week is right only with every expected move", () => {
   const s = SCENARIOS.find((x) => x.id === "week4");
   assert.deepEqual(grade(s, [{ ad: "holiday_static", change: "pause" }]).wrong, ["holiday_static: pause"]);
   assert.equal(grade(s, [{ ad: "trial_video", change: "keep" }]).ok, false);
-  assert.equal(grade(s, [{ ad: "trial_video", change: "increase" }, { ad: "free_guide", change: "keep" }]).ok, true);
+  // a week that expects two moves is right only with both: one of two is a miss, not a pass
+  assert.equal(grade(s, [{ ad: "trial_video", change: "increase" }, { ad: "free_guide", change: "keep" }]).ok, false);
+  assert.equal(grade(s, [{ ad: "trial_video", change: "increase" }, { ad: "free_guide", change: "reduce" }]).ok, true);
 });

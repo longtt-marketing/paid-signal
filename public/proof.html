@@ -79,7 +79,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     <h2 id="weeks">Budget decisions, on weeks with known answers</h2>
     <p class="sub">The demo shop has too few paid orders for any budget move, so five synthetic weeks (labelled SYNTHETIC wherever they appear; none of their payments is a PayPal capture) test the decision itself: enough orders on two ads, refunds hiding behind captures, a double payment, the ad with the most leads and the least money, and too few orders everywhere. Each week lists the right change per ad. The weeks are written so the right answer follows from paid orders; they test whether the agent finds it and keeps to the evidence rule. Try one on the dashboard: "Or try a synthetic week".</p>
     <div class="grid">
-      <div class="stat"><b>10 / 10</b><span>budget-agent runs with the right decision</span><small>Two runs per week, real Claude, same gate as the dashboard (rerun 31 Oct with the direction rule). Every change allowed by the week's answer, and all 12 expected moves made.</small></div>
+      <div class="stat"><b>10 / 10</b><span>budget-agent runs with the right decision</span><small>Two runs per week, real Claude, same gate as the dashboard (rerun 31 Oct with the direction rule after costs). A run counts as right only if every change is allowed by the week's answer and every expected move is made: all 12 were.</small></div>
       <div class="stat"><b>0 / 10</b><span>runs that proposed a wrong budget move</span><small>No cut or raise on an ad without the evidence for it.</small></div>
       <div class="stat"><b class="bad">0 / 5</b><span>weeks the ad platform's view gets right</span><small>Moving budget toward the most leads per dollar. Paid Signal's own split by paid orders: 5 / 5.</small></div>
     </div>
@@ -109,7 +109,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
         <tr><td>Raw field name instead of plain words</td><td class="n">100 / 100</td></tr>
         <tr><td>Ad key instead of the ad's name</td><td class="n">100 / 100</td></tr>
         <tr><td>Budget moved on fewer than 3 paid orders</td><td class="n">100 / 100</td></tr>
-        <tr><td>Budget moved against the payments (raise an ad below $1 per $1 or below the average; cut one above), every such move on the five synthetic weeks; the 20 supported moves all pass</td><td class="n">12 / 12</td></tr>
+        <tr><td>Budget moved against the payments (raise an ad that does not cover its spend after the shop's costs and PayPal fees, or is below the average; cut one that does both), every such move on the five synthetic weeks; the 20 supported moves all pass</td><td class="n">12 / 12</td></tr>
         <tr><td>Calls revenue minus ad spend "profit"</td><td class="n">100 / 100</td></tr>
         <tr><td>Money written without a dollar sign</td><td class="n">100 / 100</td></tr>
         <tr><td>Wrong claim about which payment was refunded <small>(added after a live proposal got a duplicate pair backwards)</small></td><td class="n">100 / 100</td></tr>
@@ -121,7 +121,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section aria-labelledby="agents">
     <h2 id="agents">The other agents</h2>
     <div class="grid">
-      <div class="stat"><b>9 / 10</b><span>live budget-agent runs passed the gate on the first submission; 10 / 10 after one repair</span><small>Rerun 31 Oct after the direction rule; the one repair was the word "profit". Earlier that day a run passed 5 / 10: the prompt itself called the first of a duplicate pair the refunded one, which is not always so. Code now names the refunded capture.</small></div>
+      <div class="stat"><b>9 / 10</b><span>live budget-agent runs passed the gate on the first submission; 10 / 10 after one repair</span><small>Rerun 31 Oct after the direction rule after costs; the one repair was "$36" written without its cents. Earlier that day a run passed 5 / 10: the prompt itself called the first of a duplicate pair the refunded one, which is not always so. Code now names the refunded capture.</small></div>
       <div class="stat"><b>3 of 7</b><span>unpaid invoices the chase agent chose to remind in its first live run</span><small>The three leads who had asked to book. It read five with get_invoice first, skipped four, and noticed one invoice did not match what the lead asked for.</small></div>
       <div class="stat"><b>4 / 4</b><span>bad sends the send agent's code refuses</span><small>Not a draft, wrong amount, wrong currency, or PayPal did not return the invoice. Unit-tested; the model cannot override it.</small></div>
       <div class="stat"><b>1 answer</b><span>from Claude as an outside MCP client</span><small>Named the cheapest ad, warned it rests on one order, and found the held duplicate. <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-run.md">Transcript</a>.</small></div>
@@ -131,7 +131,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section aria-labelledby="quality">
     <h2 id="quality">Tests and speed</h2>
     <div class="grid">
-      <div class="stat"><b>92</b><span>unit tests on money rules, the gate, the four agents, schema checks, MCP and every AG Studio tool name</span><small>CI on every push.</small></div>
+      <div class="stat"><b>94</b><span>unit tests on money rules, the gate, the four agents, schema checks, MCP and every AG Studio tool name</span><small>CI on every push.</small></div>
       <div class="stat"><b>14 + 20</b><span>browser checks and Postman assertions against the live app</span><small>The browser checks run daily.</small></div>
       <div class="stat"><b>2.3 s</b><span>to a usable dashboard on a throttled phone (4G, 4x CPU)</span><small>From 18 s with one bundle; measured with Playwright on 29 Oct. A cold first visit can take longer.</small></div>
     </div>

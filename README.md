@@ -27,7 +27,7 @@ Paid Signal closes that loop on the PayPal developer platform:
    For sent invoices still unpaid, a chase agent (Claude with the Agent Toolkit) reads each, chooses whom to remind and writes
    the note; `send_invoice_reminder` sends it, within code limits. Budget changes and refunds stay clicks a person makes.
 4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
-   by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund becomes a Google retraction or restatement and holds the Meta event back;
+   by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund becomes a Google retraction or restatement; a Meta event not yet sent is held back, and one already sent stays (Meta's Conversions API has no retraction), so the refund is taken off here;
    a possible duplicate payment is held back from both, and is not counted as a paid order, until it is refunded.
    Meta gets the paid orders that came from a Meta click (fbclid) or from a chat lead's invoice; a buyer who came from a
    Google click (gclid) goes to Google only, so Meta cannot take credit for it. The demo shows
@@ -87,8 +87,9 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
   paid order that would make "below its ad spend" 90% likely (Gamma-Poisson, prior worth one order at the shop's own cost
   per paid order). The agent quotes them through the gate; the dashboard shows them as "Covers its spend?".
 - **Direction of a move** (`supportedMoves` in `src/ledger.js`): on an ad with 3+ paid orders the gate refuses a raise unless
-  it returns at least $1 of paid revenue per $1 of spend and at least the average of those ads, and a cut unless it is
-  below either. The owner can add a request (`instruction` on `/api/agent`); the agent weighs it, and the gate still refuses a
+  what its paid revenue leaves after the shop's costs and PayPal's fees (`SHOP_COSTS`: the fictional shop's stated 30% cost
+  of delivery, 2.99% + $0.49 per order) covers its spend and it is at or above the average of those ads, and a cut unless it
+  fails either. The owner can add a request (`instruction` on `/api/agent`); the agent weighs it, and the gate still refuses a
   move the payments do not support.
 - **Budget agent inside AG Studio** (`web/src/agentTools.js`): a custom Studio agent. Studio's lead agent delegates budget
   questions to it; it reads the ledger, submits through the same gate (`/api/agent/check`), and delegates to Studio's
@@ -141,7 +142,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 92 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
+npm test                              # 94 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy
@@ -155,7 +156,7 @@ npx wrangler dev                      # or: npx wrangler deploy
 - This is a public sandbox demo: refunds, invoice drafts and assistant turns are open to visitors and limited per
   visitor and per day. The AG Studio trial key is a front-end key and is served to the browser.
 - Matching relies on the click id reaching checkout. PayPal verifies the payment, not the click. Payments without one are shown as unmatched rather than guessed.
-- The evidence gate checks that numbers and ids exist, not that the reasoning is right. Approvals are logged on the server but, in this public demo, not tied to an owner login.
+- The evidence gate checks that numbers and ids exist and that a budget move goes the way the payments point (after the fictional shop's stated costs and PayPal fees), not every step of the reasoning; that rule is itself a choice, tested on synthetic weeks, not proven on a real shop. Approvals are demo approvals: logged on the server but, in this public demo, not tied to an owner login.
 - Small numbers are weak evidence; the agent is told to say so, and does.
 - Transaction Search reports how current it is (the sandbox refreshes about daily); payments newer than that are listed as pending, not missing.
 

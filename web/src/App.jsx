@@ -199,7 +199,7 @@ export default function App({ first = null }) {
     const out = [];
     for (const p of state?.payments || []) {
       out.push({ at: p.captured_at, kind: "paid", text: `${p.ad && p.ad !== "direct" ? short(p.ad) : "No ad click"} paid ${money(p.amount)}${p.via === "invoice" ? " · invoice" : p.source === "g" ? " · Google click" : p.source === "fb" ? " · Meta click" : ""}` });
-      if (Number(p.refunded_amount) > 0) out.push({ at: p.refunded_at || p.captured_at, kind: "refund", text: `${short(p.ad)} refunded ${money(p.refunded_amount)}${p.source === "g" ? " · Google " + (Number(p.refunded_amount) >= Number(p.amount) ? "retraction" : "restatement") : " · Meta event held"}` });
+      if (Number(p.refunded_amount) > 0) out.push({ at: p.refunded_at || p.captured_at, kind: "refund", text: `${short(p.ad)} refunded ${money(p.refunded_amount)}${p.source === "g" ? " · Google " + (Number(p.refunded_amount) >= Number(p.amount) ? "retraction" : "restatement") : " · taken off here; Meta has no retraction"}` });
     }
     for (const i of invoices) {
       if (i.sent_at) out.push({ at: i.sent_at, kind: "agent", text: `${i.sent_by ? "Agent sent" : "Sent"} invoice · ${i.lead.replace(" (fictional)", "")}` });

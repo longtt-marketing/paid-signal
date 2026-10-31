@@ -59,7 +59,7 @@
      "moves_expected": 1,
      "actions": [
       "parent_carousel: increase",
-      "free_guide: keep",
+      "free_guide: reduce",
       "trial_video: keep"
      ]
     },
@@ -71,7 +71,7 @@
      "moves_expected": 1,
      "actions": [
       "parent_carousel: increase",
-      "free_guide: keep",
+      "free_guide: reduce",
       "trial_video: keep"
      ]
     }
@@ -103,7 +103,7 @@
      "moves_expected": 1,
      "actions": [
       "trial_video: increase",
-      "parent_carousel: keep",
+      "parent_carousel: reduce",
       "holiday_static: keep"
      ]
     }
