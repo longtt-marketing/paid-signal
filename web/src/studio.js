@@ -88,7 +88,7 @@ export const initialReport = {
       widgets: {
         leads: kpi("Leads (ads)", sum("ads.leads")),
         payers: kpi("Paid orders", sum("ads.payers")),
-        rpd: kpi("Paid revenue per $1 of ads", { id: "revenuePerDollar" }),
+        rpd: kpi("Revenue per $1 of ads", { id: "revenuePerDollar" }),
         nopayer: kpi("Ad spend per paid order", { id: "costPerPayer" }),
         claim: { type: "claim-vs-confirmed", dataMapping: { category: [{ id: "ads.name" }], claimed: [sum("ads.leads")], confirmed: [sum("ads.payers")] }, format: { title: { enabled: true, text: "What each ad claims vs what PayPal confirms" } } },
         table: {

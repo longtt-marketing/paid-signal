@@ -4,6 +4,10 @@ import { paypal } from "./paypal.js";
 import { ordersSdk } from "./paypalSdk.js";
 import { handleMcp } from "./mcp.js";
 import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates, proposeSplit, paybackOdds, disputeState, supportedMoves } from "./ledger.js";
+// PayPal reports refund times in its own zone (e.g. -07:00); the ledger keeps every time in UTC so they sort at a glance
+// the owner request the dashboard sends ("Tell it to raise the ad with the most leads"); /judge replays its latest run
+const OWNER_ASK = "Raise the free guide's budget: it brings the most leads.";
+const utc = (t) => { const d = new Date(t || Date.now()); return isNaN(d) ? new Date().toISOString() : d.toISOString(); };
 import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
 import { runSendAgent, SEND_SYSTEM, SEND_TOOLS } from "./sendAgent.js";
 import { parseCsv, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS } from "./revenue.js";
@@ -170,7 +174,7 @@ async function applyRefund(env, captureId, refundedValue, when) {
   const total = (Math.round(Number(rec.refunded_amount || 0) * 100) + Math.round(Number(refundedValue) * 100)) / 100;
   rec.refunded_amount = Math.min(total, Number(rec.amount)).toFixed(2);
   rec.status = Number(rec.refunded_amount) >= Number(rec.amount) ? "REFUNDED" : "PARTIALLY_REFUNDED";
-  rec.refunded_at = when || new Date().toISOString();
+  rec.refunded_at = utc(when);
   await env.LEDGER.put(`pay:${captureId}`, JSON.stringify(rec)); await forget("pay:");
   return rec;
 }
@@ -184,7 +188,7 @@ async function firstPaint(env, url, page) {
     const html = `<div class="app"><header class="top"><div class="top-in"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a></div></header>`
       + `<main class="desk"><section class="hero"><div class="hero-copy"><h1 class="sr">Ads report ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}.</h1><p class="kicker">Kite Robotics Club · demo ad export · PayPal sandbox</p>`
       + `<div class="duo"><div><b class="n claimed">${t.leads}</b><span>leads the ads report</span></div><div><b class="n paid">${t.paid}</b><span>paid ${t.paid === 1 ? "order" : "orders"} PayPal confirms</span></div></div>`
-      + `<p class="pitch">Ad platforms learn from the ${t.leads}. Paid Signal sends them the ${t.paid}, straight from PayPal.</p></div>`
+      + `<p class="pitch">Ad platforms learn from the ${t.leads}. Paid Signal sends them the ${t.paid}, straight from PayPal.</p><div class="hero-actions"><a class="cta" href="/judge">Why the ad with the most leads gets no raise</a><a class="hero-link" href="/trail">Follow one PayPal payment →</a></div></div>`
       + `<div class="hero-bars"><p class="ghost">Loading the ledger…</p></div></section></main></div>`;
     return new HTMLRewriter().on("#root", { element(e) { e.setInnerContent(html, { html: true }); } }).transform(page);
   } catch { return page; }
@@ -453,7 +457,7 @@ const app = {
         const secs = (a, b) => (a && b ? Math.round((b - a) / 100) / 10 : null);
         return json({
           payment: { capture_id: p.capture_id, order_id: p.order_id, amount: p.amount, currency: p.currency, captured_at: p.captured_at, via: p.via || "checkout",
-            status: p.status, refunded_amount: p.refunded_amount || "0.00", refunded_at: p.refunded_at || null, dispute: p.dispute || null, dispute_state: disputeState(p), held_as_duplicate: held },
+            status: p.status, refunded_amount: p.refunded_amount || "0.00", refunded_at: p.refunded_at ? utc(p.refunded_at) : null, dispute: p.dispute || null, dispute_state: disputeState(p), held_as_duplicate: held },
           click: { ad: p.ad || null, ad_name: p.ad ? adName(p.ad) : null, source: p.source || null, click_id: p.click_id || null, clicked_at: p.clicked_at || null },
           paypal,
           meta: m && { ok: Boolean(m.ok), held: m.held || null, event_id: m.event_id || null, value: m.value ?? null, events_received: m.events_received ?? null, fbtrace_id: m.fbtrace_id || null,
@@ -472,7 +476,7 @@ const app = {
         const [payments, meta] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
         // the payer's email hash stays on the server (duplicate check, Meta match); the public ledger gets a salted key that
         // only says "same payer" and cannot be checked against a guessed email
-        const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, user_agent, ...p }) => ({ ...p, payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));
+        const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, user_agent, ...p }) => ({ ...p, ...(p.refunded_at ? { refunded_at: utc(p.refunded_at) } : {}), payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));
         // a Google-click buyer sent to Meta before Google buyers were routed to Google only: still a fact, no longer counted
         const source = Object.fromEntries(payments.map((p) => [p.capture_id, p.source]));
         const sends = meta.map((m) => (m.ok && source[m.capture_id] === "g" ? { ...m, superseded: "Google click, sent before Google buyers went to Google only" } : m));
@@ -587,10 +591,17 @@ const app = {
         const at = new Date().toISOString(), id = `D-${Date.now().toString(36).toUpperCase()}`;
         const rec = { id, at, ad: String(b.ad).slice(0, 60), change: String(b.change || "").slice(0, 20), verdict: b.verdict, reason: String(b.reason || "").slice(0, 600), evidence: (b.evidence || []).slice(0, 8).map((e) => String(e).slice(0, 40)),
           rec_id: /^R-[A-Z0-9]{4,16}$/.test(String(b.rec_id)) ? b.rec_id : null, index: Number.isInteger(b.index) && b.index >= 0 && b.index < 4 ? b.index : null };
+        // the server, not the browser, says which week the decision was on: the latest synthetic recommendation's id
+        if (rec.rec_id && rec.rec_id === (await env.LEDGER.get("rec:synthetic", "json"))?.id) rec.week = "synthetic scenario week";
         await env.LEDGER.put(`dec:${at}:${id}`, JSON.stringify(rec), { expirationTtl: 2592000 }); await forget("dec:");
         return json(rec);
       }
-      if (url.pathname === "/api/decisions") return json({ decisions: (await cachedList(env, "dec:")).reverse().slice(0, 50) });
+      // decisions taken on a synthetic scenario week (evidence ids SYN…) say so, so the public log is not read as the live shop
+      if (url.pathname === "/api/decisions") return json({ decisions: (await cachedList(env, "dec:")).reverse().slice(0, 50)
+        .map((d) => ({ ...d, week: d.week || ((d.evidence || []).some((e) => String(e).startsWith("SYN")) ? "synthetic scenario week" : "live ledger") })) });
+
+      // A recorded live run of the budget agent on an owner's request (replayed on /judge; "Run it live" calls /api/agent)
+      if (url.pathname === "/api/runs/owner") return json({ run: await env.LEDGER.get("run:owner", "json") });
 
       // The latest recommendation that passed the evidence gate, with the owner's decisions on it, so Approvals survives a reload.
       if (url.pathname === "/api/recommendation") {
@@ -662,6 +673,14 @@ const app = {
         const out = await runAgent({ llm, rec, payments, instruction: typeof body.instruction === "string" ? body.instruction : "" });
         const source = week ? `budget agent · SYNTHETIC: ${week.name}` : "budget agent";
         const saved = out.recommendation && out.grounded ? await saveRecommendation(env, out.recommendation, source) : null;
+        // the latest owner request on the live ledger is kept whole, so /judge can replay it without spending a Claude turn
+        // only the dashboard's own request on the bundled ad export, and only an answer the gate passed: a visitor's edited
+        // CSV or free text never replaces what /judge shows every judge
+        const demoCsv = !week && body.instruction === OWNER_ASK ? await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text() : null;
+        const plain = (t) => String(t || "").split(String.fromCharCode(13)).join("").trim(); // Windows line endings aside
+        if (demoCsv !== null && plain(body.csv) === plain(demoCsv) && out.recommendation && out.grounded) await env.LEDGER.put("run:owner", JSON.stringify({ at: new Date().toISOString(), instruction: String(body.instruction).slice(0, 300),
+          recommendation: out.recommendation, grounded: out.grounded, trace: out.trace, ms: Date.now() - started, rec_id: saved?.id || null,
+          ads: rec.ads.map((r) => ({ ad: r.ad, leads: r.leads, paid: r.paid, revenue_cents: r.revenue_cents, spend_cents: r.spend_cents })), moves: supportedMoves(rec) }));
         return json({ ...out, rec_id: saved?.id || null, source, ms: Date.now() - started,
           ...(week ? { synthetic: { id: week.id, name: week.name, story: week.story, right_answer: week.right }, grade: grade(week, out.recommendation?.actions || []) } : {}) });
       }

@@ -33,10 +33,11 @@ test("replay: every PayPal event leaves the ledger, the ad platforms and the bud
   ]) await env.LEDGER.put(`pay:${p.capture_id}`, JSON.stringify(p));
 
   const realFetch = globalThis.fetch;
+  let verdict = "SUCCESS"; // what PayPal's verify-webhook-signature answers
   globalThis.fetch = async (url) => {
     const u = String(url);
     if (u.endsWith("/v1/oauth2/token")) return new Response(JSON.stringify({ access_token: "T", expires_in: 32400 }), { status: 200 });
-    if (u.endsWith("/v1/notifications/verify-webhook-signature")) return new Response(JSON.stringify({ verification_status: "SUCCESS" }), { status: 200 });
+    if (u.endsWith("/v1/notifications/verify-webhook-signature")) return new Response(JSON.stringify({ verification_status: verdict }), { status: 200 });
     throw new Error(`unexpected fetch ${u}`);
   };
   let n = 0;
@@ -67,6 +68,11 @@ test("replay: every PayPal event leaves the ledger, the ad platforms and the bud
     });
     await t.test("a forged webhook (certificate not from PayPal) changes nothing", async () => {
       assert.equal((await hook(refund("RFAKE", "CAPD", "149.00"), "evil.example.com")).status, 401);
+      assert.equal((await state()).row("trial_video").revenue_cents, 24700);
+    });
+    await t.test("a webhook from a PayPal certificate host that PayPal's own check calls FAILURE changes nothing", async () => {
+      verdict = "FAILURE";
+      try { assert.equal((await hook(refund("RBAD", "CAPD", "149.00"))).status, 401); } finally { verdict = "SUCCESS"; }
       assert.equal((await state()).row("trial_video").revenue_cents, 24700);
     });
     await t.test("a partial refund lowers revenue but keeps the order; replaying it changes nothing", async () => {

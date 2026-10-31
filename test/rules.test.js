@@ -351,8 +351,8 @@ test("fees: PayPal's own fee on a capture is used when known, the published rate
   const ads = [{ ad: "a", spend_cents: 10000, leads: 5 }];
   const est = reconcile(ads, [1, 2, 3].map((n) => pay({ capture_id: `F${n}`, ad: "a", payer_email_sha256: `p${n}` })));
   const seen = reconcile(ads, [1, 2, 3].map((n) => pay({ capture_id: `F${n}`, ad: "a", payer_email_sha256: `p${n}`, fee: "2.50" })));
-  assert.deepEqual([est.ads[0].fee_cents, est.ads[0].fees_observed], [3 * (147 + 49), 0]);
-  assert.deepEqual([seen.ads[0].fee_cents, seen.ads[0].fees_observed], [750, 3]);
+  assert.deepEqual([est.ads[0].fee_cents, est.ads[0].fees_observed, est.ads[0].fees_estimated], [3 * (147 + 49), 0, 3]);
+  assert.deepEqual([seen.ads[0].fee_cents, seen.ads[0].fees_observed, seen.ads[0].fees_estimated], [750, 3, 0]);
   assert.ok(afterCostsPerDollar(seen.ads[0]) < afterCostsPerDollar(est.ads[0]));
 });
 

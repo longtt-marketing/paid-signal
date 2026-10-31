@@ -6,7 +6,8 @@
 // Usage: node scripts/eval-blind-scenarios.mjs 2 [docs/proof/blind-scenarios-2.json] > docs/proof/blind-scenarios-run-2.json
 // Set 1 (blind-scenarios.json) was run once before the rule was changed (blind-scenarios-run-1.json); seeing it led to two
 // rule changes (no cut for an ad that covers its spend after costs; no keep for one that does not), so set 2 was written
-// afterwards, again without the code, to test the changed rule.
+// afterwards, again without the code, to test the changed rule. Set 3 (blind-scenarios-3.json) was written after the prompts
+// and the rule were frozen on 31 Oct and run once (blind-scenarios-run-3.json); nothing was changed after seeing it.
 import { readFileSync } from "node:fs";
 import { reconcile, supportedMoves } from "../src/ledger.js";
 import { runAgent, anthropicLLM } from "../src/agent.js";

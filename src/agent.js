@@ -64,6 +64,8 @@ export function reconciliationView(rec, payments = []) {
       // only where the 3-order rule keeps the budget: an ad with enough orders is decided on what it returns after costs
       small_sample_read: r.paid < 3 ? read(odds.ads[r.ad]) : "enough paid orders: decide on what it returns after costs",
       ...(moves[r.ad] ? { after_costs_and_fees_per_dollar: moves[r.ad].after_costs.toFixed(2) } : {}),
+      // PayPal's fee as charged where the capture reports it; estimated (2.99% + $0.49) only where it does not
+      paypal_fees_usd: dollars(r.fee_cents), paypal_fees_basis: `${r.fees_observed} as charged by PayPal, ${r.fees_estimated} estimated`,
     })),
     average_paid_order_usd: odds.average_paid_order_cents === null ? "no paid orders" : dollars(odds.average_paid_order_cents),
     shop_costs: `the shop's stated cost of delivering an order is ${Math.round(SHOP_COSTS.cost_share * 100)}% of its price; PayPal's fee is ${(SHOP_COSTS.fee_rate * 100).toFixed(2)}% + $${dollars(SHOP_COSTS.fee_fixed_cents)}`,

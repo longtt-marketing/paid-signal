@@ -42,8 +42,23 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 <main>
   <div>
     <h1>Proof</h1>
-    <p class="lede">What we measured, how, and what failed. Every number below comes from a script in the repo or from the live sandbox, and the agents are scored on cases they were never tuned on.</p>
+    <p class="lede">What we measured, how, and what failed. Every number below comes from a script in the repo or from the live sandbox, and the agents are scored on cases they were not tuned on; where a test set was reused while fixing a bug, it says so.</p>
   </div>
+
+  <section aria-labelledby="levels">
+    <h2 id="levels">What is verified, and what is not</h2>
+    <p class="sub">Read this first. Each row links to its method below.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Evidence</th><th>Verified</th><th>Not verified</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#live">PayPal sandbox</a></td><td>Real sandbox orders, captures, refunds, invoices and reminders; every ledger payment found in PayPal's own Transaction Search; PayPal's fee as charged on each checkout capture</td><td>Real merchant revenue; the shop and its ad export are fictional</td></tr>
+        <tr><td><a href="/trail">Meta Conversions API</a></td><td>Each payment from a Meta click delivered as a test event, with Meta's reply (<code>events_received</code>, <code>fbtrace_id</code>)</td><td>Any change in how Meta delivers ads; Meta has no retraction, so a later refund is subtracted here, not at Meta</td></tr>
+        <tr><td><a href="#weeks">Budget agent</a></td><td>Decisions on labelled synthetic weeks, five written by us and twenty-two by a separate analyst agent, the last six frozen and run once; the evidence gate under 1,100 planted errors</td><td>That the rule is the best budget policy for a real shop; the analyst's answers are AI-written, not human ground truth</td></tr>
+        <tr><td><a href="#public">Bunq ads, 2017</a></td><td>On real public ads, how often sign-ups and customers disagree</td><td>PayPal purchases or a revenue gain: there, sign-ups were a fair stand-in</td></tr>
+        <tr><td><a href="#money">8-week simulation</a></td><td>How the dashboard's rule behaves under the uncertainty of 6 orders</td><td>Anything measured: it is a model</td></tr>
+      </tbody>
+    </table></div>
+  </section>
 
   <section aria-labelledby="live">
     <h2 id="live">Live right now <span class="live"><i></i>read on page load</span></h2>
@@ -65,16 +80,6 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     </div>
   </section>
 
-  <section aria-labelledby="money">
-    <h2 id="money">Does it make money? A simulation</h2>
-    <p class="sub">The demo week loses money: $285.00 paid revenue against $326.50 ad spend. What if the shop kept the same weekly budget for 8 weeks and moved it each week? The evidence is thin (6 paid orders across 4 ads), so each of 2,000 runs draws every ad's true paid rate from what the export and PayPal show, and the policies never see that draw; they learn from noisy weeks as a shop would. Three policies: keep the split; follow leads per dollar, which is what ad platforms optimise for; follow PayPal-confirmed paid orders per dollar with the dashboard's own rule (an ad moves only after 3 paid orders, every ad keeps 10%). Figures are paid revenue minus ad spend, before product cost, so not profit. A simulation, not a measurement; it reruns on a real shop's numbers with <code>node scripts/eval-budget-sim.mjs shop.csv</code>.</p>
-    <div class="grid">
-      <div class="stat"><b>$1,181</b><span>over 8 weeks when budget follows paid orders</span><small>Middle 80% of runs: −$284 to $2,708. 79.9 paid orders on average.</small></div>
-      <div class="stat"><b class="bad">$847</b><span>when budget follows leads</span><small>Middle 80%: −$379 to $2,233. 72.8 paid orders. Keeping the split: $685.</small></div>
-      <div class="stat"><b>1,365 / 2,000</b><span>runs where following paid orders beat following leads</span><small>By $334 on average; in the worst 10% of runs it lost $427 or more. With 6 orders, that is the honest spread.</small></div>
-    </div>
-  </section>
-
   <section aria-labelledby="weeks">
     <h2 id="weeks">Budget decisions, on weeks with known answers</h2>
     <p class="sub">The demo shop has too few paid orders for any budget move, so five synthetic weeks (labelled SYNTHETIC wherever they appear; none of their payments is a PayPal capture) test the decision itself: enough orders on two ads, refunds hiding behind captures, a double payment, the ad with the most leads and the least money, and too few orders everywhere. Each week lists the right change per ad. The weeks are written so the right answer follows from paid orders; they test whether the agent finds it and keeps to the evidence rule. Try one on the dashboard: "Or try a synthetic week".</p>
@@ -86,13 +91,14 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   </section>
 
   <section aria-labelledby="blind">
-    <h2 id="blind">Blind test: answers we did not write</h2>
-    <p class="sub">The weeks above were written by us, so they cannot show our rule is right. A separate analyst agent that never read this code wrote synthetic weeks of its own, with its own answers from first principles: a paid order counts only if not refunded, not a double payment and not in an open dispute; contribution is paid revenue less a 30% cost and PayPal's fee; fewer than 3 orders is too thin to move. Prices from $19 to $199, refunds, disputes, break-even ads. <code>node scripts/eval-blind-scenarios.mjs</code>; the weeks and every answer with its arithmetic are in the repo.</p>
+    <h2 id="blind">Blind test: weeks and answers written by a separate analyst agent</h2>
+    <p class="sub">The weeks above were written by us, so they cannot show our rule is right. A separate analyst agent that never read this code wrote synthetic weeks of its own, with its own answers from first principles: a paid order counts only if not refunded, not a double payment and not in an open dispute; contribution is paid revenue less a 30% cost and PayPal's fee; fewer than 3 orders is too thin to move. Prices from $19 to $199, refunds, disputes, break-even ads. <code>node scripts/eval-blind-scenarios.mjs</code>; the weeks and every answer with its arithmetic are in the repo. The answers are an AI analyst's, not human ground truth: they test the agent and the rule against reasoning we did not write, not against a real shop.</p>
     <div class="grid">
       <div class="stat"><b>18 / 20</b><span>budget-agent runs fully right on the first set of 10 weeks</span><small>Every move allowed by the analyst and every must-move made; numbers grounded in 20 of 20 after one repair (12 first time). Moving budget by leads per dollar got 1 of 10 weeks right.</small></div>
       <div class="stat"><b class="bad">8 / 10</b><span>weeks our own rule got right on that first set</span><small>It let a profitable ad below the average be cut, and a money-losing ad be kept as it was. Both rules were changed; on the same weeks the changed rule gets 9 of 10 (the analyst wants a pause, not a cut, for an ad returning 24 cents per dollar).</small></div>
-      <div class="stat"><b>12 / 12</b><span>runs fully right on a second set of 6 weeks, written after the change</span><small>All 18 must-moves made, none wrong; 11 of 12 grounded at the first submission. The first run of this set passed only 5 of 12 first time: the gate read PayPal's "2.99%" fee as money missing its dollar sign. That was the gate's bug, fixed and unit-tested, then the set was rerun. Leads per dollar: 1 of 6 weeks.</small></div>
-    </div>
+      <div class="stat"><b>12 / 12</b><span>runs fully right on a second set of 6 weeks, written after the change</span><small>All 18 must-moves made, none wrong; 11 of 12 grounded at the first submission. The first run of this set passed only 5 of 12 first time: the gate read PayPal's "2.99%" fee as money missing its dollar sign. That was the gate's bug, fixed and unit-tested, then the set was rerun, so this set is no longer untouched. The changed rule itself agrees with the analyst on 5 of 6 weeks: on b16 the analyst pauses an ad the rule only requires to be cut; Claude paused it. Leads per dollar: 1 of 6 weeks.</small></div>
+          <div class="stat"><b>11 / 12</b><span>runs fully right on a third set of 6 weeks, frozen before it was run and run once</span><small>Written after the prompts and the rule were frozen; nothing was changed after seeing it. All 12 must-moves made; 10 of 12 grounded at the first submission, 12 of 12 after one repair. The one miss: on b26 the agent proposed "fix tracking" for an ad with no paid order, where the analyst allows only "keep". The rule itself: 6 of 6 weeks. Leads per dollar: 1 of 6.</small></div>
+</div>
   </section>
 
   <section aria-labelledby="small">
@@ -141,7 +147,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section aria-labelledby="quality">
     <h2 id="quality">Tests and speed</h2>
     <div class="grid">
-      <div class="stat"><b>108</b><span>unit tests on money rules, the gate, the four agents, schema checks, MCP and every AG Studio tool name</span><small>CI on every push. One replays 11 PayPal events through the Worker's own webhook (a forged one, a partial refund and its replay, a full refund, a re-sent capture, a refunded double payment, disputes opened, won, lost and resolved with no clear outcome, a Google refund) and checks paid orders, revenue, what Meta and Google are told and which budget moves are allowed after each.</small></div>
+      <div class="stat"><b>110</b><span>unit tests on money rules, the gate, the four agents, schema checks, MCP and every AG Studio tool name</span><small>CI on every push. One sends 12 simulated PayPal webhook events through the Worker's real webhook code, with PayPal's sign-in and signature check stubbed (a forged certificate, one PayPal's check calls FAILURE, a partial refund and its replay, a full refund, a re-sent capture, a refunded double payment, disputes opened, won, lost and resolved with no clear outcome, a Google refund) and checks paid orders, revenue, what Meta and Google are told and which budget moves are allowed after each.</small></div>
       <div class="stat"><b>17 + 20</b><span>browser checks and Postman assertions against the live app</span><small>The browser checks run daily, including the money trail of a real capture and a 404 for an unknown one.</small></div>
       <div class="stat"><b>2.3 s</b><span>to a usable dashboard on a throttled phone (4G, 4x CPU)</span><small>From 18 s with one bundle; measured with Playwright on 29 Oct. A cold first visit can take longer.</small></div>
     </div>
@@ -156,6 +162,16 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
       <div class="stat"><b>Not settled</b><span>whether ranking by customers picks next week's better ads</span><small>Ranked on the first week, scored on the second: by customers 61.6% of spend-weighted pairs right, by sign-ups 57.6%; the 90% interval of the difference runs from −5.5 to +15.5 points.</small></div>
     </div>
     <p class="sub">In this account, sign-ups were a fair stand-in for customers: their quality varied little from ad to ad. The paid signal matters where quality varies, as in the author's own test below, where the ads with the most clicks brought no orders. We report the result either way.</p>
+  </section>
+
+  <section aria-labelledby="money">
+    <h2 id="money">Does it make money? A simulation</h2>
+    <p class="sub">The demo week loses money: $285.00 paid revenue against $326.50 ad spend. What if the shop kept the same weekly budget for 8 weeks and moved it each week? The evidence is thin (6 paid orders across 4 ads), so each of 2,000 runs draws every ad's true paid rate from what the export and PayPal show, and the policies never see that draw; they learn from noisy weeks as a shop would. Three policies: keep the split; follow leads per dollar, which is what ad platforms optimise for; follow PayPal-confirmed paid orders per dollar with the dashboard's own rule (an ad moves only after 3 paid orders, every ad keeps 10%). Figures are paid revenue minus ad spend, before product cost, so not profit. A simulation, not a measurement; it reruns on a real shop's numbers with <code>node scripts/eval-budget-sim.mjs shop.csv</code>.</p>
+    <div class="grid">
+      <div class="stat"><b>$1,181</b><span>over 8 weeks when budget follows paid orders</span><small>Middle 80% of runs: −$284 to $2,708. 79.9 paid orders on average.</small></div>
+      <div class="stat"><b class="bad">$847</b><span>when budget follows leads</span><small>Middle 80%: −$379 to $2,233. 72.8 paid orders. Keeping the split: $685.</small></div>
+      <div class="stat"><b>1,365 / 2,000</b><span>runs where following paid orders beat following leads</span><small>By $334 on average; in the worst 10% of runs it lost $427 or more. With 6 orders, that is the honest spread.</small></div>
+    </div>
   </section>
 
   <section aria-labelledby="real">

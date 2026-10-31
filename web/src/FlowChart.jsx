@@ -16,6 +16,7 @@ export default function FlowChart({ ads, payments, sends, held, worst }) {
   const W = narrow ? 340 : 560, H = narrow ? 210 : 236, top = 30, colW = 18, gap = 6;
   const pay = Object.fromEntries((payments || []).map((p) => [p.capture_id, p]));
   const received = (sends || []).filter((m) => m.ok && m.events_received > 0 && pay[m.capture_id] && !m.superseded);
+  const early = (sends || []).filter((m) => m.ok && m.superseded && pay[m.capture_id]).length;
   const google = (payments || []).filter((p) => p.source === "g" && Number(p.refunded_amount || 0) < Number(p.amount) && !(held || []).includes(p.capture_id)).length;
   const rows = ads.map((a) => ({ ad: a.ad, leads: a.leads, paid: a.paid, sent: received.filter((m) => pay[m.capture_id].ad === a.ad).length }));
   const totals = Object.fromEntries(STAGES.map(([k]) => [k, rows.reduce((n, r) => n + r[k], 0)]));
@@ -57,7 +58,7 @@ export default function FlowChart({ ads, payments, sends, held, worst }) {
         ))}
       </svg>
       <figcaption className="fl-cap">
-        Paid: {totals.paid - byInvoice} at checkout, {byInvoice} by invoice. Meta received {totals.sent}: {live} sent at capture{totals.sent - live > 0 ? `, ${totals.sent - live} sent later for payments made before the live link` : ""}.{google ? ` ${google} from a Google click ${google === 1 ? "goes" : "go"} to Google instead.` : ""}
+        Paid: {totals.paid - byInvoice} at checkout, {byInvoice} by invoice. Meta received {totals.sent}: {live} sent at capture{totals.sent - live > 0 ? `, ${totals.sent - live} sent later for payments made before the live link` : ""}.{google ? ` ${google} from a Google click ${google === 1 ? "goes" : "go"} to Google instead${early ? ` (${early === 1 ? "it" : "they"} also reached Meta once, before Google buyers went to Google only; not counted here)` : ""}.` : ""}
       </figcaption>
     </figure>
   );

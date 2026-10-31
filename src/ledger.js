@@ -61,7 +61,7 @@ export function disputeState(p) {
  * rule that keeps it back from Meta and Google.
  */
 export function reconcile(adRows, payments) {
-  const byAd = new Map(adRows.map((r) => [r.ad, { ad: r.ad, spend_cents: r.spend_cents, leads: r.leads, paid: 0, refunded: 0, held: 0, revenue_cents: 0, held_cents: 0, disputed: 0, disputed_cents: 0, fee_cents: 0, fees_observed: 0, captures: [] }]));
+  const byAd = new Map(adRows.map((r) => [r.ad, { ad: r.ad, spend_cents: r.spend_cents, leads: r.leads, paid: 0, refunded: 0, held: 0, revenue_cents: 0, held_cents: 0, disputed: 0, disputed_cents: 0, fee_cents: 0, fees_observed: 0, fees_estimated: 0, captures: [] }]));
   const unmatched = [];
   const held = new Set(possibleDuplicates(payments).map((d) => d.capture_id));
   for (const p of payments) {
@@ -78,7 +78,7 @@ export function reconcile(adRows, payments) {
     else row.paid++;
     row.revenue_cents += Math.max(0, gross - back);
     // PayPal's own fee on the capture when it was read at capture; otherwise PayPal's published rate (SHOP_COSTS)
-    if (back < gross) { if (p.fee != null) { row.fee_cents += cents(p.fee); row.fees_observed++; } else row.fee_cents += Math.round((gross - back) * SHOP_COSTS.fee_rate) + SHOP_COSTS.fee_fixed_cents; }
+    if (back < gross) { if (p.fee != null) { row.fee_cents += cents(p.fee); row.fees_observed++; } else { row.fee_cents += Math.round((gross - back) * SHOP_COSTS.fee_rate) + SHOP_COSTS.fee_fixed_cents; row.fees_estimated++; } }
   }
   const ads = [...byAd.values()].map((r) => ({
     ...r,

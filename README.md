@@ -96,7 +96,9 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
 - **Is the rule right?** (`scripts/eval-blind-scenarios.mjs`): a separate analyst agent that never read this code wrote
   synthetic weeks with its own answers from first principles. The first set exposed two places where the rule disagreed with
   the analyst (it allowed cutting a profitable ad below the average, and keeping a money-losing one); the rule was changed,
-  and a second set, written afterwards, tests the changed rule. Results in `docs/proof/blind-scenarios-run-*.json`.
+  and a second set, written afterwards, tests the changed rule (the rule itself agrees with the analyst on 5 of 6 weeks; the
+  agent on 12 of 12 runs). A third set, frozen before it was run and run once: agent 11 of 12 runs, rule 6 of 6, leads per
+  dollar 1 of 6. The answers are an AI analyst's, not human ground truth. Results in `docs/proof/blind-scenarios-run-*.json`.
 - **Budget agent inside AG Studio** (`web/src/agentTools.js`): a custom Studio agent. Studio's lead agent delegates budget
   questions to it; it reads the ledger, submits through the same gate (`/api/agent/check`), and delegates to Studio's
   built-in page agent to add the evidence chart. Its accepted change lands in the approvals column.
@@ -148,7 +150,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 94 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
+npm test                              # 110 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

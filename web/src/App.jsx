@@ -227,7 +227,7 @@ export default function App({ first = null }) {
           </nav>
           <div className="top-end">
             <span className="live"><i />PayPal sandbox · live</span>
-            <a className="cta" href={adLink("trial_video", "fb")}>Pay in the demo shop</a>
+            <a className="cta" href="/judge">Judge path · 60 s</a>
           </div>
         </div>
       </header>
@@ -243,6 +243,7 @@ export default function App({ first = null }) {
               <div><b className="n paid">{(t || first)?.paid ?? "…"}</b><span>paid {(t || first)?.paid === 1 ? "order" : "orders"} PayPal confirms</span></div>
             </div>
             <p className="pitch">Ad platforms learn from the {(t || first)?.leads ?? "leads"}. Paid Signal sends them the {(t || first)?.paid ?? "paid orders"}, straight from PayPal.</p>
+            <div className="hero-actions"><a className="cta" href="/judge">Why the ad with the most leads gets no raise</a><a className="hero-link" href="/trail">Follow one PayPal payment →</a></div>
             {t && <div className="chips-row">
               <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
               {t.held > 0 && <span title="Same payer, same ad, minutes apart: not counted as a paid order, and kept from the ad platforms"><b>{t.held}</b> possible duplicate held</span>}
@@ -322,7 +323,7 @@ export default function App({ first = null }) {
                   </div>;
                 })()}
                 <div className="sig-side">
-                  {state?.meta.held.length > 0 && <div><b>Held back from Meta</b>{state.meta.held.map((h) => <small key={h.capture_id}>{h.capture_id} · {h.reason}</small>)}</div>}
+                  {state?.meta.held.length > 0 && <div><b>Held back from Meta</b>{state.meta.held.map((h) => <small key={h.capture_id}>{h.capture_id} · {state.metaSends.some((m) => m.capture_id === h.capture_id && m.superseded) ? "Google click: goes to Google only now (it reached Meta once, before that rule)" : h.reason}</small>)}</div>}
                   {state && <div><b>Google adjustments</b>{state.google.adjustments.map((a) => <small key={a.order_id + a.adjustment_type}>{a.adjustment_type === "RETRACTION" ? "Retraction" : "Restatement"} · {a.order_id}{a.adjusted_value ? ` → $${a.adjusted_value}` : ""}</small>)}</div>}
                 </div>
               </div>
@@ -346,8 +347,8 @@ export default function App({ first = null }) {
                     <b>{adName(a.ad)}</b>
                     <p>{a.reason}</p>
                     <div className="chips">{a.evidence.map((e) => <span key={e} className="chip">{e.startsWith("row:") ? `${short(e.slice(4))} row` : `capture ${e}`}</span>)}</div>
-                    {decisions[i] ? <p className="decided">{decisions[i].verdict === "approved" ? "Approved" : "Dismissed"} · logged {new Date(decisions[i].at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {decisions[i].id}</p>
-                      : <div className="row"><button className="primary" onClick={() => decide(i, "approved")}>Approve</button><button onClick={() => decide(i, "dismissed")}>Dismiss</button></div>}
+                    {decisions[i] ? <p className="decided">{decisions[i].verdict === "approved" ? (a.change === "keep" ? "Agreed: no change" : "Approved") : "Dismissed"} · logged {new Date(decisions[i].at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {decisions[i].id}</p>
+                      : <div className="row"><button className="primary" onClick={() => decide(i, "approved")}>{a.change === "keep" ? "Agree, no change" : "Approve"}</button><button onClick={() => decide(i, "dismissed")}>Dismiss</button></div>}
                   </article>
                 ))}
                 {agent.source && <p className="trace">From the {agent.source}</p>}
