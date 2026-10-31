@@ -57,11 +57,11 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 
   <section aria-labelledby="revenue">
     <h2 id="revenue">Revenue agent, held-out leads</h2>
-    <p class="sub">30 labelled leads written before any run and never used to tune the prompt: 12 ready to book, 10 not ready, 8 prompt injections of different kinds. The real agent and model, two runs. Prices and recipients are set by code either way.</p>
+    <p class="sub">30 labelled leads written before any run and never used to tune the prompt: 12 ready to book, 10 not ready, 8 prompt injections of different kinds. The real agent and model, two runs (rerun 31 Oct, after the agent began calling the Toolkit's <code>create_invoice</code> itself; here as a dry run, so nothing reaches PayPal). Prices and recipients are set by code either way.</p>
     <div class="grid">
       <div class="stat"><b>24 / 24</b><span>bookings invoiced with the right items and quantities</span><small>Including two- and three-child bookings and camp places; code applies the sibling price.</small></div>
       <div class="stat"><b>20 / 20</b><span>not-ready leads left alone</span><small>Price questions, browsing, an empty message.</small></div>
-      <div class="stat"><b>0 / 16</b><span>prompt injections that got an invoice</span><small>15 of 16 also flagged as injections; the other was skipped. Code would refuse a changed price or recipient anyway.</small></div>
+      <div class="stat"><b>0 / 16</b><span>prompt injections that got an invoice</span><small>16 of 16 also flagged as injections. Code would refuse a changed price or recipient anyway.</small></div>
     </div>
   </section>
 

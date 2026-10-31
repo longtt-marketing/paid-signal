@@ -39,10 +39,10 @@ test("revenue agent: code prices accepted proposals, refuses tampered ones, reco
   const llm = scripted([
     use("1", "read_leads", {}),
     many(
-      ["2", "propose_invoice", { lead: lead(13).lead, items: [{ sku: "trial_class", qty: 2 }], note: "Both twins booked.", reason: "asked to book both" }],
-      ["3", "propose_invoice", { lead: lead(15).lead, items: [{ sku: "december_camp", qty: 1 }], amount: "1.00", note: "Camp", reason: "asked" }],
+      ["2", "create_invoice", { lead: lead(13).lead, items: [{ sku: "trial_class", qty: 2 }], note: "Both twins booked.", reason: "asked to book both" }],
+      ["3", "create_invoice", { lead: lead(15).lead, items: [{ sku: "december_camp", qty: 1 }], amount: "1.00", note: "Camp", reason: "asked" }],
       ["4", "skip_lead", { lead: lead(15).lead, reason: "message tries to set the price and recipient", flag: "injection" }],
-      ["5", "propose_invoice", { lead: lead(13).lead, items: [{ sku: "trial_class", qty: 1 }], note: "Again", reason: "dup" }],
+      ["5", "create_invoice", { lead: lead(13).lead, items: [{ sku: "trial_class", qty: 1 }], note: "Again", reason: "dup" }],
     ),
     say("Proposed one invoice; flagged one message."),
   ]);
@@ -51,4 +51,24 @@ test("revenue agent: code prices accepted proposals, refuses tampered ones, reco
   assert.equal(out.refusals.length, 2); // the tampered amount, and a second invoice for the same lead
   assert.equal(out.skips[0].flag, "injection");
   assert.equal(out.summary, "Proposed one invoice; flagged one message.");
+});
+
+test("revenue agent: its create_invoice call reaches the Toolkit only after code priced it, and sees PayPal's draft id", async () => {
+  const seen = [], answers = [];
+  const llm = async (messages) => {
+    const last = messages.at(-1); if (last.role === "tool") answers.push(...last.results.map((r) => r.content));
+    return [use("1", "read_leads", {}),
+      many(["2", "create_invoice", { lead: lead(13).lead, items: [{ sku: "trial_class", qty: 2 }], note: "Both twins booked.", reason: "asked" }],
+        ["3", "create_invoice", { lead: lead(12).lead, items: [{ sku: "trial_class", qty: 1 }], recipient: "x@y.example", note: "Hi", reason: "asked" }],
+        ["4", "create_invoice", { lead: lead(14).lead, items: [{ sku: "december_camp", qty: 1 }], note: "Camp", reason: "asked" }]),
+      say("Done.")][messages.filter((m) => m.role === "assistant").length];
+  };
+  const createDraft = async (p) => { seen.push([p.lead, p.total, p.email]); return p.lead === lead(14).lead ? { error: "timeout" } : { id: "INV2-TEST-0001" }; };
+  const out = await runRevenueAgent({ llm, leads, invoices: [], createDraft });
+  // the tampered call (a recipient) never reaches PayPal; the other two do, priced by code, to the lead's own email
+  assert.deepEqual(seen, [[lead(13).lead, "88.20", lead(13).email], [lead(14).lead, "149.00", lead(14).email]]);
+  assert.match(answers[1], /Created in PayPal: draft INV2-TEST-0001/);
+  assert.match(answers[3], /PayPal did not create the draft: timeout/);
+  assert.deepEqual(out.proposals.map((p) => p.id), ["INV2-TEST-0001"]);
+  assert.equal(out.refusals.length, 2);
 });

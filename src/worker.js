@@ -47,8 +47,9 @@ async function saveRecommendation(env, recommendation, source) {
 }
 
 /**
- * The revenue agent reads what each unpaid lead wrote and proposes invoices; code prices and checks every proposal, and
- * PayPal's Agent Toolkit creates the drafts. Nothing is sent: each draft waits in Approvals. Used by the dashboard and by
+ * The revenue agent reads what each unpaid lead wrote and calls create_invoice itself; inside that call code prices and
+ * checks it, then PayPal's Agent Toolkit creates the draft and the agent gets PayPal's id back. Nothing is sent: each draft
+ * waits in Approvals. Used by the dashboard and by
  * the nightly refill, so every draft a judge finds was decided by the agent and priced by code.
  */
 async function revenueDrafts(env, url) {
@@ -56,23 +57,25 @@ async function revenueDrafts(env, url) {
   const invoices = await listPrefix(env, "inv:");
   const leads = (await demoLeads(env, url)).filter((l) => !invoices.some((i) => i.lead === l.lead && i.status === "PAID"));
   const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });
-  const run = await runRevenueAgent({ llm, leads, invoices });
   const toolkit = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
     configuration: { actions: { invoices: { create: true } }, context: { sandbox: true } } }).getTools();
   const drafts = [];
-  for (const p of run.proposals) {
+  // the agent's own create_invoice call runs this once code has priced and checked it: price list, the lead's own email
+  const createDraft = async (p) => {
     const lead = leads.find((l) => l.lead === p.lead);
     const params = { currency_code: "USD", reference: "Kite Robotics booking", note: p.note, invoicer_business_name: "Kite Robotics Club (demo)",
       primary_recipients: [{ billing_info: { email_address: lead.email, name: { given_name: lead.lead.replace(/ \(.*\)$/, "") } } }],
       items: p.lines.map((l) => ({ name: l.name, quantity: "1", unit_amount: { currency_code: "USD", value: l.unit } })) };
     let out = {}; try { out = JSON.parse(String(await toolkit.create_invoice.execute(params))); } catch {}
     const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
-    if (!/^INV2-[A-Z0-9-]+$/.test(id)) { drafts.push({ lead: p.lead, error: "PayPal did not create the draft." }); continue; }
+    if (!/^INV2-[A-Z0-9-]+$/.test(id)) return { error: "PayPal returned no invoice id" };
     const rec = { id, lead: lead.lead, ad: lead.ad, email: lead.email, amount: p.total, lines: p.lines, status: "DRAFT",
       reference: packClick({ ad: lead.ad, source: lead.source, clickId: lead.click_id, clickedAt: 0 }), note: p.note, reason: p.reason,
       drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() };
     await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); drafts.push(rec);
-  }
+    return { id };
+  };
+  const run = await runRevenueAgent({ llm, leads, invoices, createDraft });
   await forget("inv:");
   return ({ drafts, skips: run.skips, refusals: run.refusals, summary: run.summary, trace: run.trace, ms: Date.now() - t0 });
 }

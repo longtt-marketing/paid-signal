@@ -21,7 +21,7 @@ test("schema: a malformed proposal from the revenue agent is refused before any 
   const leads = [{ lead: "L1", ad: "trial_video", source: "fb", click_id: "x", email: "l1@example.com", message: "Book two kids" }];
   let i = 0;
   const turns = [
-    { raw: [], calls: [{ id: "1", name: "propose_invoice", input: { lead: "L1", items: [{ sku: "trial_class", qty: "two" }], note: "x", reason: "y" } }] },
+    { raw: [], calls: [{ id: "1", name: "create_invoice", input: { lead: "L1", items: [{ sku: "trial_class", qty: "two" }], note: "x", reason: "y" } }] },
     { raw: [{ type: "text", text: "Done." }], calls: [] },
   ];
   const out = await runRevenueAgent({ llm: async () => turns[i++], leads, invoices: [] });

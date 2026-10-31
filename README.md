@@ -65,7 +65,7 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
 
 | API | Where |
 | --- | --- |
-| **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): `create_invoice` for the revenue agent's drafts; `get_invoice`, `send_invoice` for the send agent, pinned to the approved invoice; `get_invoice`, `send_invoice_reminder` called by the chase agent with its own note, limited to eligible unpaid invoices | `src/revenue.js`, `src/sendAgent.js`, `src/chaseAgent.js`, `/api/agent/revenue`, `/api/invoices/approve`, `/api/agent/chase` |
+| **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): `create_invoice` called by the revenue agent itself (code prices it and sets the recipient inside the call, then returns PayPal's draft id to the agent); `get_invoice`, `send_invoice` for the send agent, pinned to the approved invoice; `get_invoice`, `send_invoice_reminder` called by the chase agent with its own note, limited to eligible unpaid invoices | `src/revenue.js`, `src/sendAgent.js`, `src/chaseAgent.js`, `/api/agent/revenue`, `/api/invoices/approve`, `/api/agent/chase` |
 | Orders v2: create, read and capture through **PayPal's server SDK** (`@paypal/paypal-server-sdk`, generated with APIMatic), with `custom_id`, `invoice_id`, `PayPal-Request-Id` idempotency | `src/paypalSdk.js`, `/api/checkout`, `/api/capture` |
 | Payments v2: refund a capture (full or partial), through the server SDK | `src/paypalSdk.js`, `/api/refund` |
 | Invoicing v2: create draft (the lead's click kept with the invoice in the ledger), send, get; sent invoices are re-checked with PayPal on Refresh, because the sandbox does not always emit `INVOICING.INVOICE.PAID` | `/api/invoices/*`, agent tool `draft_paypal_invoices` |
