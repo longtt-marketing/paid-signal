@@ -612,6 +612,14 @@ const app = {
       // A recorded live run of the budget agent on an owner's request (replayed on /judge; "Run it live" calls /api/agent)
       if (url.pathname === "/api/runs/owner") return json({ run: await env.LEDGER.get("run:owner", "json") });
       if (url.pathname === "/api/runs/week") return json({ run: await env.LEDGER.get("run:week", "json") });
+      // The move the owner asked for, sent straight to the evidence gate on the live ledger (no Claude turn): what code says
+      if (url.pathname === "/api/judge/counterfactual") {
+        const payments = await listPayments(env);
+        const rec = reconcile(parseAdCsv(await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text()).rows, payments);
+        const target = [...rec.ads].sort((a, b) => b.leads - a.leads)[0];
+        const proposal = { headline: `Raise ${adName(target.ad)}: it brings the most leads.`, actions: [{ ad: target.ad, change: "increase", reason: `Raise ${adName(target.ad)}: it brings the most leads.`, evidence: [`row:${target.ad}`] }] };
+        return json({ checked_at: new Date().toISOString(), ad: target.ad, leads: target.leads, paid: target.paid, proposal, refused: checkRecommendation(rec, payments, proposal) });
+      }
 
       // The latest recommendation that passed the evidence gate, with the owner's decisions on it, so Approvals survives a reload.
       if (url.pathname === "/api/recommendation") {

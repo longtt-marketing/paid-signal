@@ -38,6 +38,9 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .btn{font:600 14px "Inter Tight",sans-serif;border:1px solid var(--ink);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;min-height:40px}
 .btn.primary{background:var(--ink);color:#fff}.btn:disabled{opacity:.5;cursor:wait}
 .note{margin:10px 0 0;font-size:13px;color:var(--faint)}.err{color:var(--bad)}
+.contrast{display:grid;grid-template-columns:1fr 1fr;gap:12px}.contrast .side{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.contrast b{font-size:22px;letter-spacing:-.01em}.contrast small{font-size:13px;color:var(--faint)}.contrast .side.syn{border-style:dashed}
+@media (max-width:640px){.contrast{grid-template-columns:1fr}}
 .more{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .more a{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none}
 .more a b{display:block}.more a span{font-size:13px;color:var(--faint)}
@@ -49,9 +52,14 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 <main>
   <div>
     <h1>The ad with the most leads is not always the ad worth funding.</h1>
-    <p class="lede">Sixty seconds, no login, no payment. A shop owner asks Claude to spend more on the ad that brings the most leads. Claude checks what PayPal says was actually paid, code checks the move, and you can open the PayPal capture behind the answer.</p>
+    <p class="lede">Sixty seconds, no login, no payment. A shop owner asks Claude to spend more on the ad that brings the most leads. Claude checks what PayPal says was actually paid, code checks the move, and you can open the PayPal capture behind the answer. PayPal confirms the payment; which ad it came from is our own click record inside the order, so that link is the app's, not PayPal's.</p>
   </div>
   <div class="vs" id="vs" aria-live="polite"><div><b>–</b><span>leads the ad report gives this ad</span></div><i>→</i><div class="paid"><b>–</b><span>paid orders PayPal confirms for it</span></div></div>
+
+  <div class="contrast" id="contrast" aria-live="polite">
+    <div class="side"><span class="tag">Live PayPal sandbox ledger</span><b id="c-live">…</b><small id="c-live-why"></small></div>
+    <div class="side syn"><span class="tag">SYNTHETIC week, made-up payments</span><b id="c-syn">…</b><small id="c-syn-why"></small></div>
+  </div>
 
   <section class="step" id="ask"><h2><em>1</em>The owner asks</h2><p class="note">Loading the recorded run…</p></section>
   <section class="step" id="answer"><h2><em>2</em>Claude reads the payments and answers; code checks the move</h2></section>

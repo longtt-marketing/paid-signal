@@ -22,6 +22,8 @@ function render(run) {
   ask.append($("p", { className: "quote", textContent: `“${run.instruction}”` }),
     $("p", { className: "note" }, [$("span", { className: "tag", textContent: "Replay of a recorded live run" }),
       ` Claude ran it on the live PayPal ledger on ${new Date(run.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} in ${(run.ms / 1000).toFixed(1)} s. Replaying spends no Claude turn.`]));
+  box("c-live").textContent = `${name(target.ad)}: ${target.leads} leads, ${target.paid} paid order${target.paid === 1 ? "" : "s"} → no raise`;
+  box("c-live-why").textContent = "Too few PayPal-confirmed orders for any move; Claude declined the owner's raise and the gate refuses it (step 2).";
   const live = $("button", { className: "btn", type: "button", textContent: "Run it live again (one Claude run)" });
   live.onclick = async () => {
     live.disabled = true; live.textContent = "Claude is reading the payments…";
@@ -43,6 +45,12 @@ function render(run) {
   ans.append($("p", { className: "rule" }, move
     ? [$("b", { textContent: "The rule in code: " }), `raise ${move.increase ? "allowed" : "not allowed"}, cut ${move.reduce ? "allowed" : "not allowed"}: ${move.why}.`]
     : [$("b", { textContent: "The rule in code: " }), `no budget moves either way on fewer than 3 PayPal-confirmed paid orders. This ad has ${target.paid}, from ${target.leads} leads (${money(target.revenue_cents)} paid on ${money(target.spend_cents)} of ads). Had Claude agreed to raise it, the gate would have refused the move.`]));
+  const cf = $("p", { className: "rule", textContent: "Sending the owner's raise straight to the gate…" });
+  ans.append(cf);
+  getJSON("/api/judge/counterfactual").then((c) => {
+    cf.replaceChildren($("b", { textContent: c.refused.length ? "The raise itself, sent to the gate just now: refused. " : "The raise itself, sent to the gate just now: accepted. " }),
+      c.refused.join(" "), $("span", { className: "note", textContent: ` (checked ${new Date(c.checked_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}, no Claude turn: the same code that checks every proposal)` }));
+  }).catch((e) => { cf.textContent = e.message; });
   const gates = (run.trace || []).filter((s) => s.tool === "submit_recommendation");
   const first = gates[0];
   ans.append($("p", { className: "note", textContent: !run.grounded ? "The evidence gate did not pass this answer." : first && first.problems ? `The evidence gate refused Claude's first answer (${first.why?.join(" ") || "see trace"}); the repaired answer passed.` : "The evidence gate checked every number, capture id and the direction of every move: passed on the first submission." }),
@@ -51,7 +59,7 @@ function render(run) {
   const ids = (action.evidence || []).filter((e) => !e.startsWith("row:"));
   const cap = head("capture");
   if (!ids.length) { cap.append($("p", { className: "note", textContent: "This answer cites no single payment; the money trail shows any of them." })); return; }
-  cap.append($("p", { className: "note", textContent: `Claude cited ${ids.length === 1 ? "this capture" : "these captures"}. PayPal's record is read from PayPal, not from our ledger.` }));
+  cap.append($("p", { className: "note", textContent: `Claude cited ${ids.length === 1 ? "this capture" : "these captures"}. PayPal's record is retrieved from PayPal, not from our ledger (cached for up to 10 minutes). Meta's reply only acknowledges the test event; it does not show that Meta matched it or that ads improved.` }));
   for (const id of ids) {
     const card = $("div", {}, [$("p", { className: "note", textContent: `Reading capture ${id} from PayPal…` })]);
     cap.append(card);
@@ -77,6 +85,8 @@ getJSON("/api/runs/week").then(({ run }) => {
   const sec = box("week");
   if (!run) { sec.append($("p", { className: "note", textContent: "No synthetic week has been run yet; the dashboard's “Or try a synthetic week” runs one." })); return; }
   sec.append($("p", { className: "reason" }, [$("span", { className: "tag", textContent: `SYNTHETIC: ${run.week.name}` }), ` ${run.week.story}`]));
+  const up = (run.recommendation.actions || []).find((a) => a.change === "increase");
+  if (up) { box("c-syn").textContent = `${name(up.ad)} → raise`; box("c-syn-why").textContent = "Enough paid orders, and it covers its spend after costs and PayPal fees: the same agent and gate allow the raise (step 4)."; }
   for (const a of run.recommendation.actions || []) {
     const up = a.change === "increase", down = a.change === "reduce" || a.change === "pause";
     sec.append($("p", { className: `verdict ${up ? "ok" : ""}`, style: down || up ? "" : "background:var(--grey-bg);color:var(--grey)", textContent: `${CHANGE[a.change] || a.change}: ${name(a.ad)}` }),
