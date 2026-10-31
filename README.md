@@ -79,6 +79,10 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
   `submit_recommendation`). A code gate rejects any number that is not in the reconciliation and any evidence id that
   does not exist, allows one repair, then flags. Tested in `test/agent.test.js`; measured in [`docs/proof`](docs/proof)
   (`scripts/eval-gate.mjs`, `scripts/eval-agent.mjs`).
+- **Small samples** (`paybackOdds` in `src/ledger.js`): with fewer than 3 paid orders no budget moves, but each ad still gets
+  a number: the chance its paid revenue covers its ad spend, a 90% range for its cost per paid order, and the spend with no
+  paid order that would make "below its ad spend" 90% likely (Gamma-Poisson, prior worth one order at the shop's own cost
+  per paid order). The agent quotes them through the gate; the dashboard shows them as "Covers its spend?".
 - **Budget agent inside AG Studio** (`web/src/agentTools.js`): a custom Studio agent. Studio's lead agent delegates budget
   questions to it; it reads the ledger, submits through the same gate (`/api/agent/check`), and delegates to Studio's
   built-in page agent to add the evidence chart. Its accepted change lands in the approvals column.
@@ -130,7 +134,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 75 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
+npm test                              # 79 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

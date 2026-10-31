@@ -1,5 +1,5 @@
 {
- "date": "2026-10-30",
+ "date": "2026-10-31",
  "what": "The author's real Meta test (2 to 8 Oct 2026, 33 ads) through Paid Signal's budget rule (src/ledger.js proposeSplit). Completed affiliate orders stand in for PayPal-confirmed paid orders.",
  "rows_compared": 10,
  "ads_with_completed_orders": [
@@ -26,6 +26,11 @@
   "increase_completed": 0,
   "reduce": "Fashion item E",
   "reduce_completed": 1
+ },
+ "small_sample_read": {
+  "average_commission_per_completed_order_vnd": 11075,
+  "rows_likely_below_ad_spend": 10,
+  "highest_chance_covers_spend": "2.0e-9"
  },
  "paid_signal_rule": {
   "moved": 0,

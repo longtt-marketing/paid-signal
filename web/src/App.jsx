@@ -190,6 +190,7 @@ export default function App() {
   const waiting = actions.filter((_, i) => !decisions[i]).length + drafts.length;
   const costPerPaid = t && t.paid ? usd(Math.round(t.spend_cents / t.paid)) : "none";
   const byCost = [...ads].sort((a, b) => b.spend_cents - a.spend_cents);
+  const odds = state?.odds?.ads || {}; // small-sample read from the ledger (paybackOdds)
   const best = ads.filter((a) => a.cost_per_paid_cents != null).sort((a, b) => a.cost_per_paid_cents - b.cost_per_paid_cents)[0]?.ad;
   const worst = ads.filter((a) => a.cost_per_paid_cents != null).sort((a, b) => b.cost_per_paid_cents - a.cost_per_paid_cents)[0]?.ad;
 
@@ -267,13 +268,14 @@ export default function App() {
               <div className="card-head"><h2>Per ad</h2><span className="muted">Sorted by spend</span></div>
               <div className="scroll-x">
                 <table className="grid">
-                  <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Paid revenue after refunds, minus this ad's spend. Product cost is not included.">After ad spend</th><th>Per paid order</th></tr></thead>
+                  <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Paid revenue after refunds, minus this ad's spend. Product cost is not included.">After ad spend</th><th>Per paid order</th><th title="Chance this ad's paid revenue covers its ad spend, from its paid orders so far at the shop's average paid order. While it is not clear, the spend with no paid order that would make 'below its ad spend' 90% likely.">Covers its spend?</th></tr></thead>
                   <tbody>
                     {byCost.map((a) => (
                       <tr key={a.ad}><td>{adName(a.ad)}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td>{a.paid}{a.held > 0 && <small className="held"> +{a.held} held</small>}</td><td>{usd(a.revenue_cents)}</td><td className={a.net_cents < 0 ? "neg" : a.net_cents > 0 ? "pos" : ""}>{signed(a.net_cents)}</td>
-                        <td>{a.cost_per_paid_cents == null ? <span className="pill warn">no paid order</span> : <span className={`pill ${a.ad === best ? "good" : a.ad === worst ? "warn" : ""}`}>{usd(a.cost_per_paid_cents)}</span>}</td></tr>
+                        <td>{a.cost_per_paid_cents == null ? <span className="pill warn">no paid order</span> : <span className={`pill ${a.ad === best ? "good" : a.ad === worst ? "warn" : ""}`}>{usd(a.cost_per_paid_cents)}</span>}</td>
+                        <td className="odds-cell">{odds[a.ad] ? <>{Math.round(odds[a.ad].chance_covers_spend * 100)}%<small className="odds">{odds[a.ad].more_spend_to_decide_cents != null ? `cut if the next $${Math.round(odds[a.ad].more_spend_to_decide_cents / 100)} brings no paid order` : odds[a.ad].verdict}</small></> : "–"}</td></tr>
                     ))}
-                    {t && <tr className="total"><td>Total</td><td>{usd(t.spend_cents)}</td><td>{t.leads}</td><td>{t.paid}</td><td>{usd(t.revenue_cents)}</td><td className={t.net_cents < 0 ? "neg" : t.net_cents > 0 ? "pos" : ""}>{signed(t.net_cents)}</td><td>{costPerPaid}</td></tr>}
+                    {t && <tr className="total"><td>Total</td><td>{usd(t.spend_cents)}</td><td>{t.leads}</td><td>{t.paid}</td><td>{usd(t.revenue_cents)}</td><td className={t.net_cents < 0 ? "neg" : t.net_cents > 0 ? "pos" : ""}>{signed(t.net_cents)}</td><td>{costPerPaid}</td><td></td></tr>}
                   </tbody>
                 </table>
               </div>

@@ -3,7 +3,7 @@
 import { paypal } from "./paypal.js";
 import { ordersSdk } from "./paypalSdk.js";
 import { handleMcp } from "./mcp.js";
-import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates, proposeSplit } from "./ledger.js";
+import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates, proposeSplit, paybackOdds } from "./ledger.js";
 import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
 import { runSendAgent, SEND_SYSTEM, SEND_TOOLS } from "./sendAgent.js";
 import { parseCsv, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS } from "./revenue.js";
@@ -546,7 +546,7 @@ const app = {
         // what would go to Meta, minus the hashed email: Meta gets it, a public page does not
         const meta = await metaFromLedger(payments, `${url.origin}/shop.html`);
         meta.events = meta.events.map((e) => ({ ...e, user_data: { ...e.user_data, ...(e.user_data.em ? { em: ["(SHA-256 of the payer's email; sent to Meta, not shown here)"] } : {}) } }));
-        return json({ reconciliation: rec, csv_errors: parsed.errors, meta, google: googleRows(payments, undefined, { hold: heldDuplicates(payments) }) });
+        return json({ reconciliation: rec, odds: paybackOdds(rec), csv_errors: parsed.errors, meta, google: googleRows(payments, undefined, { hold: heldDuplicates(payments) }) });
       }
 
       // The same gate for the budget agent that runs inside AG Studio: its recommendation is accepted only if every

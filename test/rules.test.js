@@ -1,7 +1,7 @@
 // Edge cases of the money rules: duplicates, refunds, attribution windows, payload formats and the evidence gate.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { packClick, unpackClick, parseAdCsv, reconcile, quotableNumbers, ungroundedNumbers, metaEvents, googleRows, possibleDuplicates } from "../src/ledger.js";
+import { packClick, unpackClick, parseAdCsv, reconcile, quotableNumbers, ungroundedNumbers, metaEvents, googleRows, possibleDuplicates, paybackOdds } from "../src/ledger.js";
 import { checkRecommendation, reconciliationView } from "../src/agent.js";
 import { runSendAgent } from "../src/sendAgent.js";
 
@@ -219,4 +219,37 @@ test("gate: a refund claim must name the capture, and the ledger must agree", ()
   assert.deepEqual(say("Capture CAPTUREBB2 was not refunded, so it counts."), []);
   assert.match(say("Capture CAPTUREBB2 was refunded, so it does not count.").join(" "), /CAPTUREBB2 was not refunded/);
   assert.match(say("In each pair the second was refunded, so the first counts.").join(" "), /without naming it/);
+});
+
+// small samples: what one or two paid orders do say
+const oddsRec = () => reconcile([{ ad: "a", spend_cents: 10000, leads: 20 }, { ad: "b", spend_cents: 10000, leads: 5 }, { ad: "c", spend_cents: 500, leads: 9 }],
+  [pay({ capture_id: "A1", ad: "a", amount: "50.00" }), pay({ capture_id: "B1", ad: "b", amount: "50.00", payer_email_sha256: "h2" })]);
+
+test("paybackOdds: matches the closed form, and one order on twice the shop's cost per order is likely below its spend", () => {
+  // shop: $205 for 2 orders of $50, so the prior is one order per $102.50; ad a: Gamma(2, 202.5), covers when rate >= 1/50
+  const o = paybackOdds(oddsRec()).ads.a, x = 202.5 / 50;
+  assert.ok(Math.abs(o.chance_covers_spend - Math.exp(-x) * (1 + x)) < 1e-9);
+  assert.equal(o.verdict, "likely below its ad spend"); assert.equal(o.more_spend_to_decide_cents, null);
+});
+
+test("paybackOdds: an unclear ad gets the spend that settles it, to the dollar", () => {
+  const o = paybackOdds(oddsRec()).ads.c;
+  assert.equal(o.verdict, "not clear yet");
+  // no order yet: Gamma(1, 102.5 + 5 + S); "below its spend" is 90% likely once e^-x <= 0.1, and not a dollar earlier
+  const x = (102.5 + 5 + o.more_spend_to_decide_cents / 100) / 50;
+  assert.ok(Math.exp(-x) <= 0.1 && Math.exp(-(x - 1 / 50)) > 0.1);
+});
+
+test("paybackOdds: no paid order in the shop means no read at all", () => {
+  const rec = reconcile([{ ad: "a", spend_cents: 5000, leads: 3 }], []);
+  assert.deepEqual(paybackOdds(rec), { average_paid_order_cents: null, ads: {} });
+});
+
+test("gate: the small-sample read can be quoted; a made-up settling spend cannot", () => {
+  const rec = oddsRec(), payments = [pay({ capture_id: "A1", ad: "a", amount: "50.00" }), pay({ capture_id: "B1", ad: "b", amount: "50.00", payer_email_sha256: "h2" })];
+  const view = reconciliationView(rec, payments).ads.find((r) => r.ad === "c").small_sample_read;
+  const S = view.more_spend_with_no_paid_order_that_settles_it_usd;
+  const rec1 = (s) => ({ headline: "Every ad has fewer than 3 paid orders.", actions: [{ ad: "c", change: "keep", reason: `${view.chance_paid_revenue_covers_ad_spend} chance it covers its ad spend; if the next $${s} brings no paid order, it is very likely (90%) below its ad spend.`, evidence: ["row:c"] }] });
+  assert.deepEqual(checkRecommendation(rec, payments, rec1(S)), []);
+  assert.ok(checkRecommendation(rec, payments, rec1("77.00")).some((p) => p.includes("77.00")));
 });

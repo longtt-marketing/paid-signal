@@ -93,6 +93,13 @@ export function quotableNumbers(rec) {
     if (r.lead_to_paid !== null) add(Math.round(r.lead_to_paid * 100) + "%");
     if (r.roas !== null) add(r.roas.toFixed(2));
   }
+  // the small-sample read the agent is shown (paybackOdds): chance, range, spend that settles it, the average paid order
+  const odds = paybackOdds(rec);
+  if (odds.average_paid_order_cents !== null) add(dollars(odds.average_paid_order_cents));
+  for (const o of Object.values(odds.ads)) {
+    add(Math.round(o.chance_covers_spend * 100) + "%"); o.cost_per_paid_range_cents.forEach((c) => add(dollars(c)));
+    if (o.more_spend_to_decide_cents !== null) add(dollars(o.more_spend_to_decide_cents));
+  }
   return out;
 }
 
@@ -132,6 +139,35 @@ export function proposeSplit(rows, budget, floor = 0.1, minPaid = 3) {
     share: movable && ready[i] ? floor + (pool - floor * n) * (score[i] / sum) : now[i],
     reason: !ready[i] ? `kept: ${r.paid} paid order${r.paid === 1 ? "" : "s"}, fewer than ${minPaid}` : movable ? "moved by paid orders per dollar" : `kept: fewer than 2 ads have ${minPaid}+ paid orders`,
   })).map((x) => ({ ...x, budget: Math.round(budget * x.share * 100) / 100 }));
+}
+
+/**
+ * What a small sample does say. Paid orders per dollar of an ad follow a Poisson rate with a Gamma prior worth one paid order
+ * at the shop's own cost per paid order, so an ad with no data starts at the shop average. An ad covers its ad spend when
+ * its rate is at least 1 / (the shop's average paid order). Returns, per ad: the chance it covers its spend, a 90% range for
+ * its cost per paid order, and, while that is unclear, how much more spend with no paid order would make "below its ad
+ * spend" 90% likely. Same Gamma with a whole-number shape throughout, so the CDF is a finite Poisson sum, no special functions.
+ * @param {ReturnType<typeof reconcile>} rec
+ */
+export function paybackOdds(rec, sure = 0.9) {
+  const t = rec.totals;
+  if (!t.paid || !t.spend_cents || !t.revenue_cents) return { average_paid_order_cents: null, ads: {} };
+  const aov = t.revenue_cents / t.paid / 100, be = 1 / aov, prior = t.spend_cents / 100 / t.paid; // dollars
+  // P(rate < r) for Gamma(shape k, rate b): 1 - sum_{i<k} e^-x x^i / i!, x = b r
+  const cdf = (k, b, r) => { const x = b * r; let term = Math.exp(-x), s = term; for (let i = 1; i < k; i++) { term *= x / i; s += term; } return 1 - s; };
+  const solve = (f, lo, hi) => { for (let i = 0; i < 80; i++) { const m = (lo + hi) / 2; if (f(m)) hi = m; else lo = m; } return hi; };
+  const ads = {};
+  for (const r of rec.ads) {
+    if (!r.spend_cents) continue;
+    const k = 1 + r.paid, b = prior + r.spend_cents / 100;
+    const covers = 1 - cdf(k, b, be);
+    const rateAt = (q) => solve((x) => cdf(k, b, x) >= q, 0, 100);
+    const range = [Math.round(1 / rateAt(0.95)) * 100, Math.round(1 / rateAt(0.05)) * 100]; // whole dollars, in cents
+    // spend S with no new order: shape stays k, b grows to b + S; smallest S where covering is at most 1 - sure
+    const more = covers > 1 - sure && covers < sure ? Math.ceil(solve((s) => 1 - cdf(k, b + s, be) <= 1 - sure, 0, 1e6)) * 100 : null;
+    ads[r.ad] = { chance_covers_spend: covers, cost_per_paid_range_cents: range, more_spend_to_decide_cents: more, verdict: covers <= 1 - sure ? "likely below its ad spend" : covers >= sure ? "likely covers its ad spend" : "not clear yet" };
+  }
+  return { average_paid_order_cents: Math.round(aov * 100), ads };
 }
 
 /** Two live captures from the same payer for the same ad within `windowMs` look like a double click at checkout. */
