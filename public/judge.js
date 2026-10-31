@@ -71,3 +71,17 @@ getJSON("/api/runs/owner").then(({ run }) => {
   if (run) return render(run);
   head("ask").append($("p", { className: "note", textContent: "No recorded owner request yet. Open the dashboard and use “Tell it to raise the ad with the most leads”." }));
 }).catch((e) => head("ask").append($("p", { className: "note err", textContent: e.message })));
+
+// 4: the same agent and gate on a labelled synthetic week with enough paid orders, replayed from its last live run
+getJSON("/api/runs/week").then(({ run }) => {
+  const sec = box("week");
+  if (!run) { sec.append($("p", { className: "note", textContent: "No synthetic week has been run yet; the dashboard's “Or try a synthetic week” runs one." })); return; }
+  sec.append($("p", { className: "reason" }, [$("span", { className: "tag", textContent: `SYNTHETIC: ${run.week.name}` }), ` ${run.week.story}`]));
+  for (const a of run.recommendation.actions || []) {
+    const up = a.change === "increase", down = a.change === "reduce" || a.change === "pause";
+    sec.append($("p", { className: `verdict ${up ? "ok" : ""}`, style: down || up ? "" : "background:var(--grey-bg);color:var(--grey)", textContent: `${CHANGE[a.change] || a.change}: ${name(a.ad)}` }),
+      $("p", { className: "reason", textContent: a.reason }));
+  }
+  const g = run.grade;
+  sec.append($("p", { className: "note", textContent: `Recorded live run, ${new Date(run.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}. ${g ? (g.ok ? "Every move matches the week's written answer." : `Against the week's written answer: ${g.wrong?.join(", ") || "a move missing"}.`) : ""} The same evidence gate checked every number and the direction of every move.` }));
+}).catch(() => {});

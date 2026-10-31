@@ -6,6 +6,7 @@ import { handleMcp } from "./mcp.js";
 import { packClick, unpackClick, parseAdCsv, reconcile, metaEvents, googleRows, possibleDuplicates, proposeSplit, paybackOdds, disputeState, supportedMoves } from "./ledger.js";
 // PayPal reports refund times in its own zone (e.g. -07:00); the ledger keeps every time in UTC so they sort at a glance
 // the owner request the dashboard sends ("Tell it to raise the ad with the most leads"); /judge replays its latest run
+const RULE_SINCE = "2026-10-31T12:00:00.000Z"; // the budget rule as it stands (3+ paid orders, direction after costs and fees)
 const OWNER_ASK = "Raise the free guide's budget: it brings the most leads.";
 const utc = (t) => { const d = new Date(t || Date.now()); return isNaN(d) ? new Date().toISOString() : d.toISOString(); };
 import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
@@ -342,7 +343,7 @@ const app = {
       const origin = request.headers.get("origin");
       if (origin && origin !== url.origin && url.pathname !== "/mcp") return json({ error: "Cross-site requests are not accepted." }, 403);
       // the routes that spend Claude turns answer only this site's own pages, which always send their Origin
-      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/invoices/approve" || url.pathname === "/api/refund") && origin !== url.origin)
+      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/invoices/approve" || url.pathname === "/api/refund" || url.pathname === "/api/decisions") && origin !== url.origin)
         return json({ error: "Only the Paid Signal page can call this." }, 403);
       if (env.BURST && !(await env.BURST.limit({ key: ip })).success) return json({ error: "Too many requests. Wait a minute and try again." }, 429);
     }
@@ -445,6 +446,8 @@ const app = {
               paypal = { read: "Payments v2: GET /v2/payments/captures/{id}, through the server SDK", status: c.status, amount: c.amount?.value, currency: c.amount?.currency_code,
                 create_time: c.create_time, custom_id: c.custom_id || null, final_capture: c.final_capture ?? null,
                 fee: b.paypal_fee?.value || null, net: b.net_amount?.value || null, refunded: b.total_refunded_amount?.value || null };
+              // a capture does not carry its refunds; the ledger has them from PayPal's signature-verified refund webhooks
+              if (!paypal.refunded && Number(p.refunded_amount) > 0) { paypal.refunded = p.refunded_amount; paypal.refunded_from = "PayPal refund webhooks (ledger)"; }
             }
             paypal.read_at = new Date().toISOString();
             await env.LEDGER.put(`trailpp:${p.capture_id}`, JSON.stringify(paypal), { expirationTtl: 600 }); // PayPal is asked at most every 10 minutes
@@ -468,7 +471,7 @@ const app = {
             per_dollar: row.spend_cents ? (row.revenue_cents / row.spend_cents).toFixed(2) : null, chance_covers_spend: odds ? Math.round(odds.chance_covers_spend * 100) : null,
             cut_after: odds?.more_spend_to_decide_cents != null ? (odds.more_spend_to_decide_cents / 100).toFixed(2) : null, move: move ? { increase: move.increase, reduce: move.reduce, why: move.why } : null },
           payments: payments.map((x) => ({ capture_id: x.capture_id, ad_name: x.ad ? adName(x.ad) : "No ad click", amount: x.amount, captured_at: x.captured_at, via: x.via || "checkout",
-            meta: metaBy[x.capture_id]?.ok ? (metaBy[x.capture_id].backfill ? "sent in backfill" : "sent at capture") : metaBy[x.capture_id]?.held ? `held (${metaBy[x.capture_id].held})` : "not sent" })),
+            meta: metaBy[x.capture_id]?.ok ? (x.source === "g" ? "Google click, sent in backfill before the Google-only rule; not counted" : metaBy[x.capture_id].backfill ? "sent in backfill" : "sent at capture") : metaBy[x.capture_id]?.held ? `held (${metaBy[x.capture_id].held})` : "not sent" })),
         });
       }
 
@@ -588,20 +591,27 @@ const app = {
         const stop = await guard(env, request, "decisions", 40, 400); if (stop) return json({ error: stop }, 429);
         const b = await request.json();
         if (!["approved", "dismissed"].includes(b.verdict) || !AD_KEYS.has(b.ad)) return json({ error: "A verdict on one of the demo's ads is required." }, 400);
+        // a decision is only ever on a recommendation the evidence gate passed: the server copies the move from it, so the
+        // public log cannot hold a move the gate never saw
+        const [live, syn] = await Promise.all([env.LEDGER.get("rec:latest", "json"), env.LEDGER.get("rec:synthetic", "json")]);
+        const base = [live, syn].find((r) => r && r.id === b.rec_id);
+        const act = base && Number.isInteger(b.index) ? base.recommendation?.actions?.[b.index] : null;
+        if (!act || act.ad !== b.ad) return json({ error: "That recommendation is no longer the latest checked one. Ask the agent again." }, 409);
         const at = new Date().toISOString(), id = `D-${Date.now().toString(36).toUpperCase()}`;
-        const rec = { id, at, ad: String(b.ad).slice(0, 60), change: String(b.change || "").slice(0, 20), verdict: b.verdict, reason: String(b.reason || "").slice(0, 600), evidence: (b.evidence || []).slice(0, 8).map((e) => String(e).slice(0, 40)),
-          rec_id: /^R-[A-Z0-9]{4,16}$/.test(String(b.rec_id)) ? b.rec_id : null, index: Number.isInteger(b.index) && b.index >= 0 && b.index < 4 ? b.index : null };
-        // the server, not the browser, says which week the decision was on: the latest synthetic recommendation's id
-        if (rec.rec_id && rec.rec_id === (await env.LEDGER.get("rec:synthetic", "json"))?.id) rec.week = "synthetic scenario week";
+        const rec = { id, at, ad: act.ad, change: act.change, verdict: b.verdict, reason: String(act.reason || "").slice(0, 600), evidence: (act.evidence || []).slice(0, 8).map((e) => String(e).slice(0, 40)),
+          rec_id: base.id, index: b.index, ...(base === syn ? { week: "synthetic scenario week" } : {}) };
         await env.LEDGER.put(`dec:${at}:${id}`, JSON.stringify(rec), { expirationTtl: 2592000 }); await forget("dec:");
         return json(rec);
       }
       // decisions taken on a synthetic scenario week (evidence ids SYN…) say so, so the public log is not read as the live shop
       if (url.pathname === "/api/decisions") return json({ decisions: (await cachedList(env, "dec:")).reverse().slice(0, 50)
-        .map((d) => ({ ...d, week: d.week || ((d.evidence || []).some((e) => String(e).startsWith("SYN")) ? "synthetic scenario week" : "live ledger") })) });
+        .map((d) => ({ ...d, week: d.week || ((d.evidence || []).some((e) => String(e).startsWith("SYN")) ? "synthetic scenario week" : "live ledger"),
+          // the budget rule in force today dates from 31 Oct; earlier approvals stay as history, not as moves it would allow
+          ...(d.at < RULE_SINCE ? { rule: "made under an earlier rule (before 31 Oct 2026, 12:00 UTC); kept as history" } : {}) })) });
 
       // A recorded live run of the budget agent on an owner's request (replayed on /judge; "Run it live" calls /api/agent)
       if (url.pathname === "/api/runs/owner") return json({ run: await env.LEDGER.get("run:owner", "json") });
+      if (url.pathname === "/api/runs/week") return json({ run: await env.LEDGER.get("run:week", "json") });
 
       // The latest recommendation that passed the evidence gate, with the owner's decisions on it, so Approvals survives a reload.
       if (url.pathname === "/api/recommendation") {
@@ -676,6 +686,9 @@ const app = {
         // the latest owner request on the live ledger is kept whole, so /judge can replay it without spending a Claude turn
         // only the dashboard's own request on the bundled ad export, and only an answer the gate passed: a visitor's edited
         // CSV or free text never replaces what /judge shows every judge
+        // the latest gate-passed run on a labelled synthetic week, replayed on /judge as "when the payments do support a move"
+        if (week && out.recommendation && out.grounded) await env.LEDGER.put("run:week", JSON.stringify({ at: new Date().toISOString(), week: { id: week.id, name: week.name, story: week.story },
+          recommendation: out.recommendation, trace: out.trace, ms: Date.now() - started, grade: grade(week, out.recommendation.actions || []) }));
         const demoCsv = !week && body.instruction === OWNER_ASK ? await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text() : null;
         const plain = (t) => String(t || "").split(String.fromCharCode(13)).join("").trim(); // Windows line endings aside
         if (demoCsv !== null && plain(body.csv) === plain(demoCsv) && out.recommendation && out.grounded) await env.LEDGER.put("run:owner", JSON.stringify({ at: new Date().toISOString(), instruction: String(body.instruction).slice(0, 300),

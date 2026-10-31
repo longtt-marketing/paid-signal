@@ -129,3 +129,19 @@ test("replay: every PayPal event leaves the ledger, the ad platforms and the bud
     });
   } finally { globalThis.fetch = realFetch; }
 });
+
+test("decisions: only on the latest checked recommendation, with the move copied from it by the server", async () => {
+  const env = { LEDGER: kv() };
+  await env.LEDGER.put("rec:latest", JSON.stringify({ id: "R-LIVE1", recommendation: { actions: [{ ad: "free_guide", change: "keep", reason: "Only 1 paid order.", evidence: ["row:free_guide"] }] } }));
+  const post = (body, origin = "https://paid-signal.test") => app.fetch(new Request("https://paid-signal.test/api/decisions", {
+    method: "POST", headers: { "content-type": "application/json", origin }, body: JSON.stringify(body) }), env);
+  // a move the gate never saw: a cut on a stale or made-up recommendation
+  assert.equal((await post({ ad: "free_guide", change: "reduce", verdict: "approved", rec_id: "R-OLD99", index: 0 })).status, 409);
+  // no Origin, or another site's: refused
+  assert.equal((await app.fetch(new Request("https://paid-signal.test/api/decisions", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }), env)).status, 403);
+  // the browser's own change and reason are ignored; the stored recommendation's are logged
+  const ok = await post({ ad: "free_guide", change: "reduce", reason: "made up", verdict: "approved", rec_id: "R-LIVE1", index: 0 });
+  assert.equal(ok.status, 200);
+  const d = await ok.json();
+  assert.deepEqual([d.change, d.reason, d.rec_id], ["keep", "Only 1 paid order.", "R-LIVE1"]);
+});
