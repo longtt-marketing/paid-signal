@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-02",
+  "method": "Payloads built by src/ledger.js metaEvents and posted to the Paid Signal demo dataset with a test_event_code (scratch script, not part of the app).",
+  "lead_form": {
+    "real_test_lead": { "made_with": "Meta Lead Ads Testing Tool, author's page, form 'Paid Signal test form' (not used in any ad)", "lead_id": "16 digits, issued by Meta (not published)", "action_source": "system_generated", "result": { "http": 200, "events_received": 1 } },
+    "made_up_lead_id": { "lead_id": "DEMO-style fictional id", "result": { "http": 400, "error_subcode": 2804036, "meaning": "lead id invalid or deleted; Meta lead ids are 15-17 digit numbers it issues" } }
+  },
+  "messenger": {
+    "made_up_psid": { "action_source": "business_messaging", "messaging_channel": "messenger", "result": { "http": 400, "error_subcode": 2804068, "meaning": "invalid page_scoped_user_id for business_messaging Purchase" } },
+    "real_psid": "not sent yet: needs a real conversation with the page"
+  }
+}
