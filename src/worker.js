@@ -305,19 +305,45 @@ async function recordInvoicePayment(env, invoice, url = new URL("https://paid-si
   const kept = await env.LEDGER.get(`inv:${invoice.id}`, "json");
   const click = unpackClick(invoice.detail?.memo || kept?.reference || invoice.detail?.reference);
   const txs = invoice.payments?.transactions || [];
+  const learnedAt = new Date().toISOString();
+  const update = invoice.detail?.metadata?.last_update_time;
+  const updateDate = update && /(?:Z|[+-]\d{2}:\d{2})$/i.test(update) ? new Date(update) : null;
+  const invoiceUpdateAt = updateDate && !Number.isNaN(updateDate.getTime()) ? updateDate.toISOString() : null;
   for (const t of txs) {
     const id = t.payment_id; if (!id || (await env.LEDGER.get(`pay:${id}`))) continue;
     await env.LEDGER.put(`pay:${id}`, JSON.stringify({
       capture_id: id, order_id: invoice.id, status: "COMPLETED", amount: t.amount?.value, currency: t.amount?.currency_code || "USD",
-      ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt, captured_at: t.payment_date_time || (t.payment_date ? `${t.payment_date}T00:00:00Z` : new Date().toISOString()),
+      ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt,
+      // The sandbox can label account-local transaction time with Z, so keep it raw and use the invoice UTC audit time.
+      captured_at: invoiceUpdateAt || learnedAt, payment_seen_at: learnedAt, paypal_payment_date: t.payment_date_time || t.payment_date || null,
+      ...(invoiceUpdateAt ? { paypal_invoice_update_time: invoiceUpdateAt } : {}),
       refunded_amount: "0.00", payer_email_sha256: kept?.email ? await sha(String(kept.email).trim().toLowerCase()) : null, via: "invoice",
     }));
     // an invoice paid days after the chat teaches Meta too, the moment PayPal says it is paid
     await sendToMeta(env, url, await env.LEDGER.get(`pay:${id}`, "json"));
   }
   const rec = await env.LEDGER.get(`inv:${invoice.id}`, "json");
-  if (rec) { rec.status = invoice.status || "PAID"; rec.paid_at = new Date().toISOString(); await env.LEDGER.put(`inv:${invoice.id}`, JSON.stringify(rec)); }
+  if (rec) { rec.status = invoice.status || "PAID"; rec.paid_at = learnedAt; rec.payment_seen_at = learnedAt; await env.LEDGER.put(`inv:${invoice.id}`, JSON.stringify(rec)); }
   await forget("pay:"); await forget("inv:");
+}
+
+/** Re-check PayPal invoices; the public refresh is throttled, while the scheduled check must always run. */
+async function syncInvoices(env, pp, url, force = false) {
+  const all = await cachedList(env, "inv:");
+  const open = all.filter((i) => i.status === "SENT" || i.status === "PARTIALLY_PAID");
+  if (!open.length) return { checked: 0, paid: 0, invoices: all.map(({ email, ...x }) => x) };
+  if (!force) {
+    const last = Number(await env.LEDGER.get("sync:last")) || 0;
+    if (Date.now() - last < 300000) return { checked: 0, paid: 0, recent: true, invoices: all.map(({ email, ...x }) => x) };
+  }
+  await env.LEDGER.put("sync:last", String(Date.now()));
+  let paid = 0;
+  for (const i of open) {
+    const invoice = await pp.getInvoice(i.id);
+    if (invoice.status === "PAID" || invoice.status === "PARTIALLY_PAID") { await recordInvoicePayment(env, invoice, url); paid++; }
+  }
+  if (paid) await forget("inv:");
+  return { checked: open.length, paid, invoices: (await cachedList(env, "inv:")).map(({ email, ...x }) => x) };
 }
 
 /** Shared daily limit plus a per-visitor one, so a single visitor cannot use up the demo for judges. */
@@ -326,6 +352,41 @@ async function guard(env, request, key, perIp, total) {
   if (!(await quota(env, `${key}:ip:${ip}`, perIp))) return `You reached this demo's limit for ${key} today.`;
   if (!(await quota(env, key, total))) return `The shared daily ${key} limit is reached.`;
   return null;
+}
+
+// Agent runs (budget, revenue, chase, send) share one daily cap across all visitors, so public use cannot drain the API
+// budget during judging; 120 runs is several times a judging day. AG Studio assistant turns keep their own cap (below).
+const CLAUDE_DAILY = 120;
+async function claudeGuard(env, request, key, perIp, total) {
+  const stop = await guard(env, request, key, perIp, total);
+  if (stop) return stop;
+  return await guard(env, request, "Claude runs", 20, CLAUDE_DAILY);
+}
+
+async function budgetFallback(env) {
+  const [run, recommendation] = await Promise.all([env.LEDGER.get("run:owner", "json"), env.LEDGER.get("rec:latest", "json")]);
+  return { run, recommendation };
+}
+
+function budgetUnavailable(fallback, status = 503) {
+  const run = fallback.run, rec = fallback.recommendation;
+  const date = (value) => value ? new Date(value).toLocaleDateString("en-US", { dateStyle: "medium" }) : "";
+  const saved = run ? `Latest saved run from ${date(run.at)}: ${run.recommendation?.headline || "budget recommendation"}.`
+    : rec ? `Latest checked recommendation from ${date(rec.at)}: ${rec.recommendation?.headline || "budget recommendation"}.`
+      : "No earlier run is available.";
+  return json({ error: `Claude could not run. ${saved}`, fallback }, status);
+}
+
+async function revenueFallback(env) {
+  const run = await env.LEDGER.get("run:revenue", "json");
+  return { run, recommendation: await env.LEDGER.get("rec:latest", "json") };
+}
+
+function revenueUnavailable(fallback, status = 503) {
+  const run = fallback.run;
+  const date = run?.at ? new Date(run.at).toLocaleDateString("en-US", { dateStyle: "medium" }) : "";
+  const saved = run ? `Latest saved invoice run from ${date}: ${run.summary} ${run.drafts?.length || 0} saved drafts, ${run.skips?.length || 0} leads skipped.` : "No earlier invoice run is available.";
+  return json({ error: `Claude could not run. ${saved}`, fallback }, status);
 }
 
 async function quota(env, key, limit) {
@@ -504,24 +565,17 @@ const app = {
       // Webhooks are the main path, but the sandbox does not always emit INVOICING.INVOICE.PAID: ask PayPal about every
       // sent invoice and record the ones it says are paid (recordInvoicePayment is idempotent per payment id).
       if (url.pathname === "/api/invoices/sync" && request.method === "POST") {
-        const all = await cachedList(env, "inv:");
-        const open = all.filter((i) => i.status === "SENT" || i.status === "PARTIALLY_PAID");
-        if (!open.length) return json({ checked: 0, paid: 0, invoices: all.map(({ email, ...x }) => x) });
-        // one PayPal re-check per 5 minutes for everyone; page loads in between just read the ledger
-        const last = Number(await env.LEDGER.get("sync:last")) || 0;
-        if (Date.now() - last < 300000) return json({ checked: 0, paid: 0, recent: true, invoices: all.map(({ email, ...x }) => x) });
-        await env.LEDGER.put("sync:last", String(Date.now()));
-        let paid = 0;
-        for (const i of open) { const inv = await pp.getInvoice(i.id); if (inv.status === "PAID" || inv.status === "PARTIALLY_PAID") { await recordInvoicePayment(env, inv, url); paid++; } }
-        if (paid) await forget("inv:");
-        return json({ checked: open.length, paid, invoices: (await cachedList(env, "inv:")).map(({ email, ...x }) => x) });
+        return json(await syncInvoices(env, pp, url));
       }
 
       // The revenue agent reads what each unpaid lead wrote and proposes invoices; code prices and checks every proposal,
       // and PayPal's Agent Toolkit creates the drafts. Nothing is sent: each draft waits in Approvals.
       if (url.pathname === "/api/agent/revenue" && request.method === "POST") {
-        const stop = await guard(env, request, "revenue agent runs", 4, 40); if (stop) return json({ error: stop }, 429);
-        const out = await revenueDrafts(env, url);
+        const stop = await claudeGuard(env, request, "revenue agent runs", 4, 40);
+        if (stop) return revenueUnavailable(await revenueFallback(env), 429);
+        let out;
+        try { out = await revenueDrafts(env, url); }
+        catch { console.warn("revenue agent failed"); return revenueUnavailable(await revenueFallback(env), 502); }
         // the judge path replays the latest run: who was skipped and why, the injection refusal; no emails
         await env.LEDGER.put("run:revenue", JSON.stringify({ at: new Date().toISOString(), skips: out.skips, refusals: out.refusals, summary: out.summary, trace: out.trace, ms: out.ms,
           drafts: out.drafts.map(({ email, ...d }) => d) }));
@@ -531,7 +585,7 @@ const app = {
       // Sent invoices nobody has paid: the chase agent reads each with the Agent Toolkit, chooses whom to remind and writes
       // the note; code allows only eligible invoices, at most 3 reminders, and no amount but the invoice's own.
       if (url.pathname === "/api/agent/chase" && request.method === "POST") {
-        const stop = await guard(env, request, "chase agent runs", 3, 20); if (stop) return json({ error: stop }, 429);
+        const stop = await claudeGuard(env, request, "chase agent runs", 3, 20); if (stop) return json({ error: stop }, 429);
         const t0 = Date.now();
         const eligible = eligibleForReminder(await listPrefix(env, "inv:"));
         if (!eligible.length) return json({ reminded: [], summary: "No sent invoice is waiting long enough for a reminder.", trace: [], eligible: 0, ms: 0 });
@@ -555,7 +609,7 @@ const app = {
         if (!rec) return json({ error: "Unknown invoice." }, 404);
         if (rec.status !== "DRAFT") return json({ error: `Invoice is ${rec.status}, not a draft.` }, 400);
         // per visitor first, then a shared budget, so one visitor cannot send every draft before the judges arrive
-        const stop = await guard(env, request, "invoice sends", 3, 30); if (stop) return json({ error: stop }, 429);
+        const stop = await claudeGuard(env, request, "invoice sends", 3, 30); if (stop) return json({ error: stop }, 429);
         const tools = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
           configuration: { actions: { invoices: { get: true, send: true } }, context: { sandbox: true } } }).getTools();
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: SEND_SYSTEM, tools: SEND_TOOLS });
@@ -712,7 +766,8 @@ const app = {
 
       if (url.pathname === "/api/agent" && request.method === "POST") {
         const body = await request.json();
-        const stop = await guard(env, request, "agent runs", 4, Number(env.AGENT_DAILY || 40)); if (stop) return json({ error: `${stop} The reconciliation still works.` }, 429);
+        const stop = await claudeGuard(env, request, "agent runs", 4, Number(env.AGENT_DAILY || 40));
+        if (stop) return budgetUnavailable(await budgetFallback(env), 429);
         // a synthetic week (src/scenarios.js) has enough paid orders for a real decision; it never touches the PayPal ledger
         const week = body.scenario ? scenario(String(body.scenario)) : null;
         if (body.scenario && !week) return json({ error: "Unknown scenario." }, 400);
@@ -720,7 +775,9 @@ const app = {
         const rec = reconcile(week ? week.ads : parseAdCsv(body.csv).rows, payments);
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined });
         const started = Date.now();
-        const out = await runAgent({ llm, rec, payments, instruction: typeof body.instruction === "string" ? body.instruction : "" });
+        let out;
+        try { out = await runAgent({ llm, rec, payments, instruction: typeof body.instruction === "string" ? body.instruction : "" }); }
+        catch { console.warn("budget agent failed"); return budgetUnavailable(await budgetFallback(env), 502); }
         const source = week ? `budget agent · SYNTHETIC: ${week.name}` : "budget agent";
         const saved = out.recommendation && out.grounded ? await saveRecommendation(env, out.recommendation, source) : null;
         // the latest owner request on the live ledger is kept whole, so /judge can replay it without spending a Claude turn
@@ -759,9 +816,16 @@ const app = {
     }
   },
 };
-// Every night: keep a few drafts for visitors to approve. A warm lead whose invoice was sent but never paid gets a fresh draft.
-app.scheduled = async (_event, env) => {
+// Every five minutes: recover paid invoices even when PayPal does not send INVOICING.INVOICE.PAID.
+// Every night: keep a few drafts for visitors to approve and refresh disputes.
+app.scheduled = async (event, env) => {
   const pp = paypal({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET });
+  const url = new URL("https://paid-signal.thelongmarketing.workers.dev/");
+  if (event.cron === "*/5 * * * *") {
+    try { await syncInvoices(env, pp, url, true); } catch { console.warn("scheduled invoice sync failed"); }
+    return;
+  }
+  if (event.cron !== "17 2 * * *") return;
   let invoices = await listPrefix(env, "inv:");
   // drafts nobody approved within a day are cleared, so judges find fresh ones
   for (const i of invoices.filter((x) => x.status === "DRAFT" && Date.now() - Date.parse(x.created_at || 0) > 20 * 3600000)) {
@@ -771,7 +835,7 @@ app.scheduled = async (_event, env) => {
   invoices = await listPrefix(env, "inv:");
   await forget("inv:");
   // no draft waiting: the revenue agent reads the leads again and drafts only for the ones ready to pay, priced by code
-  if (!invoices.some((i) => i.status === "DRAFT")) await revenueDrafts(env, new URL("https://paid-signal.thelongmarketing.workers.dev/"));
+  if (!invoices.some((i) => i.status === "DRAFT") && await quota(env, "Claude runs", CLAUDE_DAILY)) await revenueDrafts(env, url);
   try { await syncDisputes(env); } catch (e) { console.warn("dispute sync failed", e?.message); }
 };
 export default app;

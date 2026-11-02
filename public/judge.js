@@ -10,6 +10,25 @@ const head = (id) => { const s = box(id); const h = s.querySelector("h2"); s.rep
 
 async function getJSON(url, init) { const r = await fetch(url, init); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`); return j; }
 
+function showFallback(message, fallback) {
+  if (fallback?.run) {
+    if (fallback.run.ads?.length) {
+      render(fallback.run);
+      box("ask").prepend($("p", { className: "note err", textContent: message }));
+    } else head("ask").append($("p", { className: "note err", textContent: message }), $("p", { className: "quote", textContent: fallback.run.recommendation?.headline || "Latest saved run" }));
+    return;
+  }
+  const ask = head("ask");
+  ask.append($("p", { className: "note err", textContent: message }));
+  const saved = fallback?.recommendation;
+  if (saved) {
+    ask.append($("p", { className: "note", textContent: `Latest checked recommendation, ${new Date(saved.at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.` }),
+      $("p", { className: "quote", textContent: saved.recommendation?.headline || "Saved budget recommendation" }));
+    const ans = head("answer");
+    for (const action of saved.recommendation?.actions || []) ans.append($("p", { className: "reason", textContent: `${CHANGE[action.change] || action.change}: ${name(action.ad)}. ${action.reason}` }));
+  } else ask.append($("p", { className: "note", textContent: "No saved run is available yet." }));
+}
+
 function render(run) {
   // the ad the request is about: the one with the most leads in the ad report
   const target = [...(run.ads || [])].sort((a, b) => b.leads - a.leads)[0];
@@ -35,9 +54,14 @@ function render(run) {
     live.disabled = true; live.textContent = "Claude is reading the payments…";
     try {
       const csv = await (await fetch("/data/demo-ads.csv")).text();
-      await getJSON("/api/agent", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ csv, instruction: run.instruction }) });
+      const out = await getJSON("/api/agent", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ csv, instruction: run.instruction }) });
+      if (out.error) { showFallback(out.error, out.fallback); return; }
       render((await getJSON("/api/runs/owner")).run);
-    } catch (e) { live.disabled = false; live.textContent = "Run it live again (one Claude run)"; ask.append($("p", { className: "note err", textContent: e.message })); }
+    } catch {
+      let fallback = {};
+      try { [fallback.run, fallback.recommendation] = await Promise.all([getJSON("/api/runs/owner").then((x) => x.run), getJSON("/api/recommendation").then((x) => x.latest)]); } catch {}
+      showFallback("Claude could not run. Showing the latest saved run.", fallback);
+    }
   };
   ask.append($("div", { className: "row" }, [live]));
 

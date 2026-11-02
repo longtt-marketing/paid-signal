@@ -31,7 +31,7 @@ h1{margin:0;font-size:clamp(36px,5vw,48px);line-height:1.05;font-weight:700;lett
 .alt:hover{background:var(--chip)}
 .click{margin:0;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:var(--paid-bg);color:var(--paid-ink);font-size:14px}
 .click i{width:8px;height:8px;border-radius:50%;background:var(--paid);flex:none}.click.none{background:var(--chip);color:var(--mute)}.click.none i{background:var(--faint)}
-.msg{margin:0;font-size:14px;color:var(--mute)}.msg:empty{display:none}
+.msg{margin:0;font-size:14px;color:var(--mute)}.msg:empty{display:none}.notice{margin:0;font-size:13px;color:var(--faint)}
 .done{width:100%;max-width:520px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:36px;display:flex;flex-direction:column;gap:24px;align-items:flex-start}
 .tick{width:56px;height:56px;border-radius:50%;background:var(--paid-bg);display:grid;place-items:center}
 .done h1{font-size:40px}.done .sub{margin-top:8px}
@@ -56,6 +56,7 @@ h1{margin:0;font-size:clamp(36px,5vw,48px);line-height:1.05;font-weight:700;lett
       <div class="total"><span>Total</span><b>$49.00</b></div>
       <div id="paypal-buttons"></div>
       <button class="alt" id="redirect" type="button">Pay in this tab</button>
+      <p class="notice">This demo sends purchase details to Meta as test events. <a href="/data">See what data goes where</a>.</p>
       <p class="click none" id="click"><i></i><span>No ad click on this visit</span></p>
       <p class="msg" id="msg" role="status"></p>
     </section>
