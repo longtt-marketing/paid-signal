@@ -145,3 +145,14 @@ test("decisions: only on the latest checked recommendation, with the move copied
   const d = await ok.json();
   assert.deepEqual([d.change, d.reason, d.rec_id], ["keep", "Only 1 paid order.", "R-LIVE1"]);
 });
+
+test("invoice lists never carry a lead's email, including the sync answer", async () => {
+  const env = { LEDGER: kv() };
+  await env.LEDGER.put("inv:INV2-AAAA", JSON.stringify({ id: "INV2-AAAA", lead: "Lead 99 (fictional)", ad: "free_guide", email: "lead99@example.com", amount: "49.00", status: "DRAFT" }));
+  for (const [path, method] of [["/api/invoices", "GET"], ["/api/invoices/sync", "POST"]]) {
+    const res = await app.fetch(new Request(`https://paid-signal.test${path}`, { method, headers: { origin: "https://paid-signal.test", "content-type": "application/json" }, ...(method === "POST" ? { body: "{}" } : {}) }), env);
+    const body = await res.text();
+    assert.equal(res.status, 200, path);
+    assert.ok(body.includes("INV2-AAAA") && !body.includes("lead99@example.com"), path);
+  }
+});

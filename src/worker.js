@@ -506,15 +506,15 @@ const app = {
       if (url.pathname === "/api/invoices/sync" && request.method === "POST") {
         const all = await cachedList(env, "inv:");
         const open = all.filter((i) => i.status === "SENT" || i.status === "PARTIALLY_PAID");
-        if (!open.length) return json({ checked: 0, paid: 0, invoices: all });
+        if (!open.length) return json({ checked: 0, paid: 0, invoices: all.map(({ email, ...x }) => x) });
         // one PayPal re-check per 5 minutes for everyone; page loads in between just read the ledger
         const last = Number(await env.LEDGER.get("sync:last")) || 0;
-        if (Date.now() - last < 300000) return json({ checked: 0, paid: 0, recent: true, invoices: all });
+        if (Date.now() - last < 300000) return json({ checked: 0, paid: 0, recent: true, invoices: all.map(({ email, ...x }) => x) });
         await env.LEDGER.put("sync:last", String(Date.now()));
         let paid = 0;
         for (const i of open) { const inv = await pp.getInvoice(i.id); if (inv.status === "PAID" || inv.status === "PARTIALLY_PAID") { await recordInvoicePayment(env, inv, url); paid++; } }
         if (paid) await forget("inv:");
-        return json({ checked: open.length, paid, invoices: await cachedList(env, "inv:") });
+        return json({ checked: open.length, paid, invoices: (await cachedList(env, "inv:")).map(({ email, ...x }) => x) });
       }
 
       // The revenue agent reads what each unpaid lead wrote and proposes invoices; code prices and checks every proposal,
