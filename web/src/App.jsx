@@ -270,7 +270,7 @@ export default function App({ first = null }) {
               <svg width="56" height="40" viewBox="0 0 56 40" aria-hidden="true"><path d="M2 20h46M38 8l12 12-12 12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
               <div><b className="n paid">{(t || first)?.paid ?? "…"}</b><span>paid {(t || first)?.paid === 1 ? "order" : "orders"} PayPal confirms</span></div>
             </div>
-            <p className="pitch">{t ? `Ad platforms learn from the ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}: the ${state?.meta?.events?.length ?? 0} from Meta ads go back to Meta, the Google ones to Google.` : "Ad platforms learn from leads. PayPal knows who paid."}</p>
+            <p className="pitch">{t ? `Ad platforms learn from the ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}: the ${state?.meta?.events?.length ?? 0} from Meta ads go back to Meta (test events in this demo), the Google ones to Google.` : "Ad platforms learn from leads. PayPal knows who paid."}</p>
             <div className="hero-actions"><a className="cta" href="/judge">Judge path, 60 s</a><a className="hero-link" href="/audit">Audit your own ads</a></div>
             {t && <div className="chips-row">
               <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
@@ -344,7 +344,7 @@ export default function App({ first = null }) {
                   return <div className="sig-event">
                     <dl>
                       <div><dt>Payment</dt><dd>capture {ev.event_id.replace("paypal:", "")} · ${ev.custom_data.value.toFixed(2)}</dd></div>
-                      <div><dt>Event</dt><dd>Purchase · {ev.action_source === "business_messaging" ? "Messenger conversation" : ev.action_source === "system_generated" ? "lead-form CRM event" : "paid at checkout"}</dd></div>
+                      <div><dt>Event</dt><dd>Purchase · {ev.action_source === "business_messaging" ? "Messenger conversation" : ev.action_source === "system_generated" ? "lead-form CRM event" : ev.action_source === "chat" ? "invoice paid after a chat" : "paid at checkout"}</dd></div>
                       <div><dt>Matched on</dt><dd>{[ev.user_data.fbc && "the ad click (fbc)", ev.user_data.em && "the payer's hashed email", ev.user_data.page_scoped_user_id && "Messenger page-scoped ID", ev.user_data.lead_id && "Meta lead ID", ev.user_data.client_user_agent && "browser"].filter(Boolean).join(", ")}</dd></div>
                       <div><dt>Meta</dt><dd>{sent?.ok ? `received ${sent.events_received} event ${clock(sent.at)}${sent.backfill ? " (sent later, before the live link)" : ""}` : "not sent yet"}</dd></div>
                     </dl>

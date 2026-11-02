@@ -28,7 +28,7 @@ async function show(id) {
   const ppBody = pp?.error ? [$("p", { className: "err", textContent: `PayPal could not be read just now: ${pp.error}` })]
     : [dl([["Status (PayPal)", pp?.status || "–"], ["Amount", money(pp?.amount, pp?.currency)],
       p.via === "invoice" ? ["Invoice", code(pp?.invoice_id)] : ["Capture id", code(p.capture_id)],
-      p.via === "invoice" ? ["Paid on (PayPal)", pp?.paid_at || "–"] : ["Captured (PayPal)", when(pp?.create_time)],
+      p.via === "invoice" ? ["Paid on (PayPal invoice date, account time zone)", pp?.paid_at || "–"] : ["Captured (PayPal)", when(pp?.create_time)],
       p.via !== "invoice" && ["custom_id (PayPal)", code(pp?.custom_id)],
       pp?.fee && ["PayPal fee / net", `${money(pp.fee)} / ${money(pp.net)}`],
       Number(p.refunded_amount) > 0 && ["Refunded", `${money(p.refunded_amount)}${p.refunded_at ? ` · ${when(p.refunded_at)}` : ""}`],
@@ -43,7 +43,7 @@ async function show(id) {
   else if (m.ok) {
     metaBody = [dl([["Event", "Purchase"], ["event_id", code(m.event_id)], ["Value", money(m.value)], ["Meta answered", `events_received: ${m.events_received ?? "–"}`], ["fbtrace_id", code(m.fbtrace_id)], ["Sent", when(m.at)], ["Mode", m.test_event ? "test event (this demo)" : "live"]]),
       $("p", { className: "note", textContent: m.superseded ? "A Google click, sent to Meta in the backfill before Google buyers were routed to Google only: still a fact, not counted as a Meta purchase." : m.backfill ? "Sent later, in a backfill, when the live link to Meta was switched on; not counted as a live delivery time." : "Sent the moment PayPal confirmed the payment. Meta's Conversions API has no retraction: if this payment were refunded now, it would come off the ledger here, not at Meta." })];
-    metaTag = t.capture_to_meta_s != null ? gap(`${fmtSecs(t.capture_to_meta_s)} after capture`, "blue") : gap(m.backfill ? "backfill" : "sent", "blue");
+    metaTag = t.capture_to_meta_s != null && t.capture_to_meta_s >= 0 && p.via !== "invoice" ? gap(`${fmtSecs(t.capture_to_meta_s)} after capture`, "blue") : p.via === "invoice" && !m.backfill ? gap("sent when PayPal reported the invoice paid", "blue") : gap(m.backfill ? "backfill" : "sent", "blue");
   } else { metaBody = $("p", { textContent: m.held ? `Held back: ${m.held}.` : `Meta did not accept it: ${m.error || "no answer"}.` }); metaTag = gap("held", "bad"); metaCls = "warn"; }
   steps.push(step("3", metaCls, "Meta receives the purchase", "Conversions API, the shop's own dataset", metaBody, metaTag));
 

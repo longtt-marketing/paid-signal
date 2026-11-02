@@ -5,7 +5,7 @@ Lead 03 (fictional),free_guide,fb,,trial class price,lead03@example.com,What's t
 Lead 04 (fictional),parent_carousel,fb,,sibling discount,lead04@example.com,Is there a discount for siblings? I have two kids.,messenger,DEMO-PSID-004,DEMO-PAGE-001,
 Lead 05 (fictional),holiday_static,g,Cj0Klead05,camp dates,lead05@example.com,When are the December camp dates? My son is 9.,web,,,
 Lead 06 (fictional),free_guide,fb,,downloaded the guide only,lead06@example.com,,lead_form,,,DEMO-LEAD-006
-Lead 07 (sandbox buyer),free_guide,fb,,booking a class this week,sb-q38rf53592820@personal.example.com,"Booking a class this week, please send the invoice.",lead_form,,,DEMO-LEAD-007
+Lead 07 (sandbox buyer),free_guide,fb,IwARlead07,booking a class this week,sb-q38rf53592820@personal.example.com,"Booking a class this week, please send the invoice.",web,,,
 Lead 08 (fictional),parent_carousel,fb,,booking two siblings for Saturday,lead08@example.com,Please book my two kids (7 and 9) for Saturday's trial.,messenger,DEMO-PSID-008,DEMO-PAGE-001,
 Lead 09 (fictional),trial_video,fb,IwARlead09,which day the trial class runs,lead09@example.com,Which day does the trial class run? Saturday might suit us.,web,,,
 Lead 10 (fictional),free_guide,fb,,price for two children,lead10@example.com,What's the price for two children?,lead_form,,,DEMO-LEAD-010

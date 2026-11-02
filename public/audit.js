@@ -7,6 +7,9 @@ const el = (tag, props = {}, kids = []) => { const e = Object.assign(document.cr
 const usd = (c) => `${c < 0 ? "−" : ""}$${(Math.abs(c) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
 const files = { ads: null, pp: null, sample: false };
+// the sample export uses the demo shop's ad keys; show their names (a shop's own export already has names)
+const DEMO_NAMES = { trial_video: "Trial class · video", free_guide: "Free guide · lead form", parent_carousel: "Testimonial · carousel", holiday_static: "Holiday camp · static" };
+const label = (ad) => (files.sample && DEMO_NAMES[ad]) || ad;
 let report = "";
 
 const ready = () => { $("run").disabled = !(files.ads && files.pp); };
@@ -33,8 +36,10 @@ $("sample").onclick = async () => {
       lines.push([date, time, "UTC", "Sandbox buyer", p.via === "invoice" ? "Invoice Payment" : "Express Checkout Payment", "Completed", "USD", p.amount, p.fee ? `-${p.fee}` : "", "", p.payer_key ? `buyer-${p.payer_key}@sample.invalid` : "", p.capture_id, "", custom].map(q).join(","));
       if (Number(p.refunded_amount) > 0) lines.push([date, time, "UTC", "Sandbox buyer", "Payment Refund", "Completed", "USD", `-${p.refunded_amount}`, "", "", "", `${p.capture_id}-R`, p.capture_id, ""].map(q).join(","));
     }
+    // one made-up payment with no ad tag, labelled below, so the "no ad can claim" case shows in the sample
+    lines.push(["11/1/2026", "09:00:00", "UTC", "Walk-in buyer", "Website Payment", "Completed", "USD", "49.00", "-1.96", "", "", "SAMPLE-NO-AD-1", "", ""].map(q).join(","));
     files.ads = ads; files.pp = lines.join("\n"); files.sample = true;
-    $("ads-ok").textContent = "Sample: demo-ads.csv (fictional shop)"; $("pp-ok").textContent = `Sample: ${ledger.payments.length} PayPal sandbox payments, read live`;
+    $("ads-ok").textContent = "Sample: demo-ads.csv (fictional shop)"; $("pp-ok").textContent = `Sample: ${ledger.payments.length} PayPal sandbox payments read live, plus one made-up payment with no ad tag`;
     ready(); audit();
   } catch (e) { $("msg").textContent = `Could not load the sample files: ${e.message}`; }
   $("sample").disabled = false;
@@ -59,7 +64,7 @@ function audit() {
   $("headline").textContent = !s.tagged
     ? `PayPal confirms ${plural(s.payments, "payment")}, but none says which ad it came from, so no ad can be credited yet. Below is what to add so the next export can.`
     : byLeads && byPaid && byLeads.ad !== byPaid.ad && byPaid.revenue_cents > 0
-      ? `Your ad report's best ad by leads is ${byLeads.ad} (${plural(byLeads.leads, "lead")}, ${plural(byLeads.paid, "paid order")}). By PayPal-confirmed payments it is ${byPaid.ad} (${plural(byPaid.paid, "paid order")}, ${usd(byPaid.revenue_cents)}).`
+      ? `Your ad report's best ad by leads is ${label(byLeads.ad)} (${plural(byLeads.leads, "lead")}, ${plural(byLeads.paid, "paid order")}). By PayPal-confirmed payments it is ${label(byPaid.ad)} (${plural(byPaid.paid, "paid order")}, ${usd(byPaid.revenue_cents)}).`
       : `${plural(t.paid, "paid order")} PayPal confirms against ${plural(t.leads, "lead")} the ad report counts; paid revenue ${usd(t.revenue_cents)} on ${usd(t.spend_cents)} of ads.`;
 
   const stat = (b, span, cls = "") => el("div", { className: `stat ${cls}` }, [el("b", { textContent: b }), el("span", { textContent: span })]);
@@ -75,21 +80,21 @@ function audit() {
     const allow = m ? (m.increase ? ["Raise allowed", "up"] : m.reduce ? ["Cut", "down"] : ["Keep", ""]) : ["Keep: fewer than 3 paid orders", ""];
     const why = m ? m.why : o?.more_spend_to_decide_cents != null ? `Cut if the next ${usd(o.more_spend_to_decide_cents)} of spend brings no paid order.` : r.paid === 0 && r.spend_cents > 0 ? "No paid order yet." : "";
     const per = r.spend_cents ? r.revenue_cents / r.spend_cents : 0, after = r.spend_cents ? (r.revenue_cents * (1 - share) - r.fee_cents) / r.spend_cents : 0;
-    return el("tr", {}, [el("td", { textContent: r.ad }), el("td", { textContent: usd(r.spend_cents) }), el("td", { textContent: String(r.leads) }),
+    return el("tr", {}, [el("td", { textContent: label(r.ad) }), el("td", { textContent: usd(r.spend_cents) }), el("td", { textContent: String(r.leads) }),
       el("td", { textContent: `${r.paid}${r.held ? ` (+${r.held} held)` : ""}` }), el("td", { textContent: String(r.refunded) }), el("td", { textContent: usd(r.revenue_cents) }),
       el("td", { textContent: `$${per.toFixed(2)}` }), el("td", { textContent: `$${after.toFixed(2)}` }),
       el("td", {}, [el("span", { className: `pill ${allow[1]}`, textContent: allow[0] }), why ? el("small", { textContent: why }) : null])]);
   }));
 
   const todo = [];
-  if (s.tagged < s.payments) todo.push(`${plural(s.payments - s.tagged, "PayPal payment")} (${usd(s.untagged_net_cents)}) carry no ad. Put the ad in each PayPal order's custom_id at checkout, as the demo shop does (see Connect a shop), or add ad={{ad.name}} to your Meta ad's URL parameters and pass it through.`);
+  if (s.tagged < s.payments) todo.push(`${plural(s.payments - s.tagged, "PayPal payment")} (${usd(s.untagged_net_cents)}) ${s.payments - s.tagged === 1 ? "carries" : "carry"} no ad. Put the ad in each PayPal order's custom_id at checkout, as the demo shop does (see Connect a shop), or add ad={{ad.name}} to your Meta ad's URL parameters and pass it through.`);
   if (s.tags_not_in_export.length) todo.push(`These ad tags are in PayPal but not in the ad export: ${s.tags_not_in_export.join(", ")}. Export the same dates, at ad level, or use the same ad names in both.`);
   if (s.refunds_not_found) todo.push(`${plural(s.refunds_not_found, "refund")} refer to a payment outside this PayPal file; download a wider date range so refunds meet their payment.`);
   if (rec.ads.every((r) => r.paid < 3)) todo.push("No ad has 3 PayPal-confirmed paid orders yet, so the rule keeps every budget. The cut points in the table say how much more spend would settle each ad.");
   const up = rec.ads.filter((r) => moves[r.ad]?.increase).map((r) => r.ad), down = rec.ads.filter((r) => moves[r.ad]?.reduce).map((r) => r.ad);
-  if (up.length) todo.push(`Raising is supported for ${up.join(", ")}: each covers its spend after your costs and PayPal fees and is at or above the average.`);
-  if (down.length) todo.push(`Cutting is supported for ${down.join(", ")}: paid revenue does not cover ad spend after your costs and PayPal fees.`);
-  if (byLeads && byLeads.paid < 3 && byLeads.leads >= 2 * Math.max(1, byLeads.paid) * 3) todo.push(`Do not raise ${byLeads.ad} for its leads: ${plural(byLeads.leads, "lead")} and ${plural(byLeads.paid, "paid order")}.`);
+  if (up.length) todo.push(`Raising is supported for ${up.map(label).join(", ")}: ${up.length === 1 ? "it covers" : "each covers"} its spend after your costs and PayPal fees and is at or above the average.`);
+  if (down.length) todo.push(`Cutting is supported for ${down.map(label).join(", ")}: paid revenue does not cover ad spend after your costs and PayPal fees.`);
+  if (byLeads && byLeads.paid < 3 && byLeads.leads >= 2 * Math.max(1, byLeads.paid) * 3) todo.push(`Do not raise ${label(byLeads.ad)} for its leads: ${plural(byLeads.leads, "lead")} and ${plural(byLeads.paid, "paid order")}.`);
   if (a.errors.length || p.errors.length) todo.push(`Skipped rows: ${[...a.errors, ...p.errors].slice(0, 4).join(" ")}${a.errors.length + p.errors.length > 4 ? " …" : ""}`);
   $("todo").replaceChildren(...todo.map((x) => el("li", { textContent: x })));
 
