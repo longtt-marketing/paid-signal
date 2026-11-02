@@ -19,8 +19,10 @@ async function show(id) {
   const steps = [];
 
   const inv = p.via === "invoice";
-  steps.push(step("1", "", "Ad click", !c.ad ? "No ad click on this payment" : inv ? `${c.source === "g" ? "Google" : "Meta"} ad · the lead came from it; the click is kept with the invoice in the shop's ledger` : `${c.source === "g" ? "Google" : "Meta"} ad · carried into PayPal inside the order's custom_id`,
-    dl([["Ad", c.ad_name || "–"], ["Click id", code(c.click_id)], ["Clicked", when(c.clicked_at)], c.ad && [inv ? "Kept with the invoice" : "Packed as", code(`a=${c.ad};s=${c.source};c=${c.click_id};t=${c.clicked_at || 0}`)]]),
+  const channel = p.channel || "web";
+  const leadPath = channel === "messenger" ? "Messenger conversation" : channel === "lead_form" ? "Meta lead form" : "website click";
+  steps.push(step("1", "", inv ? "Lead attribution" : "Ad click", !c.ad ? "No ad attribution on this payment" : inv ? `${c.source === "g" ? "Google" : "Meta"} lead · ${leadPath}; attribution is kept with the invoice in the shop's ledger` : `${c.source === "g" ? "Google" : "Meta"} ad · carried into PayPal inside the order's custom_id`,
+    dl([["Ad", c.ad_name || "–"], inv ? ["Lead channel", leadPath] : ["Click id", code(c.click_id)], !inv && ["Clicked", when(c.clicked_at)], c.ad && !inv && ["Packed as", code(`a=${c.ad};s=${c.source};c=${c.click_id};t=${c.clicked_at || 0}`)]]),
     t.click_to_capture_s != null ? gap(`paid ${fmtSecs(t.click_to_capture_s)} later`, "grey") : null));
 
   const ppBody = pp?.error ? [$("p", { className: "err", textContent: `PayPal could not be read just now: ${pp.error}` })]
@@ -33,7 +35,7 @@ async function show(id) {
       p.dispute && ["Dispute", `${p.dispute.status}${p.dispute.outcome ? ` · ${p.dispute.outcome}` : ""} (${p.dispute_state})`],
       p.held_as_duplicate && ["Held", "possible duplicate: same payer, same ad, minutes apart"]]),
       $("p", { className: "note", textContent: `Read from PayPal ${pp?.read_at ? when(pp.read_at) : ""} with ${pp?.read || "the PayPal API"} (PayPal is asked again at most every 10 minutes). ${inv ? `The ledger recorded it ${when(p.captured_at)}, when PayPal's invoice record showed it paid.` : `The ledger recorded it ${when(p.captured_at)} from the capture response and a signature-verified webhook.`}` })];
-  steps.push(step("2", "paid", "PayPal confirms the money", p.via === "invoice" ? "PayPal invoice, paid after a chat" : "PayPal Checkout, captured by the server SDK", ppBody,
+  steps.push(step("2", "paid", "PayPal confirms the money", inv ? `PayPal invoice paid after a ${leadPath.toLowerCase()}` : "PayPal Checkout, captured by the server SDK", ppBody,
     gap(p.status === "COMPLETED" && !(Number(p.refunded_amount) >= Number(p.amount)) && p.dispute_state !== "open" && p.dispute_state !== "lost" ? "paid" : "not counted", p.status === "COMPLETED" ? "" : "bad")));
 
   let metaBody, metaTag, metaCls = "meta";

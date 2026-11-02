@@ -30,6 +30,14 @@ const STUDIO_TOOLS = new Set(["add_page_filter", "add_widget", "add_widget_filte
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 const sha = async (s) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
+const publicInvoice = ({ email, psid, lead_id, ...invoice }) => invoice;
+const publicLead = ({ email, psid, lead_id, ...lead }) => lead;
+const publicMeta = ({ events, ...meta }) => ({ ...meta, events: events.map((e) => ({ ...e, user_data: {
+  ...e.user_data,
+  ...(e.user_data.em ? { em: ["(SHA-256 of the payer's email; sent to Meta, not shown here)"] } : {}),
+  ...(e.user_data.page_scoped_user_id ? { page_scoped_user_id: "(Messenger PSID; sent to Meta, kept server-side)" } : {}),
+  ...(e.user_data.lead_id ? { lead_id: "(Meta lead ID; sent to Meta, kept server-side)" } : {}),
+} })) });
 
 // KV list calls are the scarce resource: the ledger is read through a 20-second edge cache, cleared on every write here
 const cacheKey = (prefix) => new Request(`https://ledger.paid-signal.internal/${prefix}`);
@@ -74,7 +82,8 @@ async function revenueDrafts(env, url) {
     let out = {}; try { out = JSON.parse(String(await toolkit.create_invoice.execute(params))); } catch {}
     const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
     if (!/^INV2-[A-Z0-9-]+$/.test(id)) return { error: "PayPal returned no invoice id" };
-    const rec = { id, lead: lead.lead, ad: lead.ad, email: lead.email, amount: p.total, lines: p.lines, status: "DRAFT",
+    const rec = { id, lead: lead.lead, ad: lead.ad, email: lead.email, channel: lead.channel || "web", psid: lead.psid || null, page_id: lead.page_id || null, lead_id: lead.lead_id || null,
+      amount: p.total, lines: p.lines, status: "DRAFT",
       reference: packClick({ ad: lead.ad, source: lead.source, clickId: lead.click_id, clickedAt: 0 }), note: p.note, reason: p.reason,
       drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() };
     await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); drafts.push(rec);
@@ -126,7 +135,7 @@ async function recordCapture(env, order, userAgent) {
   const email = order.payer?.email_address;
   const record = {
     capture_id: cap.id, order_id: order.id, status: cap.status, amount: cap.amount?.value, currency: cap.amount?.currency_code,
-    ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt,
+    ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt, channel: "web",
     captured_at: cap.create_time || new Date().toISOString(), refunded_amount: "0.00",
     // PayPal's fee on this capture as PayPal reports it, so the budget rule uses the fee actually charged
     fee: cap.seller_receivable_breakdown?.paypal_fee?.value ?? null,
@@ -184,12 +193,14 @@ async function applyRefund(env, captureId, refundedValue, when) {
 async function firstPaint(env, url, page) {
   try {
     const csv = await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text();
-    const t = reconcile(parseAdCsv(csv).rows, await listPayments(env)).totals;
+    const payments = await listPayments(env);
+    const t = reconcile(parseAdCsv(csv).rows, payments).totals;
+    const metaCount = (await metaFromLedger(payments, `${url.origin}/shop.html`)).events.length;
     // the same markup and classes the app renders, so the page reads at once and nothing jumps when React takes over
     const html = `<div class="app"><header class="top"><div class="top-in"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a></div></header>`
       + `<main class="desk"><section class="hero"><div class="hero-copy"><h1 class="sr">Ads report ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}.</h1><p class="kicker">Kite Robotics Club · demo ad export · PayPal sandbox</p>`
       + `<div class="duo"><div><b class="n claimed">${t.leads}</b><span>leads the ads report</span></div><div><b class="n paid">${t.paid}</b><span>paid ${t.paid === 1 ? "order" : "orders"} PayPal confirms</span></div></div>`
-      + `<p class="pitch">Ad platforms learn from the ${t.leads}. Paid Signal sends them the ${t.paid}, straight from PayPal.</p><div class="hero-actions"><a class="cta" href="/judge">Why the ad with the most leads gets no raise</a><a class="hero-link" href="/trail">Follow one PayPal payment →</a></div></div>`
+      + `<p class="pitch">Ad platforms learn from the ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}: the ${metaCount} from Meta ads go back to Meta, the Google ones to Google.</p><div class="hero-actions"><a class="cta" href="/judge">Why the ad with the most leads gets no raise</a><a class="hero-link" href="/trail">Follow one PayPal payment →</a></div></div>`
       + `<div class="hero-bars"><p class="ghost">Loading the ledger…</p></div></section></main></div>`;
     return new HTMLRewriter().on("#root", { element(e) { e.setInnerContent(html, { html: true }); } }).transform(page);
   } catch { return page; }
@@ -314,12 +325,13 @@ async function recordInvoicePayment(env, invoice, url = new URL("https://paid-si
     await env.LEDGER.put(`pay:${id}`, JSON.stringify({
       capture_id: id, order_id: invoice.id, status: "COMPLETED", amount: t.amount?.value, currency: t.amount?.currency_code || "USD",
       ad: click.ad, source: click.source, click_id: click.clickId, clicked_at: click.clickedAt,
+      channel: kept?.channel || "web", psid: kept?.psid || null, page_id: kept?.page_id || null, lead_id: kept?.lead_id || null,
       // The sandbox can label account-local transaction time with Z, so keep it raw and use the invoice UTC audit time.
       captured_at: invoiceUpdateAt || learnedAt, payment_seen_at: learnedAt, paypal_payment_date: t.payment_date_time || t.payment_date || null,
       ...(invoiceUpdateAt ? { paypal_invoice_update_time: invoiceUpdateAt } : {}),
       refunded_amount: "0.00", payer_email_sha256: kept?.email ? await sha(String(kept.email).trim().toLowerCase()) : null, via: "invoice",
     }));
-    // an invoice paid days after the chat teaches Meta too, the moment PayPal says it is paid
+    // An invoice payment teaches Meta too, the moment PayPal says it is paid.
     await sendToMeta(env, url, await env.LEDGER.get(`pay:${id}`, "json"));
   }
   const rec = await env.LEDGER.get(`inv:${invoice.id}`, "json");
@@ -331,10 +343,10 @@ async function recordInvoicePayment(env, invoice, url = new URL("https://paid-si
 async function syncInvoices(env, pp, url, force = false) {
   const all = await cachedList(env, "inv:");
   const open = all.filter((i) => i.status === "SENT" || i.status === "PARTIALLY_PAID");
-  if (!open.length) return { checked: 0, paid: 0, invoices: all.map(({ email, ...x }) => x) };
+  if (!open.length) return { checked: 0, paid: 0, invoices: all.map(publicInvoice) };
   if (!force) {
     const last = Number(await env.LEDGER.get("sync:last")) || 0;
-    if (Date.now() - last < 300000) return { checked: 0, paid: 0, recent: true, invoices: all.map(({ email, ...x }) => x) };
+    if (Date.now() - last < 300000) return { checked: 0, paid: 0, recent: true, invoices: all.map(publicInvoice) };
   }
   await env.LEDGER.put("sync:last", String(Date.now()));
   let paid = 0;
@@ -343,7 +355,7 @@ async function syncInvoices(env, pp, url, force = false) {
     if (invoice.status === "PAID" || invoice.status === "PARTIALLY_PAID") { await recordInvoicePayment(env, invoice, url); paid++; }
   }
   if (paid) await forget("inv:");
-  return { checked: open.length, paid, invoices: (await cachedList(env, "inv:")).map(({ email, ...x }) => x) };
+  return { checked: open.length, paid, invoices: (await cachedList(env, "inv:")).map(publicInvoice) };
 }
 
 /** Shared daily limit plus a per-visitor one, so a single visitor cannot use up the demo for judges. */
@@ -410,7 +422,7 @@ const app = {
       const origin = request.headers.get("origin");
       if (origin && origin !== url.origin && url.pathname !== "/mcp") return json({ error: "Cross-site requests are not accepted." }, 403);
       // the routes that spend Claude turns answer only this site's own pages, which always send their Origin
-      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/invoices/approve" || url.pathname === "/api/refund" || url.pathname === "/api/decisions") && origin !== url.origin)
+      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/judge/try" || url.pathname === "/api/invoices/approve" || url.pathname === "/api/refund" || url.pathname === "/api/decisions") && origin !== url.origin)
         return json({ error: "Only the Paid Signal page can call this." }, 403);
       if (env.BURST && !(await env.BURST.limit({ key: ip })).success) return json({ error: "Too many requests. Wait a minute and try again." }, 429);
     }
@@ -526,7 +538,7 @@ const app = {
         const m = metaBy[p.capture_id] || null, held = heldDuplicates(payments).has(p.capture_id);
         const secs = (a, b) => (a && b ? Math.round((b - a) / 100) / 10 : null);
         return json({
-          payment: { capture_id: p.capture_id, order_id: p.order_id, amount: p.amount, currency: p.currency, captured_at: p.captured_at, via: p.via || "checkout",
+          payment: { capture_id: p.capture_id, order_id: p.order_id, amount: p.amount, currency: p.currency, captured_at: p.captured_at, via: p.via || "checkout", channel: p.channel || "web",
             status: p.status, refunded_amount: p.refunded_amount || "0.00", refunded_at: p.refunded_at ? utc(p.refunded_at) : null, dispute: p.dispute || null, dispute_state: disputeState(p), held_as_duplicate: held },
           click: { ad: p.ad || null, ad_name: p.ad ? adName(p.ad) : null, source: p.source || null, click_id: p.click_id || null, clicked_at: p.clicked_at || null },
           paypal,
@@ -546,7 +558,7 @@ const app = {
         const [payments, meta] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
         // the payer's email hash stays on the server (duplicate check, Meta match); the public ledger gets a salted key that
         // only says "same payer" and cannot be checked against a guessed email
-        const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, user_agent, ...p }) => ({ ...p, ...(p.refunded_at ? { refunded_at: utc(p.refunded_at) } : {}), payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));
+        const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, user_agent, psid, lead_id, ...p }) => ({ ...p, ...(p.refunded_at ? { refunded_at: utc(p.refunded_at) } : {}), payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));
         // a Google-click buyer sent to Meta before Google buyers were routed to Google only: still a fact, no longer counted
         const source = Object.fromEntries(payments.map((p) => [p.capture_id, p.source]));
         const sends = meta.map((m) => (m.ok && source[m.capture_id] === "g" ? { ...m, superseded: "Google click, sent before Google buyers went to Google only" } : m));
@@ -556,11 +568,11 @@ const app = {
 
       // Leads the ad export counted but PayPal never saw pay. The agent may draft invoices for them; a person sends.
       // the email stays on the server (the invoice goes to it); the public list shows who wrote what, not where
-      if (url.pathname === "/api/leads") return json({ leads: (await demoLeads(env, url)).map(({ email, ...l }) => l) });
+      if (url.pathname === "/api/leads") return json({ leads: (await demoLeads(env, url)).map(publicLead) });
       if (url.pathname === "/data/demo-leads.csv") return json({ error: "Not found" }, 404); // read only through ASSETS, above
 
       // the recipient's email stays on the server (PayPal sends to it); the public list shows who, not where
-      if (url.pathname === "/api/invoices" && request.method === "GET") return json({ invoices: (await cachedList(env, "inv:")).map(({ email, ...i }) => i) });
+      if (url.pathname === "/api/invoices" && request.method === "GET") return json({ invoices: (await cachedList(env, "inv:")).map(publicInvoice) });
 
       // Webhooks are the main path, but the sandbox does not always emit INVOICING.INVOICE.PAID: ask PayPal about every
       // sent invoice and record the ones it says are paid (recordInvoicePayment is idempotent per payment id).
@@ -570,6 +582,37 @@ const app = {
 
       // The revenue agent reads what each unpaid lead wrote and proposes invoices; code prices and checks every proposal,
       // and PayPal's Agent Toolkit creates the drafts. Nothing is sent: each draft waits in Approvals.
+      if (url.pathname === "/api/judge/try" && request.method === "POST") {
+        let body;
+        try { body = await request.json(); } catch { return json({ error: "Send a message as JSON." }, 400); }
+        if (typeof body.message !== "string" || !body.message.trim() || body.message.length > 500) return json({ error: "Enter a message of 1 to 500 characters." }, 400);
+        const stop = await claudeGuard(env, request, "judge try runs", 3, CLAUDE_DAILY);
+        if (stop) return revenueUnavailable(await revenueFallback(env), 429);
+        const t0 = Date.now(), lead = { lead: "Judge lead", ad: "parent_carousel", source: "other", click_id: "", channel: "web", email: "judge-lead@example.com", message: body.message.trim() };
+        try {
+          const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });
+          const toolkit = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
+            configuration: { actions: { invoices: { create: true } }, context: { sandbox: true } } }).getTools();
+          const createDraft = async (p) => {
+            const params = { currency_code: "USD", reference: "Kite Robotics booking", note: p.note, invoicer_business_name: "Kite Robotics Club (demo)",
+              primary_recipients: [{ billing_info: { email_address: lead.email, name: { given_name: lead.lead } } }],
+              items: p.lines.map((l) => ({ name: l.name, quantity: "1", unit_amount: { currency_code: "USD", value: l.unit } })) };
+            let out = {}; try { out = JSON.parse(String(await toolkit.create_invoice.execute(params))); } catch {}
+            const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
+            if (!/^INV2-[A-Z0-9-]+$/.test(id)) return { error: "PayPal returned no invoice id" };
+            await env.LEDGER.put(`try:${id}`, JSON.stringify({ id, lead: lead.lead, ad: lead.ad, email: lead.email, channel: lead.channel,
+              amount: p.total, lines: p.lines, note: p.note, reason: p.reason, status: "DRAFT", drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() }));
+            return { id };
+          };
+          const run = await runRevenueAgent({ llm, leads: [lead], invoices: [], createDraft });
+          const draft = run.proposals[0], skipped = run.skips[0];
+          const trace = run.trace.map((s) => ({ ...s, called_by: s.tool === "read_leads" || s.tool === "create_invoice" || s.tool === "skip_lead" ? "Claude" : "code",
+            ...(s.tool === "create_invoice" ? { price_set_by: "code" } : {}) }));
+          return json({ decision: draft?.id ? "drafted" : "skipped", reason: draft?.reason || skipped?.reason || run.refusals[0]?.problems?.join(" ") || "The agent did not propose a draft.",
+            flag: skipped?.flag || null, invoice_id: draft?.id || null, amount: draft?.id ? draft.total : null, line_items: draft?.id ? draft.lines : [], trace, ms: Date.now() - t0 });
+        } catch { console.warn("judge try revenue agent failed"); return revenueUnavailable(await revenueFallback(env), 502); }
+      }
+
       if (url.pathname === "/api/agent/revenue" && request.method === "POST") {
         const stop = await claudeGuard(env, request, "revenue agent runs", 4, 40);
         if (stop) return revenueUnavailable(await revenueFallback(env), 429);
@@ -577,9 +620,10 @@ const app = {
         try { out = await revenueDrafts(env, url); }
         catch { console.warn("revenue agent failed"); return revenueUnavailable(await revenueFallback(env), 502); }
         // the judge path replays the latest run: who was skipped and why, the injection refusal; no emails
+        const safe = { ...out, drafts: out.drafts.map(publicInvoice) };
         await env.LEDGER.put("run:revenue", JSON.stringify({ at: new Date().toISOString(), skips: out.skips, refusals: out.refusals, summary: out.summary, trace: out.trace, ms: out.ms,
-          drafts: out.drafts.map(({ email, ...d }) => d) }));
-        return json(out);
+          drafts: out.drafts.map(publicInvoice) }));
+        return json(safe);
       }
 
       // Sent invoices nobody has paid: the chase agent reads each with the Agent Toolkit, chooses whom to remind and writes
@@ -620,7 +664,7 @@ const app = {
           // "sent by the agent" only when PayPal itself no longer shows a draft
           ...(agent.sent && fresh.status && fresh.status !== "DRAFT" ? { sent_at: new Date().toISOString(), sent_by: "send agent (Claude + PayPal Agent Toolkit)" } : {}) });
         await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); await forget("inv:");
-        return json({ invoice: rec, agent });
+        return json({ invoice: publicInvoice(rec), agent });
       }
 
       // Cross-check the webhook ledger against PayPal's own transaction history.
@@ -698,7 +742,7 @@ const app = {
         const injection = leads.find((l) => /ignore (all |your )?previous instructions/i.test(l.message || ""));
         const skip = injection && run?.skips?.find((k) => k.lead === injection.lead);
         return json({
-          invoice: pick && { id: pick.id, lead: pick.lead, ad: pick.ad, ad_name: adName(pick.ad), amount: pick.amount, lines: pick.lines || null, note: pick.note || null, reason: pick.reason || null,
+          invoice: pick && { id: pick.id, lead: pick.lead, ad: pick.ad, ad_name: adName(pick.ad), channel: pick.channel || "web", amount: pick.amount, lines: pick.lines || null, note: pick.note || null, reason: pick.reason || null,
             drafted_by: pick.drafted_by, created_at: pick.created_at, sent_by: pick.sent_by || null, sent_at: pick.sent_at || null, approved_at: pick.approved_at || null,
             reminder: pick.reminder ? { note: pick.reminder.note, by: pick.reminder.by } : null, reminded_at: pick.reminded_at || null, status: pick.status, paid_at: pick.paid_at || null, pay_url: pick.pay_url || null },
           lead: lead && { lead: lead.lead, message: lead.message, asked_for: lead.asked_for, source: lead.source === "fb" ? "Meta" : "Google" },
@@ -746,10 +790,10 @@ const app = {
         const parsed = parseAdCsv(csv);
         const payments = await listPayments(env);
         const rec = reconcile(parsed.rows, payments);
-        // what would go to Meta, minus the hashed email: Meta gets it, a public page does not
+        // Redact person-level IDs here; Meta gets the original payload, while public pages show its shape.
         const meta = await metaFromLedger(payments, `${url.origin}/shop.html`);
-        meta.events = meta.events.map((e) => ({ ...e, user_data: { ...e.user_data, ...(e.user_data.em ? { em: ["(SHA-256 of the payer's email; sent to Meta, not shown here)"] } : {}) } }));
-        return json({ reconciliation: rec, odds: paybackOdds(rec), csv_errors: parsed.errors, meta, google: googleRows(payments, undefined, { hold: heldDuplicates(payments) }) });
+        const safeMeta = publicMeta(meta);
+        return json({ reconciliation: rec, odds: paybackOdds(rec), csv_errors: parsed.errors, meta: safeMeta, google: googleRows(payments, undefined, { hold: heldDuplicates(payments) }) });
       }
 
       // The same gate for the budget agent that runs inside AG Studio: its recommendation is accepted only if every

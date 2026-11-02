@@ -203,12 +203,21 @@ test("ad export: negative or non-numeric spend and leads are refused, not guesse
   assert.equal(out.errors.length, 2);
 });
 
-test("Meta: an invoice payment is a chat conversion with no page URL; a checkout is a website one", async () => {
+test("Meta: web click, Messenger and lead-form payments use their matching payloads", async () => {
   const { metaEvents } = await import("../src/ledger.js");
-  const { events } = await metaEvents([pay({ capture_id: "W1" }), pay({ capture_id: "I1", via: "invoice", clicked_at: 0, payer_email_sha256: "abc" })], { sourceUrl: "https://x/shop" });
-  assert.equal(events.find((e) => e.event_id === "paypal:W1").action_source, "website");
-  const inv = events.find((e) => e.event_id === "paypal:I1");
-  assert.equal(inv.action_source, "chat"); assert.equal(inv.event_source_url, undefined);
+  const { events } = await metaEvents([
+    pay({ capture_id: "W1", channel: "web" }),
+    pay({ capture_id: "M1", channel: "messenger", via: "invoice", click_id: "", psid: "DEMO-PSID-001", page_id: "DEMO-PAGE-001", payer_email_sha256: "secret-hash" }),
+    pay({ capture_id: "L1", channel: "lead_form", via: "invoice", click_id: "", lead_id: "DEMO-LEAD-001", payer_email_sha256: "secret-hash" }),
+  ], { sourceUrl: "https://x/shop" });
+  const web = events.find((e) => e.event_id === "paypal:W1");
+  assert.equal(web.action_source, "website"); assert.equal(web.event_source_url, "https://x/shop"); assert.equal(web.user_data.fbc, "fb.1.1793178000000.abc");
+  const messenger = events.find((e) => e.event_id === "paypal:M1");
+  assert.equal(messenger.action_source, "business_messaging"); assert.equal(messenger.messaging_channel, "messenger");
+  assert.deepEqual(messenger.user_data, { page_scoped_user_id: "DEMO-PSID-001", page_id: "DEMO-PAGE-001" }); assert.equal(messenger.event_source_url, undefined);
+  const lead = events.find((e) => e.event_id === "paypal:L1");
+  assert.equal(lead.action_source, "system_generated"); assert.deepEqual(lead.user_data, { lead_id: "DEMO-LEAD-001" });
+  assert.equal(lead.custom_data.event_source, "crm"); assert.equal(lead.custom_data.lead_event_source, "Paid Signal");
 });
 
 test("gate: a refund claim must name the capture, and the ledger must agree", () => {

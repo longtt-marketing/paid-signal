@@ -45,6 +45,11 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .loop-row{display:grid;grid-template-columns:minmax(150px,200px) 1fr;gap:4px 16px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}.loop-row:last-child{border-bottom:0}
 .loop-row b{font-weight:600}.loop-row span{color:var(--mute);overflow-wrap:anywhere}.loop-row a{grid-column:2;font-size:14px}
 @media (max-width:640px){.loop-row{grid-template-columns:1fr}.loop-row a{grid-column:1}}
+.try{margin-top:14px;padding:16px;background:var(--chip);border-radius:14px}
+.try h3{margin:0;font-size:18px}.try textarea{display:block;width:100%;min-height:88px;margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;resize:vertical}
+.try-examples{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.try-examples button{font:500 13px "Inter Tight",sans-serif;border:1px solid var(--line);border-radius:999px;background:var(--card);padding:7px 11px;cursor:pointer}
+.try-result{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.substep{margin:16px 0 4px;font-size:16px}
 .more{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .more a{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none}
 .more a b{display:block}.more a span{font-size:13px;color:var(--faint)}
@@ -59,7 +64,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     <p class="lede">Sixty seconds, no login. The owner asks Claude to fund the ad with the most leads; Claude checks what PayPal says was paid, and code checks the move.</p>
   </div>
   <div class="vs" id="vs" aria-live="polite"><div><b>–</b><span>leads the ad report gives this ad</span></div><i>→</i><div class="paid"><b>–</b><span>paid orders PayPal confirms for it</span></div></div>
-  <p class="note">PayPal confirms each payment; which ad it came from is our own click record inside the order (<code>custom_id</code>), so that link is the app's, not PayPal's.</p>
+  <p class="note">PayPal confirms the payment. Paid Signal prepares eligible website click, Messenger and lead-form events for Meta; Google click payments go to Google.</p>
 
   <div class="contrast" id="contrast" aria-live="polite">
     <div class="side"><span class="tag">Live PayPal sandbox ledger</span><b id="c-live">…</b><small id="c-live-why"></small></div>
@@ -71,7 +76,17 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section class="step" id="capture"><h2><em>3</em>Open the PayPal payment behind the answer</h2></section>
   <section class="step" id="week"><h2><em>4</em>A harder week: a raise and a cut together</h2><p class="note">On the live ledger only one ad has 3 paid orders, so only a raise can show there. This labelled synthetic week has enough orders on two ads to need a raise and a cut at once; its payments are made up, not PayPal captures.</p></section>
 
-  <section class="step" id="loop"><h2><em>5</em>The invoice loop: a chat lead becomes a PayPal payment</h2><p class="note">Loading the ledger…</p></section>
+  <section class="step" id="loop"><h2><em>5</em>The invoice loop: a lead becomes a PayPal payment</h2>
+    <div class="try" id="try-it"><h3>Try it yourself</h3><p class="note">Write as a fictional customer. The revenue agent can create a PayPal sandbox draft for this try, but it is never sent.</p>
+      <div class="try-examples" aria-label="Example customer messages">
+        <button type="button" data-example="booking">Clear booking</button><button type="button" data-example="not-ready">Not ready</button><button type="button" data-example="injection">Prompt injection</button>
+      </div>
+      <textarea id="try-message" maxlength="500" aria-label="Fictional customer message">Please book one trial class for Saturday and send me the invoice.</textarea>
+      <div class="row"><button class="btn primary" type="button" id="try-run">Ask the revenue agent</button></div>
+      <div class="try-result" id="try-result" role="status" aria-live="polite"><p class="note">Choose an example or write a message, then ask the agent.</p></div>
+    </div>
+    <h3 class="substep">Live invoice loop</h3><p class="note">Loading the ledger…</p>
+  </section>
 
   <div class="more">
     <a href="/audit"><b>Audit your own ads</b><span>Your Ads Manager export and PayPal download, read in your browser, no login</span></a>

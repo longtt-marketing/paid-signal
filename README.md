@@ -29,9 +29,10 @@ Paid Signal closes that loop on the PayPal developer platform:
 4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
    by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund becomes a Google retraction or restatement; a Meta event not yet sent is held back, and one already sent stays (Meta's Conversions API has no retraction), so the refund is taken off here;
    a possible duplicate payment is held back from both, and is not counted as a paid order, until it is refunded.
-   Meta gets the paid orders that came from a Meta click (fbclid) or from a chat lead's invoice; a buyer who came from a
-   Google click (gclid) goes to Google only, so Meta cannot take credit for it. The demo shows
-   and downloads these payloads. The Purchase events were also sent to a real Meta dataset as **test events**: Meta's
+   Eligible Meta payments use the website click (`fbclid`), Messenger business messaging (the page ID and page-scoped user ID),
+   or Conversion Leads CRM path (`lead_id`). A buyer who came from a Google click (`gclid`) goes to Google only, so Meta cannot
+   take credit for it. The demo shows and downloads these payload shapes, with personal IDs redacted. Website-click Purchase
+   events were also sent to a real Meta dataset as **test events**: Meta's
    Test Events tab shows them processed and a resent copy deduplicated by `event_id`
    ([`scripts/meta-test-event.mjs`](scripts/meta-test-event.mjs), [screenshot](docs/proof/meta-test-events.png)).
 
@@ -48,12 +49,13 @@ carries no ad, and what the budget rule allows; nothing is uploaded. **Try it wi
 
 No login is needed for any of this; only paying in the demo shop needs the sandbox buyer from the testing notes.
 
-1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): the ads report 62 leads, PayPal confirms 7 paid orders; the flow chart follows each ad from the ad report, through PayPal, back to Meta.
+1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): the ads report 62 leads and PayPal confirms 7 paid orders. Eligible Meta payments are prepared for Meta; Google click payments go to Google.
 2. Press **Ask the revenue agent**: Claude reads what each unpaid lead wrote and drafts PayPal invoices (Agent Toolkit) for the ones ready to pay; code sets every price; a lead whose message tries to rewrite the price and recipient is flagged, never invoiced.
 3. Under **Invoices**, press **Approve** on a draft: the send agent (Claude + PayPal Agent Toolkit) re-reads it in code and sends it. **Chase unpaid** lets the chase agent decide which sent invoices get a reminder and write it.
 4. **Report · AG Studio** tab: open the assistant, choose **Review ad budgets**; a custom Studio agent on Claude submits through the evidence gate and its change lands in Approvals.
-5. [Proof](https://paid-signal.thelongmarketing.workers.dev/proof): held-out evals (12 bookings, 10 not-ready leads and 8 prompt injections, each run twice: 24 of 24, 20 of 20, 0 of 16), the evidence gate under attack (11 kinds of planted error, 100 of each: all caught), a budget simulation with its uncertainty ($1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs), live PayPal and Meta checks.
-6. Any MCP client: `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
+5. On `/judge`, use **Try it yourself** at the top of the invoice loop to test a booking, a not-ready question or a prompt injection. Any invoice stays a separate sandbox draft and is never sent.
+6. [Proof](https://paid-signal.thelongmarketing.workers.dev/proof): held-out evals (12 bookings, 10 not-ready leads and 8 prompt injections, each run twice: 24 of 24, 20 of 20, 0 of 16), the evidence gate under attack (11 kinds of planted error, 100 of each: all caught), a budget simulation with its uncertainty ($1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs), live PayPal and Meta checks.
+7. Any MCP client: `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
 
 ## Try it in three minutes
 

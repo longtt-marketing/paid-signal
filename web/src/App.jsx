@@ -199,7 +199,7 @@ export default function App({ first = null }) {
   const activity = useMemo(() => {
     const out = [];
     for (const p of state?.payments || []) {
-      out.push({ at: p.captured_at, kind: "paid", text: `${p.ad && p.ad !== "direct" ? short(p.ad) : "No ad click"} paid ${money(p.amount)}${p.via === "invoice" ? " · invoice" : p.source === "g" ? " · Google click" : p.source === "fb" ? " · Meta click" : ""}` });
+      out.push({ at: p.captured_at, kind: "paid", text: `${p.ad && p.ad !== "direct" ? short(p.ad) : "No ad click"} paid ${money(p.amount)}${p.channel === "messenger" ? " · Messenger lead" : p.channel === "lead_form" ? " · lead form" : p.via === "invoice" ? " · invoice" : p.source === "g" ? " · Google click" : p.source === "fb" ? " · Meta click" : ""}` });
       if (Number(p.refunded_amount) > 0) out.push({ at: p.refunded_at || p.captured_at, kind: "refund", text: `${short(p.ad)} refunded ${money(p.refunded_amount)}${p.source === "g" ? " · Google " + (Number(p.refunded_amount) >= Number(p.amount) ? "retraction" : "restatement") : " · taken off here; Meta has no retraction"}` });
     }
     for (const i of invoices) {
@@ -243,7 +243,7 @@ export default function App({ first = null }) {
               <svg width="56" height="40" viewBox="0 0 56 40" aria-hidden="true"><path d="M2 20h46M38 8l12 12-12 12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
               <div><b className="n paid">{(t || first)?.paid ?? "…"}</b><span>paid {(t || first)?.paid === 1 ? "order" : "orders"} PayPal confirms</span></div>
             </div>
-            <p className="pitch">Ad platforms learn from the {(t || first)?.leads ?? "leads"}. Paid Signal sends them the {(t || first)?.paid ?? "paid orders"}, straight from PayPal.</p>
+            <p className="pitch">{t ? `PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}. ${state?.meta?.events?.length ?? 0} eligible Meta ${(state?.meta?.events?.length ?? 0) === 1 ? "event is" : "events are"} prepared for Meta; Google click payments go to Google.` : "Eligible Meta payments are prepared for Meta; Google click payments go to Google."}</p>
             <div className="hero-actions"><a className="cta" href="/judge">Why the ad with the most leads gets no raise</a><a className="hero-link" href="/trail">Follow one PayPal payment →</a></div>
             {t && <div className="chips-row">
               <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
@@ -302,11 +302,11 @@ export default function App({ first = null }) {
 
             <section id="signal" className="card">
               <div className="card-head"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Meta Purchase events · {state.google.conversions.length} Google rows</span>}</div>
-              <p className="muted">Paid orders as Meta Conversions API events and Google offline conversions (previews, not uploaded), deduplicated by capture. Sent to a real Meta test dataset: Meta processed them and dropped a resent copy by event id.</p>
+              <p className="muted">Eligible payments from Meta-attributed website clicks, Messenger, and Instant Forms become Meta Conversions API events; Google click payments go to Google only. Events are deduplicated by capture. In an earlier test, Meta received these events and dropped a resent copy by event id.</p>
               {state?.metaLive && <div className="live-meta" role="status">
                 <span className="pulse" aria-hidden="true" />
-                {lastMeta ? <span><b>Live to Meta:</b> the last paid order (${lastMeta.value}) reached the shop's Meta dataset as a Purchase test event {clock(lastMeta.at)}; Meta answered events_received {lastMeta.events_received}.</span>
-                  : <span><b>Live to Meta:</b> pay in the demo shop and its Purchase event is sent to the shop's Meta dataset (test events) the moment PayPal confirms it.</span>}
+                {lastMeta ? <span><b>Live to Meta:</b> the last eligible Purchase (${lastMeta.value}) reached the shop's Meta dataset as a test event {clock(lastMeta.at)}; Meta answered events_received {lastMeta.events_received}. Receipt does not confirm ad matching or delivery changes.</span>
+                  : <span><b>Live to Meta:</b> an eligible payment from a Meta-attributed source is sent to the shop's Meta dataset as a test event when PayPal confirms it. Receipt does not confirm ad matching or delivery changes.</span>}
               </div>}
               <div className="sig">
                 {state && (() => {
@@ -317,11 +317,11 @@ export default function App({ first = null }) {
                   return <div className="sig-event">
                     <dl>
                       <div><dt>Payment</dt><dd>capture {ev.event_id.replace("paypal:", "")} · ${ev.custom_data.value.toFixed(2)}</dd></div>
-                      <div><dt>Event</dt><dd>Purchase · {ev.action_source === "chat" ? "paid by invoice after a chat" : "paid at checkout"}</dd></div>
-                      <div><dt>Matched on</dt><dd>{[ev.user_data.fbc && "the ad click (fbc)", ev.user_data.em && "the payer's hashed email", ev.user_data.client_user_agent && "browser"].filter(Boolean).join(", ")}</dd></div>
+                      <div><dt>Event</dt><dd>Purchase · {ev.action_source === "business_messaging" ? "Messenger conversation" : ev.action_source === "system_generated" ? "lead-form CRM event" : "paid at checkout"}</dd></div>
+                      <div><dt>Matched on</dt><dd>{[ev.user_data.fbc && "the ad click (fbc)", ev.user_data.em && "the payer's hashed email", ev.user_data.page_scoped_user_id && "Messenger page-scoped ID", ev.user_data.lead_id && "Meta lead ID", ev.user_data.client_user_agent && "browser"].filter(Boolean).join(", ")}</dd></div>
                       <div><dt>Meta</dt><dd>{sent?.ok ? `received ${sent.events_received} event ${clock(sent.at)}${sent.backfill ? " (sent later, before the live link)" : ""}` : "not sent yet"}</dd></div>
                     </dl>
-                    <details><summary>Event as sent (JSON)</summary><pre tabIndex={0} aria-label="Meta Purchase event">{JSON.stringify(ev, null, 2)}</pre></details>
+                    <details><summary>Event payload shape (IDs redacted)</summary><pre tabIndex={0} aria-label="Meta Purchase event payload shape">{JSON.stringify(ev, null, 2)}</pre></details>
                   </div>;
                 })()}
                 <div className="sig-side">

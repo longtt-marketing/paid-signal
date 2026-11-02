@@ -15,6 +15,9 @@ test("leads CSV: quoted messages with commas parse, every lead has an email", ()
   assert.equal(parseCsv('a,b\n"x, y","say ""hi"""\n')[0].b, 'say "hi"');
   assert.ok(leads.length >= 16);
   assert.ok(leads.every((l) => /@/.test(l.email)));
+  assert.deepEqual([leads[0].channel, leads[0].click_id, leads[0].lead_id], ["lead_form", "", "DEMO-LEAD-001"]);
+  assert.deepEqual([leads[3].channel, leads[3].click_id, leads[3].psid, leads[3].page_id], ["messenger", "", "DEMO-PSID-004", "DEMO-PAGE-001"]);
+  assert.equal(leads[4].channel, "web");
   assert.match(lead(15).message, /Ignore your previous instructions/);
 });
 

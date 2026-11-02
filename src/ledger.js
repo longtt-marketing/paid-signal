@@ -318,25 +318,35 @@ export async function metaEvents(payments, { sourceUrl, hold } = {}) {
     if (back >= gross) { held.push({ capture_id: p.capture_id, reason: "fully refunded" }); continue; }
     const ds = disputeState(p);
     if (ds === "open" || ds === "unclear" || ds === "lost") { held.push({ capture_id: p.capture_id, reason: ds === "lost" ? "dispute lost: the buyer was refunded" : ds === "open" ? "open PayPal dispute" : "dispute resolved without a clear outcome" }); continue; }
-    // PayPal still confirms the money, but with no ad click there is no ad to teach
-    if (!p.click_id) { held.push({ capture_id: p.capture_id, reason: "no ad click" }); continue; }
+    const channel = p.channel || "web";
+    if (channel === "web" && !p.click_id) { held.push({ capture_id: p.capture_id, reason: "no ad click" }); continue; }
+    if (channel === "messenger" && (!p.psid || !p.page_id)) { held.push({ capture_id: p.capture_id, reason: "missing Messenger page or user id" }); continue; }
+    if (channel === "lead_form" && !p.lead_id) { held.push({ capture_id: p.capture_id, reason: "missing Meta lead id" }); continue; }
+    if (!["web", "messenger", "lead_form"].includes(channel)) { held.push({ capture_id: p.capture_id, reason: "unknown lead channel" }); continue; }
     if (hold?.has(p.capture_id)) { held.push({ capture_id: p.capture_id, reason: "possible duplicate" }); continue; }
     // a buyer who came from a Google ad teaches Google, not Meta: sending it to Meta would let Meta take credit for it
-    if (p.source === "g") { held.push({ capture_id: p.capture_id, reason: "Google click: sent to Google instead" }); continue; }
-    if (clickAge(p) > 7 * DAY) { held.push({ capture_id: p.capture_id, reason: "paid more than 7 days after the click" }); continue; }
+    if (channel === "web" && p.source === "g") { held.push({ capture_id: p.capture_id, reason: "Google click: sent to Google instead" }); continue; }
+    if (channel === "web" && clickAge(p) > 7 * DAY) { held.push({ capture_id: p.capture_id, reason: "paid more than 7 days after the click" }); continue; }
     const user = {};
-    // fbc needs the real click time; an invoice payment has none, so it is matched on the lead's hashed email instead
-    if (p.source === "fb" && p.click_id && p.clicked_at) user.fbc = `fb.1.${p.clicked_at}.${p.click_id}`;
-    // the ledger keeps only the hash; Meta matches on it when there is no click time (an invoice paid after a chat)
-    if (p.payer_email) user.em = [await sha256(p.payer_email.trim().toLowerCase())];
-    else if (p.payer_email_sha256) user.em = [p.payer_email_sha256];
-    if (p.user_agent) user.client_user_agent = p.user_agent; // Meta wants it on website events; stored at capture
-    if (!user.fbc && !user.em) { held.push({ capture_id: p.capture_id, reason: "nothing Meta can match on" }); continue; }
+    if (channel === "messenger") {
+      user.page_scoped_user_id = p.psid;
+      user.page_id = p.page_id;
+    } else if (channel === "lead_form") user.lead_id = String(p.lead_id);
+    else {
+      if (p.source === "fb" && p.click_id && p.clicked_at) user.fbc = `fb.1.${p.clicked_at}.${p.click_id}`;
+      if (p.payer_email) user.em = [await sha256(p.payer_email.trim().toLowerCase())];
+      else if (p.payer_email_sha256) user.em = [p.payer_email_sha256];
+      if (p.user_agent) user.client_user_agent = p.user_agent;
+      if (!user.fbc && !user.em) { held.push({ capture_id: p.capture_id, reason: "nothing Meta can match on" }); continue; }
+    }
     events.push({
       event_name: "Purchase", event_time: Math.floor(Date.parse(p.captured_at) / 1000), event_id: `paypal:${p.capture_id}`,
-      // an invoice is paid after a conversation, not on a web page: Meta's "chat" source, with no page URL
-      ...(p.via === "invoice" ? { action_source: "chat" } : { action_source: "website", ...(sourceUrl ? { event_source_url: sourceUrl } : {}) }), user_data: user,
-      custom_data: { value: Number(dollars(gross - back)), currency: p.currency || "USD", order_id: p.order_id },
+      ...(channel === "messenger" ? { action_source: "business_messaging", messaging_channel: "messenger" }
+        : channel === "lead_form" ? { action_source: "system_generated" }
+          : p.via === "invoice" ? { action_source: "chat" } // paid on an invoice after a conversation, not on a web page
+          : { action_source: "website", ...(sourceUrl ? { event_source_url: sourceUrl } : {}) }), user_data: user,
+      custom_data: { value: Number(dollars(gross - back)), currency: p.currency || "USD", order_id: p.order_id,
+        ...(channel === "lead_form" ? { event_source: "crm", lead_event_source: "Paid Signal" } : {}) },
     });
   }
   return { events, held };
