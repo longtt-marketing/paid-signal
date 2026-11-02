@@ -20,6 +20,7 @@ const clock = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? "" :
 const AD_LINKS = [["trial_video", "fb"], ["free_guide", "fb"], ["parent_carousel", "fb"], ["holiday_static", "g"]];
 const adLink = (k, s) => `/shop.html?ad=${k}&${s === "fb" ? "fbclid=IwAR" : "gclid=Cj0K"}${Date.now().toString(36)}`;
 const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+const decisionsFor = (items, recId) => Object.fromEntries(items.filter((d) => d.rec_id === recId && d.index != null).map((d) => [d.index, { verdict: d.verdict, id: d.id, at: d.at }]));
 
 export default function App({ first = null }) {
   const studio = useRef(null);
@@ -28,6 +29,11 @@ export default function App({ first = null }) {
   const [state, setState] = useState(null); // { reconciliation, meta, google, payments, duplicates }
   const [agent, setAgent] = useState({ status: "idle" });
   const [decisions, setDecisions] = useState({});
+  const [visitorDecisions, setVisitorDecisions] = useState([]);
+  const [sharedRecommendation, setSharedRecommendation] = useState(null);
+  const [visitorRecommendation, setVisitorRecommendation] = useState(null);
+  const [decisionCount, setDecisionCount] = useState(0);
+  const [myDecisionCount, setMyDecisionCount] = useState(0);
   const [error, setError] = useState("");
   const [invoices, setInvoices] = useState([]);
   const [license, setLicense] = useState(undefined);
@@ -77,10 +83,15 @@ export default function App({ first = null }) {
   useEffect(() => { fetch("/data/demo-ads.csv").then((r) => r.text()).then((t) => { setCsv(t); load(t); }); }, [load]);
   // the last checked recommendation and the decisions on it come back after a reload
   useEffect(() => {
-    fetch("/api/recommendation").then((r) => r.json()).then(({ latest, decisions: ds }) => {
+    fetch("/api/recommendation").then((r) => r.json()).then(({ latest, mine, shared, decisions: ds = [], decision_count = 0, my_decision_count = 0 }) => {
+      setSharedRecommendation(shared || null);
+      setVisitorRecommendation(mine || null);
+      setVisitorDecisions(ds);
+      setDecisionCount(decision_count);
+      setMyDecisionCount(my_decision_count);
       if (!latest) return;
-      setAgent((a) => (a.status === "idle" ? { status: "done", grounded: true, recommendation: latest.recommendation, source: latest.source, rec_id: latest.id, at: latest.at } : a));
-      setDecisions((s) => (Object.keys(s).length ? s : Object.fromEntries(ds.filter((d) => d.index != null).map((d) => [d.index, { verdict: d.verdict, id: d.id, at: d.at }]))));
+      setAgent((a) => (a.status === "idle" ? { status: "done", grounded: true, recommendation: latest.recommendation, source: latest.source, rec_id: latest.id, at: latest.at, mine: Boolean(latest.mine) } : a));
+      setDecisions((s) => (Object.keys(s).length ? s : decisionsFor(ds, latest.id)));
     }).catch(() => {});
   }, []);
   // webhooks first; this asks PayPal about sent invoices too, since the sandbox does not always emit INVOICING.INVOICE.PAID
@@ -111,7 +122,16 @@ export default function App({ first = null }) {
   const flash = useCallback((msg, go) => { clearTimeout(toastTimer.current); setToast({ msg, go }); toastTimer.current = setTimeout(() => setToast(""), go ? 9000 : 4200); }, []);
 
   // the budget agent inside AG Studio lands its gated recommendation in the same approvals inbox, and says so
-  const onRecommendation = useCallback((r) => { pinStudio(); setAgent({ status: "done", ...r }); setDecisions({}); flash("The budget agent's change is waiting for your approval.", "approvals"); }, [flash, pinStudio]);
+  const onRecommendation = useCallback((r) => {
+    pinStudio(); setAgent({ status: "done", ...r, mine: true }); setDecisions({});
+    if (r.saved) setVisitorRecommendation({ ...r.saved, mine: true });
+    flash("The budget agent's change is waiting for your approval.", "approvals");
+  }, [flash, pinStudio]);
+  const showSavedRecommendation = useCallback((saved, mine) => {
+    if (!saved) return;
+    setAgent({ status: "done", grounded: true, recommendation: saved.recommendation, source: saved.source, rec_id: saved.id, at: saved.at, mine });
+    setDecisions(decisionsFor(visitorDecisions, saved.id));
+  }, [visitorDecisions]);
 
   // the revenue agent decides who is ready to pay; code prices it; the Agent Toolkit drafts it; nothing is sent here
   const [revenue, setRevenue] = useState({ status: "idle" });
@@ -142,13 +162,21 @@ export default function App({ first = null }) {
   // instruction: the owner's own request; the agent weighs it, and code still refuses a move the payments do not support
   const askWeek = async (id, instruction) => {
     setAgent({ status: "running", instruction }); scrollToId("approvals");
-    try { const out = await api("/api/agent", { scenario: id, ...(instruction ? { instruction } : {}) }); setAgent({ status: "done", instruction, ...out }); setDecisions({}); }
+    try {
+      const out = await api("/api/agent", { scenario: id, ...(instruction ? { instruction } : {}) });
+      setAgent({ status: "done", instruction, ...out }); setDecisions({});
+      if (out.saved) out.mine ? setVisitorRecommendation({ ...out.saved, mine: true }) : setSharedRecommendation(out.saved);
+    }
     catch (e) { setAgent({ status: "error", error: e.message }); }
   };
   // on the live PayPal ledger too, the owner can add a request; the payments still decide what code lets through
   const ask = async (instruction) => {
     setAgent({ status: "running", instruction }); scrollToId("approvals");
-    try { const out = await api("/api/agent", { csv, ...(instruction ? { instruction } : {}) }); setAgent({ status: "done", instruction, ...out }); setDecisions({}); }
+    try {
+      const out = await api("/api/agent", { csv, ...(instruction ? { instruction } : {}) });
+      setAgent({ status: "done", instruction, ...out }); setDecisions({});
+      if (out.saved) out.mine ? setVisitorRecommendation({ ...out.saved, mine: true }) : setSharedRecommendation(out.saved);
+    }
     catch (e) { setAgent({ status: "error", error: e.message }); }
   };
   const openAssistant = () => {
@@ -179,7 +207,11 @@ export default function App({ first = null }) {
   const actions = agent.recommendation?.actions || [];
   const decide = async (i, verdict) => {
     const a = actions[i];
-    try { const d = await api("/api/decisions", { ad: a.ad, change: a.change, verdict, reason: a.reason, evidence: a.evidence, rec_id: agent.rec_id, index: i }); setDecisions((s) => ({ ...s, [i]: { verdict, id: d.id, at: d.at } })); }
+    try {
+      const d = await api("/api/decisions", { ad: a.ad, change: a.change, verdict, reason: a.reason, evidence: a.evidence, rec_id: agent.rec_id, index: i });
+      setDecisions((s) => ({ ...s, [i]: { verdict, id: d.id, at: d.at } }));
+      setVisitorDecisions((items) => [d, ...items]); setMyDecisionCount((n) => n + 1); setDecisionCount((n) => n + 1);
+    }
     catch (e) { flash(e.message); }
   };
 
@@ -189,7 +221,6 @@ export default function App({ first = null }) {
   const metaSent = Object.fromEntries((state?.metaSends || []).map((m) => [m.capture_id, m]));
   const lastMeta = [...(state?.metaSends || [])].filter((m) => m.ok && !m.backfill).sort((a, b) => String(b.at).localeCompare(String(a.at)))[0];
   const drafts = invoices.filter((i) => i.status === "DRAFT");
-  const waiting = actions.filter((_, i) => !decisions[i]).length + drafts.length;
   const costPerPaid = t && t.paid ? usd(Math.round(t.spend_cents / t.paid)) : "none";
   const byCost = [...ads].sort((a, b) => b.spend_cents - a.spend_cents);
   const odds = state?.odds?.ads || {}; // small-sample read from the ledger (paybackOdds)
@@ -216,19 +247,15 @@ export default function App({ first = null }) {
         <div className="top-in">
           <a className="brand" href="/"><span className="mark"><i /></span>Paid Signal</a>
           <nav className="tabs" aria-label="Sections">
-            <a href="#overview" className={view === "desk" ? "on" : ""} onClick={(e) => { e.preventDefault(); goDesk("overview"); }}>Overview</a>
-            <a href="#report" className={view === "report" ? "on" : ""}>Report · AG Studio</a>
-            <a href="#approvals" onClick={(e) => { e.preventDefault(); goDesk("approvals"); }}>Approvals {waiting > 0 && <span className="count">{waiting}</span>}</a>
-            <a href="#payments" onClick={(e) => { e.preventDefault(); goDesk("payments"); }}>Payments</a>
-            <a href="#signal" onClick={(e) => { e.preventDefault(); goDesk("signal"); }}>Ad signal</a>
-            <a href="/trail">Money trail</a>
-            <a href="/scenarios.html">Scenarios</a>
-            <a href="/proof.html">Proof</a>
-            <a href="/audit">Audit your ads</a>
+            <a href="/" className={view === "desk" ? "on" : ""}>Dashboard</a>
+            <a href="/judge">Judge path</a>
+            <a href="/audit">Audit</a>
+            <a href="/proof">Proof</a>
           </nav>
           <div className="top-end">
             <span className="live"><i />PayPal sandbox · live</span>
-            <a className="cta" href="/judge">Judge path · 60 s</a>
+            <a className="cta" href="/judge">Judge path, 60 s</a>
+            <a className="hero-link" href="/audit">Audit your own ads</a>
           </div>
         </div>
       </header>
@@ -243,8 +270,8 @@ export default function App({ first = null }) {
               <svg width="56" height="40" viewBox="0 0 56 40" aria-hidden="true"><path d="M2 20h46M38 8l12 12-12 12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
               <div><b className="n paid">{(t || first)?.paid ?? "…"}</b><span>paid {(t || first)?.paid === 1 ? "order" : "orders"} PayPal confirms</span></div>
             </div>
-            <p className="pitch">{t ? `PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}. ${state?.meta?.events?.length ?? 0} eligible Meta ${(state?.meta?.events?.length ?? 0) === 1 ? "event is" : "events are"} prepared for Meta; Google click payments go to Google.` : "Eligible Meta payments are prepared for Meta; Google click payments go to Google."}</p>
-            <div className="hero-actions"><a className="cta" href="/judge">Why the ad with the most leads gets no raise</a><a className="hero-link" href="/trail">Follow one PayPal payment →</a></div>
+            <p className="pitch">{t ? `Ad platforms learn from the ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}: the ${state?.meta?.events?.length ?? 0} from Meta ads go back to Meta, the Google ones to Google.` : "Ad platforms learn from leads. PayPal knows who paid."}</p>
+            <div className="hero-actions"><a className="cta" href="/judge">Judge path, 60 s</a><a className="hero-link" href="/audit">Audit your own ads</a></div>
             {t && <div className="chips-row">
               <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
               {t.held > 0 && <span title="Same payer, same ad, minutes apart: not counted as a paid order, and kept from the ad platforms"><b>{t.held}</b> possible duplicate held</span>}
@@ -334,10 +361,12 @@ export default function App({ first = null }) {
 
           <aside className="col-side" aria-label="Approvals and activity">
             <section id="approvals" className="card">
-              <div className="card-head"><h2>Approvals</h2>{agent.status === "done" && <span className={agent.grounded ? "ok" : "warn"}>{agent.grounded ? "Numbers checked in code" : "Number check flagged"}</span>}</div>
+              <div className="card-head"><h2>Approvals</h2><div className="approval-meta"><span>{myDecisionCount} by you · {decisionCount} across visitors</span>{agent.status === "done" && <span className={agent.grounded ? "ok" : "warn"}>{agent.grounded ? "Numbers checked in code" : "Number check flagged"}</span>}</div></div>
               <div id="actions">
                 {agent.status === "idle" && <p className="muted">Ask the agent for budget changes. The agent never changes a budget: you approve, and the decision is logged.</p>}
                 {/SYNTHETIC/.test(agent.source || "") && <p className="synthetic"><b>Synthetic week</b> {agent.synthetic?.story || agent.source.split("SYNTHETIC: ")[1]} Not PayPal payments: made up to show a real budget decision.{agent.grade ? (agent.grade.ok ? " Matches the known right answer." : " Differs from the known right answer.") : ""}</p>}
+                {agent.mine && sharedRecommendation && <p className="run-notice" role="status">You changed the inputs; this is your run. <button type="button" onClick={() => showSavedRecommendation(sharedRecommendation, false)}>Show the live ledger's run</button></p>}
+                {!agent.mine && visitorRecommendation && agent.rec_id === sharedRecommendation?.id && <p className="run-notice" role="status">Your run is saved for this browser. <button type="button" onClick={() => showSavedRecommendation(visitorRecommendation, true)}>Show your run</button></p>}
                 {agent.instruction && <p className="owner-ask"><b>Owner asked</b> “{agent.instruction}”</p>}
                 {agent.status === "running" && <div className="skel" aria-live="polite"><i /><i /><i /><span>Claude is reading the ledger…</span></div>}
                 {(agent.trace || []).filter((s) => s.tool === "submit_recommendation" && s.why).map((s, k) => <div key={k} className="dec bad"><b>Code refused Claude's {k === 0 ? "first" : "next"} proposal</b>{s.why.map((w) => <small key={w}>{w}</small>)}</div>)}
@@ -424,7 +453,7 @@ export default function App({ first = null }) {
           <div className="card-head">
             <div><h2>{view === "report" ? "Report · AG Studio" : "The full report, in AG Studio"}</h2><p className="muted">Four custom widgets, a custom budget agent and Studio's own agents, running on Claude.</p></div>
             <div className="row">
-              {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {waiting > 0 && <span className="count">{waiting}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
+              {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {myDecisionCount > 0 && <span className="count">{myDecisionCount}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
               <button className="btn dark" onClick={openAssistant}>Open the Studio assistant</button>
             </div>
           </div>
@@ -440,7 +469,9 @@ export default function App({ first = null }) {
           </div>
         </section>
 
-        <footer className="foot">Fictional shop and ad data · real PayPal sandbox calls · Claude agents · <a href="https://github.com/longtt-marketing/paid-signal">Code</a> · <a href="/scenarios.html">Test scenarios</a></footer>
+        <footer className="foot">Fictional shop and ad data · real PayPal sandbox calls · Claude agents
+          <div className="more-links" aria-label="More pages"><b>More</b><a href="/trail">Money trail</a><a href="/scenarios.html">Scenarios</a><a href="/connect.html">Connect a shop</a><a href="/data">Data use</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></div>
+        </footer>
       </main>
       {toast && <div className="toast" role="status"><span>{toast.msg}</span>{toast.go && <button className="mini go" onClick={() => { goDesk(toast.go); setToast(""); }}>Review</button>}</div>}
     </div>

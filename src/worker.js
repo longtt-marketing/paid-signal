@@ -28,6 +28,31 @@ const STUDIO_TOOLS = new Set(["add_page_filter", "add_widget", "add_widget_filte
   "update_plan", "view_page", "view_plan", "view_report", "view_schema", "view_widget", "delegate_to", "complete_task", "read_paid_signal", "list_unpaid_leads",
   "draft_paypal_invoices", "check_paypal_ledger", "submit_budget_recommendation", "who_still_owes", "send_friendly_nudges"]);
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
+const VISITOR_COOKIE = "ps_vid";
+const VISITOR_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function visitorId(request) {
+  const cookie = request.headers.get("cookie") || "";
+  const value = cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${VISITOR_COOKIE}=`))?.slice(VISITOR_COOKIE.length + 1);
+  return VISITOR_ID.test(value || "") ? value.toLowerCase() : null;
+}
+
+function addVisitorCookie(request, id) {
+  const headers = new Headers(request.headers);
+  const cookies = (headers.get("cookie") || "").split(";").map((part) => part.trim()).filter((part) => part && !part.startsWith(`${VISITOR_COOKIE}=`));
+  headers.set("cookie", [...cookies, `${VISITOR_COOKIE}=${id}`].join("; "));
+  return new Request(request, { headers });
+}
+
+function withVisitorCookie(request, response, id, fresh) {
+  const path = new URL(request.url).pathname;
+  const isHtmlOrApi = path.startsWith("/api/") || path === "/mcp" || (response.headers.get("content-type") || "").toLowerCase().includes("text/html");
+  if (!isHtmlOrApi) return response;
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", "no-store");
+  if (fresh) headers.append("set-cookie", `${VISITOR_COOKIE}=${id}; Max-Age=2592000; Path=/; SameSite=Lax; Secure; HttpOnly`);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 const sha = async (s) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
 const publicInvoice = ({ email, psid, lead_id, ...invoice }) => invoice;
@@ -52,10 +77,10 @@ async function cachedList(env, prefix) {
 const forget = async (prefix) => { await globalThis.caches?.default?.delete(cacheKey(prefix)); };
 
 /** Keep the latest gate-checked budget recommendation; the owner's decisions refer to it by id. */
-async function saveRecommendation(env, recommendation, source) {
+async function saveRecommendation(env, recommendation, source, visitor, shared = false) {
   const saved = { id: `R-${Date.now().toString(36).toUpperCase()}`, at: new Date().toISOString(), source, recommendation };
-  // the dashboard opens on the real shop's latest proposal; a synthetic week's is kept apart
-  await env.LEDGER.put(/SYNTHETIC/.test(source) ? "rec:synthetic" : "rec:latest", JSON.stringify(saved));
+  if (shared) await env.LEDGER.put("rec:latest", JSON.stringify(saved));
+  else await env.LEDGER.put(`rec:v:${visitor}`, JSON.stringify(saved), { expirationTtl: 2592000 });
   return saved;
 }
 
@@ -200,7 +225,7 @@ async function firstPaint(env, url, page) {
     const html = `<div class="app"><header class="top"><div class="top-in"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a></div></header>`
       + `<main class="desk"><section class="hero"><div class="hero-copy"><h1 class="sr">Ads report ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}.</h1><p class="kicker">Kite Robotics Club · demo ad export · PayPal sandbox</p>`
       + `<div class="duo"><div><b class="n claimed">${t.leads}</b><span>leads the ads report</span></div><div><b class="n paid">${t.paid}</b><span>paid ${t.paid === 1 ? "order" : "orders"} PayPal confirms</span></div></div>`
-      + `<p class="pitch">Ad platforms learn from the ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}: the ${metaCount} from Meta ads go back to Meta, the Google ones to Google.</p><div class="hero-actions"><a class="cta" href="/judge">Why the ad with the most leads gets no raise</a><a class="hero-link" href="/trail">Follow one PayPal payment →</a></div></div>`
+      + `<p class="pitch">Ad platforms learn from the ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}: the ${metaCount} from Meta ads go back to Meta, the Google ones to Google.</p><div class="hero-actions"><a class="cta" href="/judge">Judge path, 60 s</a><a class="hero-link" href="/audit">Audit your own ads</a></div></div>`
       + `<div class="hero-bars"><p class="ghost">Loading the ledger…</p></div></section></main></div>`;
     return new HTMLRewriter().on("#root", { element(e) { e.setInnerContent(html, { html: true }); } }).transform(page);
   } catch { return page; }
@@ -701,21 +726,27 @@ const app = {
         if (!["approved", "dismissed"].includes(b.verdict) || !AD_KEYS.has(b.ad)) return json({ error: "A verdict on one of the demo's ads is required." }, 400);
         // a decision is only ever on a recommendation the evidence gate passed: the server copies the move from it, so the
         // public log cannot hold a move the gate never saw
-        const [live, syn] = await Promise.all([env.LEDGER.get("rec:latest", "json"), env.LEDGER.get("rec:synthetic", "json")]);
-        const base = [live, syn].find((r) => r && r.id === b.rec_id);
+        const vid = visitorId(request);
+        const [live, own, syn] = await Promise.all([env.LEDGER.get("rec:latest", "json"), env.LEDGER.get(`rec:v:${vid}`, "json"), env.LEDGER.get("rec:synthetic", "json")]);
+        const base = [live, own, syn].find((r) => r && r.id === b.rec_id);
         const act = base && Number.isInteger(b.index) ? base.recommendation?.actions?.[b.index] : null;
         if (!act || act.ad !== b.ad) return json({ error: "That recommendation is no longer the latest checked one. Ask the agent again." }, 409);
         const at = new Date().toISOString(), id = `D-${Date.now().toString(36).toUpperCase()}`;
         const rec = { id, at, ad: act.ad, change: act.change, verdict: b.verdict, reason: String(act.reason || "").slice(0, 600), evidence: (act.evidence || []).slice(0, 8).map((e) => String(e).slice(0, 40)),
           rec_id: base.id, index: b.index, ...(base === syn ? { week: "synthetic scenario week" } : {}) };
-        await env.LEDGER.put(`dec:${at}:${id}`, JSON.stringify(rec), { expirationTtl: 2592000 }); await forget("dec:");
+        await env.LEDGER.put(`dec:v:${vid}:${at}:${id}`, JSON.stringify(rec), { expirationTtl: 2592000 });
+        await Promise.all([forget("dec:"), forget(`dec:v:${vid}:`)]);
         return json(rec);
       }
-      // decisions taken on a synthetic scenario week (evidence ids SYN…) say so, so the public log is not read as the live shop
-      if (url.pathname === "/api/decisions") return json({ decisions: (await cachedList(env, "dec:")).reverse().slice(0, 50)
+      // Decisions are private to this browser; the total lets visitors see how much the demo has been used.
+      if (url.pathname === "/api/decisions") {
+        const vid = visitorId(request);
+        const [decisions, all] = await Promise.all([cachedList(env, `dec:v:${vid}:`), cachedList(env, "dec:")]);
+        return json({ total: all.length, mine_total: decisions.length, decisions: decisions.reverse().slice(0, 50)
         .map((d) => ({ ...d, week: d.week || ((d.evidence || []).some((e) => String(e).startsWith("SYN")) ? "synthetic scenario week" : "live ledger"),
           // the budget rule in force today dates from 31 Oct; earlier approvals stay as history, not as moves it would allow
           ...(d.at < RULE_SINCE ? { rule: "made under an earlier rule (before 31 Oct 2026, 12:00 UTC); kept as history" } : {}) })) });
+      }
 
       // A recorded live run of the budget agent on an owner's request (replayed on /judge; "Run it live" calls /api/agent)
       if (url.pathname === "/api/runs/owner") return json({ run: await env.LEDGER.get("run:owner", "json") });
@@ -753,9 +784,12 @@ const app = {
 
       // The latest recommendation that passed the evidence gate, with the owner's decisions on it, so Approvals survives a reload.
       if (url.pathname === "/api/recommendation") {
-        const latest = await env.LEDGER.get("rec:latest", "json");
-        const decisions = latest ? (await cachedList(env, "dec:")).filter((d) => d.rec_id === latest.id) : [];
-        return json({ latest, decisions });
+        const vid = visitorId(request);
+        const [own, shared, decisions, all] = await Promise.all([
+          env.LEDGER.get(`rec:v:${vid}`, "json"), env.LEDGER.get("rec:latest", "json"),
+          cachedList(env, `dec:v:${vid}:`), cachedList(env, "dec:")]);
+        const mine = own ? { ...own, mine: true } : null;
+        return json({ latest: mine || shared, mine, shared, decisions: decisions.slice(-50), decision_count: all.length, my_decision_count: decisions.length });
       }
 
       // The browser-side Studio agent framework talks to Claude through this proxy; the key never leaves the Worker.
@@ -804,8 +838,8 @@ const app = {
         const rec = reconcile(parseAdCsv(csv).rows, payments);
         const out = { headline: String(recommendation?.headline || ""), caveats: String(recommendation?.caveats || ""), actions: (recommendation?.actions || []).slice(0, 4) };
         const problems = checkRecommendation(rec, payments, out);
-        const saved = problems.length ? null : await saveRecommendation(env, out, "AG Studio budget agent");
-        return json({ grounded: problems.length === 0, problems, recommendation: out, rec_id: saved?.id || null });
+        const saved = problems.length ? null : await saveRecommendation(env, out, "AG Studio budget agent", visitorId(request));
+        return json({ grounded: problems.length === 0, problems, recommendation: out, rec_id: saved?.id || null, mine: Boolean(saved), saved });
       }
 
       if (url.pathname === "/api/agent" && request.method === "POST") {
@@ -823,19 +857,21 @@ const app = {
         try { out = await runAgent({ llm, rec, payments, instruction: typeof body.instruction === "string" ? body.instruction : "" }); }
         catch { console.warn("budget agent failed"); return budgetUnavailable(await budgetFallback(env), 502); }
         const source = week ? `budget agent · SYNTHETIC: ${week.name}` : "budget agent";
-        const saved = out.recommendation && out.grounded ? await saveRecommendation(env, out.recommendation, source) : null;
+        const demoCsv = !week && body.instruction === OWNER_ASK ? await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text() : null;
+        const plain = (t) => String(t || "").split(String.fromCharCode(13)).join("").trim(); // Windows line endings aside
+        const sharedRun = demoCsv !== null && plain(body.csv) === plain(demoCsv);
+        const vid = visitorId(request);
+        const saved = out.recommendation && out.grounded ? await saveRecommendation(env, out.recommendation, source, vid, sharedRun) : null;
         // the latest owner request on the live ledger is kept whole, so /judge can replay it without spending a Claude turn
         // only the dashboard's own request on the bundled ad export, and only an answer the gate passed: a visitor's edited
         // CSV or free text never replaces what /judge shows every judge
         // the latest gate-passed run on a labelled synthetic week, replayed on /judge as "when the payments do support a move"
         if (week && out.recommendation && out.grounded) await env.LEDGER.put("run:week", JSON.stringify({ at: new Date().toISOString(), week: { id: week.id, name: week.name, story: week.story },
           recommendation: out.recommendation, trace: out.trace, ms: Date.now() - started, grade: grade(week, out.recommendation.actions || []) }));
-        const demoCsv = !week && body.instruction === OWNER_ASK ? await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text() : null;
-        const plain = (t) => String(t || "").split(String.fromCharCode(13)).join("").trim(); // Windows line endings aside
-        if (demoCsv !== null && plain(body.csv) === plain(demoCsv) && out.recommendation && out.grounded) await env.LEDGER.put("run:owner", JSON.stringify({ at: new Date().toISOString(), instruction: String(body.instruction).slice(0, 300),
+        if (sharedRun && out.recommendation && out.grounded) await env.LEDGER.put("run:owner", JSON.stringify({ at: new Date().toISOString(), instruction: String(body.instruction).slice(0, 300),
           recommendation: out.recommendation, grounded: out.grounded, trace: out.trace, ms: Date.now() - started, rec_id: saved?.id || null,
           ads: rec.ads.map((r) => ({ ad: r.ad, leads: r.leads, paid: r.paid, revenue_cents: r.revenue_cents, spend_cents: r.spend_cents })), moves: supportedMoves(rec) }));
-        return json({ ...out, rec_id: saved?.id || null, source, ms: Date.now() - started,
+        return json({ ...out, rec_id: saved?.id || null, source, ms: Date.now() - started, ...(saved ? { saved, mine: !sharedRun } : {}),
           ...(week ? { synthetic: { id: week.id, name: week.name, story: week.story, right_answer: week.right }, grade: grade(week, out.recommendation?.actions || []) } : {}) });
       }
 
@@ -882,4 +918,14 @@ app.scheduled = async (event, env) => {
   if (!invoices.some((i) => i.status === "DRAFT") && await quota(env, "Claude runs", CLAUDE_DAILY)) await revenueDrafts(env, url);
   try { await syncDisputes(env); } catch (e) { console.warn("dispute sync failed", e?.message); }
 };
-export default app;
+const worker = {
+  async fetch(request, env, ctx) {
+    const current = visitorId(request);
+    const id = current || crypto.randomUUID();
+    const incoming = current ? request : addVisitorCookie(request, id);
+    const response = await app.fetch(incoming, env, ctx);
+    return withVisitorCookie(request, response, id, !current);
+  },
+  scheduled: app.scheduled,
+};
+export default worker;

@@ -207,16 +207,16 @@ test("Meta: web click, Messenger and lead-form payments use their matching paylo
   const { metaEvents } = await import("../src/ledger.js");
   const { events } = await metaEvents([
     pay({ capture_id: "W1", channel: "web" }),
-    pay({ capture_id: "M1", channel: "messenger", via: "invoice", click_id: "", psid: "DEMO-PSID-001", page_id: "DEMO-PAGE-001", payer_email_sha256: "secret-hash" }),
-    pay({ capture_id: "L1", channel: "lead_form", via: "invoice", click_id: "", lead_id: "DEMO-LEAD-001", payer_email_sha256: "secret-hash" }),
+    pay({ capture_id: "M1", channel: "messenger", via: "invoice", click_id: "", psid: "TEST-PSID-001", page_id: "TEST-PAGE-001", payer_email_sha256: "secret-hash" }),
+    pay({ capture_id: "L1", channel: "lead_form", via: "invoice", click_id: "", lead_id: "TEST-LEAD-001", payer_email_sha256: "secret-hash" }),
   ], { sourceUrl: "https://x/shop" });
   const web = events.find((e) => e.event_id === "paypal:W1");
   assert.equal(web.action_source, "website"); assert.equal(web.event_source_url, "https://x/shop"); assert.equal(web.user_data.fbc, "fb.1.1793178000000.abc");
   const messenger = events.find((e) => e.event_id === "paypal:M1");
   assert.equal(messenger.action_source, "business_messaging"); assert.equal(messenger.messaging_channel, "messenger");
-  assert.deepEqual(messenger.user_data, { page_scoped_user_id: "DEMO-PSID-001", page_id: "DEMO-PAGE-001" }); assert.equal(messenger.event_source_url, undefined);
+  assert.deepEqual(messenger.user_data, { page_scoped_user_id: "TEST-PSID-001", page_id: "TEST-PAGE-001" }); assert.equal(messenger.event_source_url, undefined);
   const lead = events.find((e) => e.event_id === "paypal:L1");
-  assert.equal(lead.action_source, "system_generated"); assert.deepEqual(lead.user_data, { lead_id: "DEMO-LEAD-001" });
+  assert.equal(lead.action_source, "system_generated"); assert.deepEqual(lead.user_data, { lead_id: "TEST-LEAD-001" });
   assert.equal(lead.custom_data.event_source, "crm"); assert.equal(lead.custom_data.lead_event_source, "Paid Signal");
 });
 
@@ -370,4 +370,17 @@ test("money format: a percentage with two decimals (PayPal's 2.99% fee) is not m
   const out = (reason) => checkRecommendation(rec, s.payments, { headline: "Week 4.", actions: [{ ad: "trial_video", change: "keep", reason, evidence: ["row:trial_video"] }] });
   assert.ok(!out("After the shop's 30% cost and PayPal's 2.99% + $0.49 fee.").some((p) => /dollar sign/.test(p)));
   assert.ok(out("It took 49.00 from the ad.").some((p) => /dollar sign/.test(p)));
+});
+
+test("metaEvents: fictional DEMO ids for Messenger and lead-form leads are held, real-looking ones are sent", async () => {
+  const { metaEvents } = await import("../src/ledger.js");
+  const base = { status: "COMPLETED", amount: "49.00", currency: "USD", refunded_amount: "0.00", via: "invoice", captured_at: new Date().toISOString(), order_id: "INV2-X" };
+  const { events, held } = await metaEvents([
+    { ...base, capture_id: "A", channel: "messenger", psid: "DEMO-PSID-1", page_id: "DEMO-PAGE-1" },
+    { ...base, capture_id: "B", channel: "lead_form", lead_id: "DEMO-LEAD-1" },
+    { ...base, capture_id: "C", channel: "lead_form", lead_id: "TEST-LEAD-REAL" },
+  ]);
+  assert.deepEqual(held.map((h) => h.capture_id), ["A", "B"]);
+  assert.match(held[0].reason, /fictional demo id/);
+  assert.deepEqual(events.map((e) => [e.action_source, e.user_data.lead_id]), [["system_generated", "TEST-LEAD-REAL"]]);
 });

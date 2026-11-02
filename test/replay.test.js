@@ -146,6 +146,84 @@ test("decisions: only on the latest checked recommendation, with the move copied
   assert.deepEqual([d.change, d.reason, d.rec_id], ["keep", "Only 1 paid order.", "R-LIVE1"]);
 });
 
+test("recommendations and decisions stay with each visitor; only the bundled owner run updates the shared recommendation", async () => {
+  const demoCsv = "ad,spend,leads\ntrial_video,96.20,14\nfree_guide,118.40,31\nparent_carousel,71.90,11\nholiday_static,40.00,6\n";
+  const shared = { id: "R-SHARED", at: "2026-11-01T00:00:00.000Z", source: "budget agent", recommendation: { headline: "Shared live run", actions: [] } };
+  const env = {
+    LEDGER: kv(),
+    ASSETS: { async fetch() { return new Response(demoCsv, { headers: { "content-type": "text/csv" } }); } },
+    ANTHROPIC_API_KEY: "test-key",
+  };
+  await env.LEDGER.put("rec:latest", JSON.stringify(shared));
+  await env.LEDGER.put("run:owner", JSON.stringify({ at: shared.at, recommendation: { headline: "Prior owner run" } }));
+
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    assert.equal(String(url), "https://api.anthropic.com/v1/messages");
+    return new Response(JSON.stringify({ content: [{ type: "tool_use", id: "submit-1", name: "submit_recommendation", input: {
+      headline: "Keep the free guide budget until paid orders support a move.",
+      actions: [{ ad: "free_guide", change: "keep", reason: "It needs more paid orders before its budget moves.", evidence: ["row:free_guide"] }],
+    } }] }), { headers: { "content-type": "application/json" } });
+  };
+  const cookieA = "ps_vid=11111111-1111-4111-8111-111111111111";
+  const cookieB = "ps_vid=22222222-2222-4222-8222-222222222222";
+  const post = (path, body, cookie) => app.fetch(new Request(`https://paid-signal.test${path}`, {
+    method: "POST", headers: { "content-type": "application/json", origin: "https://paid-signal.test", cookie }, body: JSON.stringify(body),
+  }), env);
+  const get = (path, cookie) => app.fetch(new Request(`https://paid-signal.test${path}`, { headers: { cookie } }), env);
+  try {
+    const editedCsv = demoCsv.replace("free_guide,118.40,31", "free_guide,118.40,32");
+    const runA = await (await post("/api/agent", { csv: editedCsv, instruction: "Raise the free guide's budget: it brings the most leads." }, cookieA)).json();
+    assert.equal(runA.grounded, true);
+    assert.equal(runA.mine, true);
+    assert.equal((await env.LEDGER.get("rec:latest", "json")).id, shared.id);
+    assert.equal((await env.LEDGER.get("run:owner", "json")).recommendation.headline, "Prior owner run");
+
+    const approved = await post("/api/decisions", { ad: "free_guide", verdict: "approved", rec_id: runA.rec_id, index: 0 }, cookieA);
+    assert.equal(approved.status, 200);
+    assert.equal((await approved.json()).change, "keep");
+
+    const recommendationB = await (await get("/api/recommendation", cookieB)).json();
+    const decisionsB = await (await get("/api/decisions", cookieB)).json();
+    assert.equal(recommendationB.latest.id, shared.id);
+    assert.equal(recommendationB.mine, null);
+    assert.deepEqual(recommendationB.decisions, []);
+    assert.deepEqual(decisionsB.decisions, []);
+    assert.equal(decisionsB.total, 1);
+
+    const runB = await (await post("/api/agent", { csv: demoCsv, instruction: "Raise the free guide's budget: it brings the most leads." }, cookieB)).json();
+    assert.equal(runB.grounded, true);
+    assert.equal(runB.mine, false);
+    assert.equal((await env.LEDGER.get("rec:latest", "json")).id, runB.rec_id);
+    assert.equal((await env.LEDGER.get("run:owner", "json")).rec_id, runB.rec_id);
+    assert.equal((await env.LEDGER.get(`rec:v:11111111-1111-4111-8111-111111111111`, "json")).id, runA.rec_id);
+  } finally { globalThis.fetch = realFetch; }
+});
+
+test("a decision without a cookie gets a fresh visitor id and can be read back with that cookie", async () => {
+  const env = { LEDGER: kv(), ASSETS: { async fetch() { return new Response("<!doctype html>", { headers: { "content-type": "text/html; charset=utf-8" } }); } } };
+  await env.LEDGER.put("rec:latest", JSON.stringify({ id: "R-NOCOOKIE", recommendation: { actions: [{ ad: "free_guide", change: "keep", reason: "Grounded reason.", evidence: ["row:free_guide"] }] } }));
+  const makeDecision = () => app.fetch(new Request("https://paid-signal.test/api/decisions", {
+    method: "POST", headers: { "content-type": "application/json", origin: "https://paid-signal.test" },
+    body: JSON.stringify({ ad: "free_guide", verdict: "dismissed", rec_id: "R-NOCOOKIE", index: 0 }),
+  }), env);
+  const first = await makeDecision(), second = await makeDecision();
+  const firstCookie = first.headers.get("set-cookie"), secondCookie = second.headers.get("set-cookie");
+  const firstId = firstCookie?.match(/ps_vid=([0-9a-f-]{36})/i)?.[1];
+  const secondId = secondCookie?.match(/ps_vid=([0-9a-f-]{36})/i)?.[1];
+  assert.equal(first.status, 200); assert.equal(second.status, 200);
+  assert.ok(firstId && secondId && firstId !== secondId);
+  assert.match(firstCookie, /Max-Age=2592000; Path=\/; SameSite=Lax; Secure; HttpOnly/i);
+  for (const id of [firstId, secondId]) {
+    const res = await app.fetch(new Request("https://paid-signal.test/api/decisions", { headers: { cookie: `ps_vid=${id}` } }), env);
+    assert.equal((await res.json()).decisions.length, 1);
+    assert.equal(res.headers.get("set-cookie"), null);
+  }
+  const page = await app.fetch(new Request("https://paid-signal.test/judge"), env);
+  assert.match(page.headers.get("set-cookie"), /ps_vid=[0-9a-f-]{36}; Max-Age=2592000; Path=\/; SameSite=Lax; Secure; HttpOnly/i);
+  assert.equal(page.headers.get("cache-control"), "no-store");
+});
+
 test("invoice lists never carry a lead's email, including the sync answer", async () => {
   const env = { LEDGER: kv() };
   await env.LEDGER.put("inv:INV2-AAAA", JSON.stringify({ id: "INV2-AAAA", lead: "Lead 99 (fictional)", ad: "free_guide", email: "lead99@example.com", amount: "49.00", status: "DRAFT" }));

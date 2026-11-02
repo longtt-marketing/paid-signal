@@ -322,6 +322,8 @@ export async function metaEvents(payments, { sourceUrl, hold } = {}) {
     if (channel === "web" && !p.click_id) { held.push({ capture_id: p.capture_id, reason: "no ad click" }); continue; }
     if (channel === "messenger" && (!p.psid || !p.page_id)) { held.push({ capture_id: p.capture_id, reason: "missing Messenger page or user id" }); continue; }
     if (channel === "lead_form" && !p.lead_id) { held.push({ capture_id: p.capture_id, reason: "missing Meta lead id" }); continue; }
+    // Meta accepts only ids it issued (a real page-scoped user id, a 15-17 digit lead id); the demo's fictional ids are shown, not sent
+    if ((channel === "messenger" && /^DEMO-/i.test(String(p.psid))) || (channel === "lead_form" && /^DEMO-/i.test(String(p.lead_id)))) { held.push({ capture_id: p.capture_id, reason: "fictional demo id: Meta only accepts ids it issued, so this payload is shown, not sent" }); continue; }
     if (!["web", "messenger", "lead_form"].includes(channel)) { held.push({ capture_id: p.capture_id, reason: "unknown lead channel" }); continue; }
     if (hold?.has(p.capture_id)) { held.push({ capture_id: p.capture_id, reason: "possible duplicate" }); continue; }
     // a buyer who came from a Google ad teaches Google, not Meta: sending it to Meta would let Meta take credit for it

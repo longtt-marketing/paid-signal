@@ -53,12 +53,15 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .more{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .more a{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none}
 .more a b{display:block}.more a span{font-size:13px;color:var(--faint)}
+.jump-list{margin:0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:14px}
+.jump-list a{font-weight:600;text-decoration-thickness:1px;text-underline-offset:3px}
 @media (max-width:640px){.top{padding:14px 16px}main{padding:28px 16px 64px}.vs{grid-template-columns:1fr;text-align:left}.vs i{display:none}dl{grid-template-columns:1fr;gap:2px}dt{margin-top:6px}}
 </style>
 </head>
 <body>
-<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav><a href="/">Dashboard</a><a href="/trail">Money trail</a><a href="/proof">Proof</a><a href="/data">Data use</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></nav></header>
+<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav aria-label="Main"><a href="/">Dashboard</a><a href="/judge">Judge path</a><a href="/audit">Audit</a><a href="/proof">Proof</a></nav></header>
 <main>
+  <p class="jump-list"><strong>In 60 seconds you will see:</strong> <a href="#ask">the owner's ask</a> · <a href="#answer">Claude refuses with the rule in code</a> · <a href="#contrast">the raise PayPal supports</a> · <a href="#loop">a live invoice you can trigger</a> · <a href="#capture">the PayPal capture behind it</a></p>
   <div>
     <h1>The ad with the most leads is not always the ad worth funding.</h1>
     <p class="lede">Sixty seconds, no login. The owner asks Claude to fund the ad with the most leads; Claude checks what PayPal says was paid, and code checks the move.</p>
@@ -88,11 +91,13 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     <h3 class="substep">Live invoice loop</h3><p class="note">Loading the ledger…</p>
   </section>
 
-  <div class="more">
-    <a href="/audit"><b>Audit your own ads</b><span>Your Ads Manager export and PayPal download, read in your browser, no login</span></a>
+  <h2 class="substep">More</h2>
+  <div class="more" aria-label="More pages">
     <a href="/trail"><b>Money trail</b><span>One payment from ad click to PayPal to Meta, read live</span></a>
-    <a href="/"><b>Dashboard</b><span>Every ad, every payment, the four agents, AG Studio</span></a>
-    <a href="/proof"><b>Proof</b><span>What is verified, what is not, and the script for each number</span></a>
+    <a href="/scenarios.html"><b>Scenarios</b><span>See the agent and evidence gate on a synthetic week</span></a>
+    <a href="/connect.html"><b>Connect a shop</b><span>Set up Paid Signal for a shop</span></a>
+    <a href="/data"><b>Data use</b><span>How data is handled</span></a>
+    <a href="https://github.com/longtt-marketing/paid-signal"><b>Code</b><span>Read the implementation</span></a>
   </div>
   <p class="note">A fictional shop with a fictional ad export; every PayPal call is a real sandbox call. An approved decision is recorded, it does not change a live Meta budget.</p>
 </main>

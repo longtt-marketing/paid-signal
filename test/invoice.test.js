@@ -173,12 +173,12 @@ test("judge try: a Claude failure returns the saved revenue fallback", async () 
 
 test("public APIs keep email, PSID and lead ID server-side", async () => {
   const env = { LEDGER: kv(), PAYPAL_CLIENT_SECRET: "secret", ASSETS: { async fetch(req) {
-    if (new URL(req.url).pathname.endsWith("demo-leads.csv")) return new Response("lead,ad,source,click_id,asked_for,email,message,channel,psid,page_id,lead_id\nLead M,parent_carousel,fb,,booking,messenger@example.com,Book a class,messenger,DEMO-PSID-PRIVATE,DEMO-PAGE-001,\nLead F,free_guide,fb,,guide,form@example.com,Downloaded it,lead_form,,,DEMO-LEAD-PRIVATE\n");
+    if (new URL(req.url).pathname.endsWith("demo-leads.csv")) return new Response("lead,ad,source,click_id,asked_for,email,message,channel,psid,page_id,lead_id\nLead M,parent_carousel,fb,,booking,messenger@example.com,Book a class,messenger,TEST-PSID-PRIVATE,DEMO-PAGE-001,\nLead F,free_guide,fb,,guide,form@example.com,Downloaded it,lead_form,,,TEST-LEAD-PRIVATE\n");
     return new Response("ad,spend,leads\nparent_carousel,10,1\nfree_guide,10,1\n");
   } } };
-  await env.LEDGER.put("inv:INV2-PRIVATE", JSON.stringify({ id: "INV2-PRIVATE", lead: "Lead F", email: "form@example.com", psid: "DEMO-PSID-PRIVATE", lead_id: "DEMO-LEAD-PRIVATE", status: "DRAFT" }));
-  await env.LEDGER.put("pay:CAP-M", JSON.stringify({ capture_id: "CAP-M", order_id: "INV2-M", ad: "parent_carousel", source: "fb", click_id: "", clicked_at: 0, channel: "messenger", psid: "DEMO-PSID-PRIVATE", page_id: "DEMO-PAGE-001", amount: "49.00", currency: "USD", captured_at: "2026-11-02T00:00:00Z", refunded_amount: "0.00" }));
-  await env.LEDGER.put("pay:CAP-F", JSON.stringify({ capture_id: "CAP-F", order_id: "INV2-F", ad: "free_guide", source: "fb", click_id: "", clicked_at: 0, channel: "lead_form", lead_id: "DEMO-LEAD-PRIVATE", amount: "49.00", currency: "USD", captured_at: "2026-11-02T00:00:00Z", refunded_amount: "0.00" }));
+  await env.LEDGER.put("inv:INV2-PRIVATE", JSON.stringify({ id: "INV2-PRIVATE", lead: "Lead F", email: "form@example.com", psid: "TEST-PSID-PRIVATE", lead_id: "TEST-LEAD-PRIVATE", status: "DRAFT" }));
+  await env.LEDGER.put("pay:CAP-M", JSON.stringify({ capture_id: "CAP-M", order_id: "INV2-M", ad: "parent_carousel", source: "fb", click_id: "", clicked_at: 0, channel: "messenger", psid: "TEST-PSID-PRIVATE", page_id: "DEMO-PAGE-001", amount: "49.00", currency: "USD", captured_at: "2026-11-02T00:00:00Z", refunded_amount: "0.00" }));
+  await env.LEDGER.put("pay:CAP-F", JSON.stringify({ capture_id: "CAP-F", order_id: "INV2-F", ad: "free_guide", source: "fb", click_id: "", clicked_at: 0, channel: "lead_form", lead_id: "TEST-LEAD-PRIVATE", amount: "49.00", currency: "USD", captured_at: "2026-11-02T00:00:00Z", refunded_amount: "0.00" }));
   const request = (path, method = "GET", body) => new Request(`https://paid-signal.test${path}`, { method, ...(body ? { headers: { origin: "https://paid-signal.test", "content-type": "application/json" }, body: JSON.stringify(body) } : {}) });
   const outputs = await Promise.all([
     app.fetch(request("/api/leads"), env), app.fetch(request("/api/invoices"), env), app.fetch(request("/api/ledger"), env),
@@ -187,7 +187,7 @@ test("public APIs keep email, PSID and lead ID server-side", async () => {
   const rendered = await Promise.all(outputs.map((r) => r.text()));
   const all = rendered.join(" ");
   assert.ok(!all.includes("form@example.com")); assert.ok(!all.includes("messenger@example.com"));
-  assert.ok(!all.includes("DEMO-PSID-PRIVATE")); assert.ok(!all.includes("DEMO-LEAD-PRIVATE"));
+  assert.ok(!all.includes("TEST-PSID-PRIVATE")); assert.ok(!all.includes("TEST-LEAD-PRIVATE"));
   const rec = JSON.parse(rendered[3]);
   assert.equal(rec.meta.events.find((e) => e.event_id === "paypal:CAP-M").user_data.page_scoped_user_id, "(Messenger PSID; sent to Meta, kept server-side)");
   assert.equal(rec.meta.events.find((e) => e.event_id === "paypal:CAP-F").user_data.lead_id, "(Meta lead ID; sent to Meta, kept server-side)");

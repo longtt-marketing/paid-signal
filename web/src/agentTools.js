@@ -126,7 +126,7 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
       execute: async (args, ctx) => {
         const d = await post("/api/agent/check", { csv: getCsv(), recommendation: args }, ctx.signal);
         if (!d.grounded) return ctx.success(`Rejected by the evidence gate. Fix these and submit again: ${d.problems.join(" ")}`, { grounded: false, problems: d.problems });
-        onRecommendation?.({ recommendation: d.recommendation, grounded: true, source: "AG Studio budget agent", rec_id: d.rec_id });
+        onRecommendation?.({ recommendation: d.recommendation, grounded: true, source: "AG Studio budget agent", rec_id: d.rec_id, saved: d.saved, mine: true });
         return ctx.success("Accepted by the evidence gate. It now waits for the owner's approval in the approvals column.", { grounded: true });
       },
     });
