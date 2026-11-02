@@ -16,14 +16,22 @@ const kv = () => {
   };
 };
 
-async function judgeTry(message, decide, env = { LEDGER: kv(), ANTHROPIC_API_KEY: "test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" }) {
-  let llmCalls = 0, toolkitInput = null;
+async function judgeTry(message, decide, env = { LEDGER: kv(), ANTHROPIC_API_KEY: "test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" }, { paypalReadError = false } = {}) {
+  let llmCalls = 0, toolkitInput = null, paypalReads = 0;
   const realFetch = globalThis.fetch;
   const toolkit = mock.method(PayPalAgentToolkit.prototype, "getTools", () => ({ create_invoice: { execute: async (input) => {
     toolkitInput = input; return JSON.stringify({ id: "INV2-TRY-0001" });
   } } }));
   globalThis.fetch = async (input, init) => {
-    assert.equal(String(input), "https://api.anthropic.com/v1/messages");
+    const url = String(input);
+    if (url.endsWith("/v1/oauth2/token")) return Response.json({ access_token: "sandbox-test-token", expires_in: 3600 });
+    if (url.endsWith("/v2/invoicing/invoices/INV2-TRY-0001")) {
+      paypalReads++;
+      if (paypalReadError) return Response.json({ name: "INTERNAL_SERVER_ERROR" }, { status: 500 });
+      return Response.json({ id: "INV2-TRY-0001", status: "DRAFT", detail: { invoice_number: "PS-TRY-001", currency_code: "USD" },
+        amount: { value: "49.00", currency_code: "USD" }, items: [{ name: "Robotics trial class", quantity: "1", unit_amount: { value: "49.00", currency_code: "USD" } }] });
+    }
+    assert.equal(url, "https://api.anthropic.com/v1/messages");
     const request = JSON.parse(init.body);
     llmCalls++;
     if (llmCalls === 1) return Response.json({ content: [{ type: "tool_use", id: "read", name: "read_leads", input: {} }] });
@@ -38,7 +46,7 @@ async function judgeTry(message, decide, env = { LEDGER: kv(), ANTHROPIC_API_KEY
     const response = await app.fetch(new Request("https://paid-signal.test/api/judge/try", { method: "POST", headers: {
       origin: "https://paid-signal.test", "content-type": "application/json", "cf-connecting-ip": "192.0.2.80",
     }, body: JSON.stringify({ message }) }), env);
-    return { response, env, llmCalls: () => llmCalls, toolkitInput: () => toolkitInput };
+    return { response, env, llmCalls: () => llmCalls, toolkitInput: () => toolkitInput, paypalReads: () => paypalReads };
   } finally { globalThis.fetch = realFetch; toolkit.mock.restore(); }
 }
 
@@ -125,6 +133,10 @@ test("judge try: a booking creates a sandbox draft under try and keeps it out of
   const body = await out.response.json();
   assert.equal(out.response.status, 200); assert.equal(body.decision, "drafted"); assert.equal(body.invoice_id, "INV2-TRY-0001");
   assert.equal(body.amount, "49.00"); assert.equal(body.line_items[0].unit, "49.00");
+  const { read_at, ...paypal } = body.paypal;
+  assert.deepEqual(paypal, { status: "DRAFT", invoice_number: "PS-TRY-001", total_amount: "49.00", currency: "USD",
+    line_items: [{ name: "Robotics trial class", quantity: "1", unit_amount: { value: "49.00", currency_code: "USD" } }] });
+  assert.ok(!Number.isNaN(Date.parse(read_at))); assert.equal(out.paypalReads(), 1);
   assert.equal(body.trace.find((x) => x.tool === "create_invoice").called_by, "Claude");
   assert.equal(body.trace.find((x) => x.tool === "create_invoice").price_set_by, "code");
   assert.equal(out.toolkitInput().primary_recipients[0].billing_info.email_address, "judge-lead@example.com");
@@ -132,6 +144,16 @@ test("judge try: a booking creates a sandbox draft under try and keeps it out of
   const listed = await app.fetch(new Request("https://paid-signal.test/api/invoices"), out.env);
   assert.deepEqual((await listed.json()).invoices, []);
   assert.ok(!JSON.stringify(body).includes("judge-lead@example.com"));
+});
+
+test("judge try keeps a draft when PayPal read-back fails", async () => {
+  const out = await judgeTry("Please book one trial class.", () => tool("create_invoice", {
+    lead: "Judge lead", items: [{ sku: "trial_class", qty: 1 }], note: "Booking.", reason: "Asked to book.",
+  }), undefined, { paypalReadError: true });
+  const body = await out.response.json();
+  assert.equal(out.response.status, 200); assert.equal(body.decision, "drafted"); assert.equal(body.invoice_id, "INV2-TRY-0001");
+  assert.match(body.paypal.error, /Could not read the draft back from PayPal/); assert.ok(!Number.isNaN(Date.parse(body.paypal.read_at)));
+  assert.equal(out.paypalReads(), 1);
 });
 
 test("judge try: an injection is skipped and flagged", async () => {

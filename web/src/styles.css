@@ -208,3 +208,40 @@ code{font-family:var(--code);font-size:12px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 
 .owner-ask{margin:0 0 10px;font-size:13.5px;color:var(--ink)}.owner-ask b{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin-bottom:2px}
+
+.ad-cards{display:none}
+.ad-card{display:grid;gap:9px;padding:12px;border:1px solid var(--line2);border-radius:12px;background:#fcfbf8;min-width:0}
+.ad-card h3{margin:0;font-size:15px;line-height:1.35;overflow-wrap:anywhere}
+.ad-card-flow,.ad-card-revenue{display:flex;align-items:baseline;gap:8px;margin:0;font-size:14px}
+.ad-card-flow span:first-child,.ad-card-revenue span,.ad-card-cover>span{color:var(--mute)}
+.ad-card-flow b,.ad-card-revenue b{margin-left:auto;font-variant-numeric:tabular-nums}
+.ad-card-cover{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:3px 8px;font-size:14px}
+.ad-card-cover>b{font-variant-numeric:tabular-nums}
+.ad-card-cover small{grid-column:1/-1;color:var(--mute);font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+.phone-disclosure-body{display:contents}
+.phone-disclosure>summary{display:none}
+.phone-disclosure-inner,.phone-disclosure-plain{display:contents}
+.toggle-hide{display:none}
+
+@media (max-width:639px){
+  .desktop-only{display:none}
+  .ad-cards{display:flex;flex-direction:column;gap:9px}
+  .phone-disclosure>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;cursor:pointer;list-style:none;font-weight:700}
+  .phone-disclosure>summary::-webkit-details-marker{display:none}
+  .phone-disclosure>summary>span:first-child{min-width:0}
+  .phone-disclosure-meta{flex:none;color:var(--faint);font:500 12px var(--sans);text-align:right}
+  .phone-disclosure[open]>summary .toggle-show{display:none}
+  .phone-disclosure[open]>summary .toggle-hide{display:inline}
+  .phone-disclosure.card{padding:12px 16px}
+  .phone-disclosure.card:not([open]){gap:0}
+  .phone-disclosure.card>summary{min-height:36px}
+  .phone-section-head h2{display:none}
+  .phone-disclosure-inner{display:flex;flex-direction:column;gap:8px;min-width:0;border-top:1px solid var(--line2)}
+  .phone-disclosure-inner:not([open]){gap:0}
+  .phone-disclosure-inner>summary{padding:10px 0;color:var(--mute);font-size:13px}
+  .phone-disclosure-inner[open]{padding-bottom:6px}
+  #invoices .sub-head>b{display:none}
+  .phone-disclosure-plain{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .phone-disclosure-plain>summary{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
+  .phone-disclosure-plain[open]>summary{margin-bottom:2px}
+}

@@ -108,9 +108,11 @@ export function findNumberContradictions(text, stats, file = "") {
       const isRevenue = near(/\bpaid revenue\b|\brevenue\b/g);
       const isSpend = near(/\bad spend\b|\bspend\b|\bspent\b|\bof ads\b/g);
       const isNet = near(/\bnet\b/g);
-      const cutPoint = /\bnext\b/i.test(before) && /\bno paid order\b/i.test(after);
-      if (cutPoint && row) {
-        const target = stats.odds[row.ad]?.more_spend_to_decide_cents;
+      // "the next $21 brings no paid order" and "$21 more spend with no paid order" are both an ad's cut point
+      const cutPoint = (/\bnext\b/i.test(before) && /\bno paid order\b/i.test(after)) || /^\s*more spend with no paid order\b/i.test(after);
+      const cutRow = row || (cutPoint && low.includes("free guide") ? stats.ads.find((item) => item.ad === "free_guide") : null);
+      if (cutPoint && cutRow) {
+        const row = cutRow, target = stats.odds[row.ad]?.more_spend_to_decide_cents;
         if (target != null && value !== target) add(line, i + 1, `${row.ad} no-order cut point is ${money(target)}, found ${money(value)}`);
         continue;
       }

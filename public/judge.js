@@ -13,10 +13,23 @@ async function getJSON(url, init) { const r = await fetch(url, init); const j = 
 function showTryResult(out) {
   const result = box("try-result"), drafted = out.decision === "drafted";
   const trace = (out.trace || []).map((x) => `${x.tool}${x.called_by ? ` called by ${x.called_by}` : ""}${x.price_set_by ? `; price set by ${x.price_set_by}` : ""}`).join(" · ");
+  const paypalText = (record) => {
+    if (record.error) return record.error;
+    let total = record.total_amount == null ? "amount unavailable" : String(record.total_amount);
+    if (record.currency) {
+      try { total = new Intl.NumberFormat("en-US", { style: "currency", currency: record.currency }).format(Number(record.total_amount)); }
+      catch { total += ` ${record.currency}`; }
+    }
+    const items = (record.line_items || []).map((item) => `${item.name || "Item"} x${item.quantity ?? "?"}`).join(", ") || "no line items returned";
+    const readAt = new Date(record.read_at);
+    const time = Number.isNaN(+readAt) ? record.read_at || "unknown time" : readAt.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+    return `PayPal says: ${record.status || "status unavailable"}, ${total}, ${items} (read back from PayPal at ${time})`;
+  };
   result.replaceChildren(
     $("p", { className: `verdict ${drafted ? "ok" : ""}`, textContent: drafted ? "Drafted. The invoice was not sent." : "Skipped." }),
     $("p", { className: "reason", textContent: `Reason: ${out.reason}${out.flag ? ` Flag: ${out.flag}.` : ""}` }),
-    ...(drafted ? [$("p", { className: "note", textContent: `Invoice ${out.invoice_id}, ${money(Math.round(Number(out.amount) * 100))}. ${out.line_items.map((x) => `${x.name} at $${x.unit}`).join(", ")}` })] : []),
+    ...(drafted ? [$("p", { className: "note", textContent: `Invoice ${out.invoice_id}, ${money(Math.round(Number(out.amount) * 100))}. ${out.line_items.map((x) => `${x.name} at $${x.unit}`).join(", ")}` }),
+      ...(out.paypal ? [$("p", { className: "note paypal-readback", textContent: paypalText(out.paypal) })] : [])] : []),
     $("p", { className: "chain", textContent: `Tool trace: ${trace || "No tool call."} · ${out.ms} ms` }),
   );
 }
@@ -34,7 +47,6 @@ box("try-run").onclick = async () => {
   try { showTryResult(await getJSON("/api/judge/try", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message }) })); }
   catch (e) {
     result.replaceChildren($("p", { className: "note err", textContent: e.message }));
-    if (e.fallback?.run) result.append($("p", { className: "note", textContent: `Latest saved revenue run: ${e.fallback.run.summary || "Saved run."}` }));
   } finally { run.disabled = false; run.textContent = "Ask the revenue agent"; }
 };
 

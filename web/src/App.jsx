@@ -22,6 +22,22 @@ const adLink = (k, s) => `/shop.html?ad=${k}&${s === "fb" ? "fbclid=IwAR" : "gcl
 const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 const decisionsFor = (items, recId) => Object.fromEntries(items.filter((d) => d.rec_id === recId && d.index != null).map((d) => [d.index, { verdict: d.verdict, id: d.id, at: d.at }]));
 
+function PhoneDisclosure({ id, title, className = "", summaryText = "", children }) {
+  const query = "(max-width: 639px)";
+  const [open, setOpen] = useState(() => !window.matchMedia(query).matches);
+  useEffect(() => {
+    const media = window.matchMedia(query), sync = () => setOpen(!media.matches);
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+  return (
+    <details id={id} className={`phone-disclosure ${className}`.trim()} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary><span><span className="toggle-show">Show</span><span className="toggle-hide">Hide</span> {title}</span>{summaryText && <span className="phone-disclosure-meta">{summaryText}</span>}</summary>
+      <div className="phone-disclosure-body">{children}</div>
+    </details>
+  );
+}
+
 export default function App({ first = null }) {
   const studio = useRef(null);
   const studioBox = useRef(null);
@@ -287,18 +303,20 @@ export default function App({ first = null }) {
         </section>
         {error && <p className="err" role="alert">{error}</p>}
 
-        <section className="loop" aria-label="Try the loop">
+        <PhoneDisclosure title="How the demo works" className="phone-disclosure-plain">
+          <section className="loop" aria-label="Try the loop">
           <article><span className="step">1</span><b>Pay from an ad click</b><p>Open an ad link and pay in the PayPal sandbox. The click rides in the order.</p><a className="btn" href={adLink("trial_video", "fb")}>Open an ad link</a></article>
           <article><span className="step">2</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
           <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={() => ask()}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("week4")}>Or try a synthetic week with more orders</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => ask("Raise the free guide's budget: it brings the most leads.")}>Or tell it to raise the ad with the most leads</button></article>
           <article><span className="step">4</span><b>Tell the ad platform</b><p>Paid orders from Meta ads go to Meta's Conversions API; Google ones are previews here. A refund before the send holds the event back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
-        </section>
+          </section>
+        </PhoneDisclosure>
 
         <div className="cols">
           <div className="col-main">
             <section className="card" aria-label="Per ad">
               <div className="card-head"><h2>Per ad</h2><span className="muted">Sorted by spend</span></div>
-              <div className="scroll-x">
+              <div className="scroll-x desktop-only">
                 <table className="grid">
                   <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Paid revenue after refunds, minus this ad's spend. Product cost is not included.">After ad spend</th><th>Per paid order</th><th title="Chance this ad's paid revenue covers its ad spend, from its paid orders so far at the shop's average paid order. While it is not clear, the spend with no paid order that would make 'below its ad spend' 90% likely.">Covers its spend?</th></tr></thead>
                   <tbody>
@@ -311,11 +329,21 @@ export default function App({ first = null }) {
                   </tbody>
                 </table>
               </div>
+              <div className="ad-cards" aria-label="Per-ad summary">
+                {byCost.map((a) => <article key={a.ad} className="ad-card">
+                  <h3>{adName(a.ad)}</h3>
+                  <p className="ad-card-flow"><span>{a.leads} leads</span><span aria-hidden="true">→</span><b>{a.paid} paid orders</b></p>
+                  <p className="ad-card-revenue"><span>Paid revenue</span><b>{usd(a.revenue_cents)}</b></p>
+                  <div className="ad-card-cover"><span>Covers its spend?</span><b>{odds[a.ad] ? `${Math.round(odds[a.ad].chance_covers_spend * 100)}%` : "Not calculated"}</b>
+                    <small>{odds[a.ad] ? odds[a.ad].more_spend_to_decide_cents != null ? `Cut if the next ${usd(odds[a.ad].more_spend_to_decide_cents)} brings no paid order` : odds[a.ad].verdict : "No cut point available"}</small>
+                  </div>
+                </article>)}
+              </div>
               <p className="muted small legend">Covers its spend? is the chance, computed in code, that the ad's paid revenue covers its ad spend going forward. With one or two paid orders it stays close to 50% whatever the ad made so far, because so few orders say little; that is why no budget moves on fewer than 3. The cut point below it is what would settle the question.</p>
             </section>
 
-            <section id="payments" className="card">
-              <div className="card-head"><h2>Payments</h2>{state && <span className="ok">{state.payments.length} in the ledger · checked against PayPal</span>}</div>
+            <PhoneDisclosure id="payments" title="Payments" className="card" summaryText={state ? `${state.payments.length} in the ledger` : ""}>
+              <div className="card-head phone-section-head"><h2>Payments</h2>{state && <span className="ok">{state.payments.length} in the ledger · checked against PayPal</span>}</div>
               <p className="muted">Refund one and its ad drops: a Google click becomes a retraction; a Meta event not yet sent is held back (one already sent stays: Meta's Conversions API has no retraction). The seeded demo payments preview a refund; pay in the shop to refund one of your own.</p>
               <div id="captures" className="list">
                 {(state?.payments || []).slice().reverse().map((p) => (
@@ -325,10 +353,10 @@ export default function App({ first = null }) {
                   </div>
                 ))}
               </div>
-            </section>
+            </PhoneDisclosure>
 
-            <section id="signal" className="card">
-              <div className="card-head"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Meta Purchase events · {state.google.conversions.length} Google rows</span>}</div>
+            <PhoneDisclosure id="signal" title="Ad platform signal" className="card" summaryText={state ? `${state.meta.events.length} Meta events` : ""}>
+              <div className="card-head phone-section-head"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Meta Purchase events · {state.google.conversions.length} Google rows</span>}</div>
               <p className="muted">Eligible payments from Meta-attributed website clicks, Messenger, and Instant Forms become Meta Conversions API events; Google click payments go to Google only. Events are deduplicated by capture. In an earlier test, Meta received these events and dropped a resent copy by event id.</p>
               {state?.metaLive && <div className="live-meta" role="status">
                 <span className="pulse" aria-hidden="true" />
@@ -356,7 +384,7 @@ export default function App({ first = null }) {
                   {state && <div><b>Google adjustments</b>{state.google.adjustments.map((a) => <small key={a.order_id + a.adjustment_type}>{a.adjustment_type === "RETRACTION" ? "Retraction" : "Restatement"} · {a.order_id}{a.adjusted_value ? ` → $${a.adjusted_value}` : ""}</small>)}</div>}
                 </div>
               </div>
-            </section>
+            </PhoneDisclosure>
           </div>
 
           <aside className="col-side" aria-label="Approvals and activity">
@@ -385,7 +413,8 @@ export default function App({ first = null }) {
                 {agent.source && <p className="trace">From the {agent.source}</p>}
                 {agent.trace && <p className="trace">{agent.trace.map((s) => s.tool + (s.ad ? `(${s.ad})` : "")).join(" → ")} · {(agent.ms / 1000).toFixed(1)} s</p>}
               </div>
-              <div id="revenue">
+              {revenue.status !== "idle" && <PhoneDisclosure id="revenue" title="Invoice proposals" className="phone-disclosure-inner"
+                summaryText={revenue.status === "running" ? "Working…" : revenue.status === "error" ? "Needs attention" : `${revenue.drafts.filter((d) => d.id).length} drafts`}>
                 {revenue.status === "running" && <div className="skel" aria-live="polite"><i /><i /><i /><span>The revenue agent is reading what the leads wrote…</span></div>}
                 {revenue.status === "error" && <p className="err">{revenue.error}</p>}
                 {revenue.status === "done" && <>
@@ -403,8 +432,8 @@ export default function App({ first = null }) {
                   })()}
                   <p className="trace">{revenue.trace.length} tool calls · {(revenue.ms / 1000).toFixed(1)} s · prices set by code · drafts created with PayPal's Agent Toolkit</p>
                 </>}
-              </div>
-              <div id="invoices">
+              </PhoneDisclosure>}
+              <PhoneDisclosure id="invoices" title="Invoice history" className="phone-disclosure-inner" summaryText={`${invoices.length} invoices`}>
                 <div className="sub-head"><b>Invoices</b><span className="row">{invoices.some((i) => i.status === "SENT" || i.status === "UNPAID") && <button className="mini" disabled={chase.status === "running"} onClick={askChase}>{chase.status === "running" ? "Chasing…" : "Chase unpaid"}</button>}<button className="mini" onClick={syncInvoices}>Refresh</button></span></div>
                 {invoices.some((i) => i.status === "SENT" || i.status === "UNPAID") && <p className="muted small">Demo clock: a reminder may go an hour after an invoice is sent (three days in a real shop), at most once a day.</p>}
                 {chase.status === "error" && <p className="err">{chase.error}</p>}
@@ -421,20 +450,20 @@ export default function App({ first = null }) {
                       : i.pay_url ? <a href={i.pay_url} target="_blank" rel="noopener noreferrer">Sent ↗</a> : <span className="muted">{i.status}</span>}
                   </div>
                 ))}
-              </div>
+              </PhoneDisclosure>
               <button className="btn wide" onClick={openAssistant}>Open the Studio assistant</button>
             </section>
 
-            <section className="card" aria-label="Activity">
-              <div className="card-head"><h2>Activity</h2></div>
+            <PhoneDisclosure title="Activity" className="card" summaryText={`${activity.length} recent events`}>
+              <div className="card-head phone-section-head"><h2>Activity</h2></div>
               <ol className="feed">
                 {activity.map((e, k) => <li key={k} className={e.kind}><i /><span>{e.text}</span><time dateTime={e.at}>{clock(e.at)}</time></li>)}
                 {!activity.length && <li className="muted">No payments yet.</li>}
               </ol>
-            </section>
+            </PhoneDisclosure>
 
-            <section id="links" className="card">
-              <div className="card-head"><h2>Ad links</h2></div>
+            <PhoneDisclosure id="links" title="Ad links & data" className="card">
+              <div className="card-head phone-section-head"><h2>Ad links</h2></div>
               <p className="muted">Each opens the demo shop with an ad click attached.</p>
               <div className="links">
                 {AD_LINKS.map(([k, s]) => <a key={k} className="adlink" href={adLink(k, s)}>{adName(k)}<small>{s === "fb" ? "Meta" : "Google"} click</small></a>)}
@@ -445,7 +474,7 @@ export default function App({ first = null }) {
                 <button className="primary" onClick={() => load(csv)}>Reconcile again</button>
                 {state?.csv_errors?.length ? <p className="note">{state.csv_errors.join(" ")}</p> : null}
               </details>
-            </section>
+            </PhoneDisclosure>
           </aside>
         </div>
 

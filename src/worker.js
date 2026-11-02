@@ -411,7 +411,8 @@ function budgetUnavailable(fallback, status = 503) {
   const saved = run ? `Latest saved run from ${date(run.at)}: ${run.recommendation?.headline || "budget recommendation"}.`
     : rec ? `Latest checked recommendation from ${date(rec.at)}: ${rec.recommendation?.headline || "budget recommendation"}.`
       : "No earlier run is available.";
-  return json({ error: `Claude could not run. ${saved}`, fallback }, status);
+  const why = status === 429 ? "Today's limit for live runs from this visitor is reached." : "Claude could not run just now.";
+  return json({ error: `${why} ${saved}`, fallback }, status);
 }
 
 async function revenueFallback(env) {
@@ -423,7 +424,9 @@ function revenueUnavailable(fallback, status = 503) {
   const run = fallback.run;
   const date = run?.at ? new Date(run.at).toLocaleDateString("en-US", { dateStyle: "medium" }) : "";
   const saved = run ? `Latest saved invoice run from ${date}: ${run.summary} ${run.drafts?.length || 0} saved drafts, ${run.skips?.length || 0} leads skipped.` : "No earlier invoice run is available.";
-  return json({ error: `Claude could not run. ${saved}`, fallback }, status);
+  // 429 is the daily limit, not a failure: say which, so a judge does not read a cap as a broken agent
+  const why = status === 429 ? "Today's limit for live runs from this visitor is reached." : "Claude could not run just now.";
+  return json({ error: `${why} ${saved}`, fallback }, status);
 }
 
 async function quota(env, key, limit) {
@@ -633,8 +636,19 @@ const app = {
           const draft = run.proposals[0], skipped = run.skips[0];
           const trace = run.trace.map((s) => ({ ...s, called_by: s.tool === "read_leads" || s.tool === "create_invoice" || s.tool === "skip_lead" ? "Claude" : "code",
             ...(s.tool === "create_invoice" ? { price_set_by: "code" } : {}) }));
+          let paypalRecord = null;
+          if (draft?.id) {
+            try {
+              const invoice = await pp.getInvoice(draft.id);
+              paypalRecord = { status: invoice.status || null, invoice_number: invoice.detail?.invoice_number ?? invoice.invoice_number ?? null,
+                total_amount: invoice.amount?.value ?? null, currency: invoice.amount?.currency_code ?? invoice.detail?.currency_code ?? null,
+                line_items: Array.isArray(invoice.items) ? invoice.items : [], read_at: new Date().toISOString() };
+            } catch {
+              paypalRecord = { error: "Could not read the draft back from PayPal.", read_at: new Date().toISOString() };
+            }
+          }
           return json({ decision: draft?.id ? "drafted" : "skipped", reason: draft?.reason || skipped?.reason || run.refusals[0]?.problems?.join(" ") || "The agent did not propose a draft.",
-            flag: skipped?.flag || null, invoice_id: draft?.id || null, amount: draft?.id ? draft.total : null, line_items: draft?.id ? draft.lines : [], trace, ms: Date.now() - t0 });
+            flag: skipped?.flag || null, invoice_id: draft?.id || null, amount: draft?.id ? draft.total : null, line_items: draft?.id ? draft.lines : [], paypal: paypalRecord, trace, ms: Date.now() - t0 });
         } catch { console.warn("judge try revenue agent failed"); return revenueUnavailable(await revenueFallback(env), 502); }
       }
 
