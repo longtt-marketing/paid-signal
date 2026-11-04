@@ -1,7 +1,7 @@
 {
  "case": {
   "what": "A Vietnamese personalised-gift shop that sells in chat; the author runs its Meta ads. October 2026, three ad groups. Figures reported by the author from the shop's order book and the ad account, reconciled on 3 Nov 2026 (late payments and refunds included). The shop confirms these figures; its order book stays private to protect its customers, and the ad account's exports are no longer accessible to the author, so only these totals are published. Its payments did not go through Paid Signal or PayPal: it shows the gap Paid Signal closes, not a result of using it. 'Net' is revenue after refunds, before product, delivery and payment costs.",
-  "source": "reported by the author (performance marketer running the shop's Meta ads), with the shop's agreement, anonymised; original ad-account exports not available",
+  "source": "reported by the author (performance marketer running the shop's Meta ads), with the shop's agreement, anonymised; original ad-account exports not available; totals checked against the shop's own reconciliation workbook (28 of 28 checks match: spend, chats, invoices, first payments, full refunds, duplicates, refunds, net revenue per ad group)",
   "payment": "Customers paid by bank transfer (VietQR); an order counts as paid only after the shop's accountant matched the money received to the order code.",
   "attribution": "Meta records which ad started each chat; staff write that ad group's code into the order book, then match it against payments and refunds.",
   "period": "2026-10-01 to 2026-10-30",
@@ -55,6 +55,11 @@
    "mean_hours": 14.33,
    "median_hours": 9.67,
    "p90_hours": 42
+  },
+  "transactions": {
+   "payments_first": 728,
+   "duplicate_payments": 7,
+   "refund_transactions": 30
   }
  },
  "read": {
