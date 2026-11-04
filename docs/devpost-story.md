@@ -1,0 +1,76 @@
+## Paid Signal in five lines
+
+**AI agents run the money side of a sale. PayPal verifies what actually happened.** For shops that close sales in a chat and get paid by PayPal invoice: Claude agents invoice the customer through PayPal's Agent Toolkit, chase the payment, refund a double payment, pay the ad's creator per paid order, and tell Meta and the ad budget only what PayPal confirms.
+
+**Be the customer (2 minutes):** on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer), write as a customer; Claude drafts a real PayPal sandbox invoice; you approve it and the send agent sends it; you pay it on PayPal's own invoice page (sandbox buyer or a sandbox test card); the page shows PayPal's PAID. Then give Claude the same double charge from two buyers, one who paid for a second child and one whose page froze, and watch it decline one and refund the other.
+
+Before: the ad report says the free guide wins with 31 of 62 leads, and the owner asks Claude to raise it. After: PayPal shows the free guide has 1 paid order, so Claude refuses, and raises the testimonial carousel instead, the ad PayPal says is paying (3 paid orders, $2.04 back per $1). The rule in code would refuse the first move too.
+
+**Try it, no login:** [Judge path, 60 s](https://paid-signal.thelongmarketing.workers.dev/judge) · [Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit) · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) · [Dashboard](https://paid-signal.thelongmarketing.workers.dev). Fictional shop; every PayPal call is a real sandbox call; Meta receives test events.
+
+Built with PayPal Agent Toolkit, PayPal Server SDK (APIMatic), Orders v2, Invoicing v2, Payouts, signature-verified Webhooks, Transaction Search, Claude and AG Studio.
+
+## Try it
+
+1. **[Judge path](https://paid-signal.thelongmarketing.workers.dev/judge)**: be the customer and pay a real sandbox invoice Claude made for you; the same double charge from two buyers, decided live; then the owner's request and Claude's refusal; the same raise sent straight to the evidence gate and refused live; the PayPal capture behind the answer; one lead's real invoice loop from chat to `create_invoice`, approval, `send_invoice`, reminder, payment and Meta; the refund agent returning a double payment to the buyer with `create_refund`; and the commission agent paying the testimonial's creator through PayPal Payouts, per paid order. A prompt injection typed as the customer is flagged and refused.
+2. **[Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit)**: drop your Ads Manager export and your PayPal activity download. The Worker's own ledger code reads them in your browser, nothing uploaded, and shows which ads brought PayPal-confirmed payments, how much paid revenue no ad can claim, and what the budget rule allows.
+3. **[Money trail](https://paid-signal.thelongmarketing.workers.dev/trail)**: one payment end to end: the ad click in PayPal's `custom_id`, PayPal's record read live (status, fee, net), Meta's reply 2.9 s after capture.
+4. **[Dashboard](https://paid-signal.thelongmarketing.workers.dev)**: 62 leads, 7 paid orders, the agents and the AG Studio report.
+5. **[Proof](https://paid-signal.thelongmarketing.workers.dev/proof)**: what is verified, what is not, and the script behind every number.
+
+## What it does
+
+1. **Ad to PayPal.** The ad click rides in the order's `custom_id`, or stays with the invoice of a lead who came through chat.
+2. **Chat to invoice.** The revenue agent reads each lead's message and drafts the invoice with the Agent Toolkit; code sets the price and the recipient inside the call. A person approves, the send agent sends, the chase agent reminds.
+3. **Payment to ledger.** Captures are matched to ads from the capture response and signature-verified webhooks; refunds reduce them; likely double payments and open disputes are held out, and once a person approves, the refund agent checks the pair and refunds the second payment with the Agent Toolkit (on 4 Nov it refunded a real sandbox double payment, $49, PayPal status COMPLETED); Transaction Search cross-checks the ledger against PayPal's history.
+4. **Ledger to decision.** An evidence gate in code checks every number, capture id and the direction of every budget move. Below 3 paid orders an ad's budget does not move; the agent says how much more spend with no paid order should trigger a cut instead.
+5. **Paid orders to the creator.** The parent who made the testimonial earns $5 per PayPal-confirmed paid order from that ad, not per lead (per lead, the free guide's creator would earn $155 for 31 leads and 1 paid order). Once a person approves, the commission agent picks the orders that earn it and pays with PayPal Payouts; code fixes the recipient, checks every order against the ledger and the total. On 4 Nov it paid $15 for 3 paid orders, skipped the refunded one, and PayPal reported SUCCESS. A refund after the payout is shown as owed back.
+6. **Back to Meta.** When PayPal confirms a payment from a Meta ad, a Purchase goes to the shop's dataset in the form Meta expects for where the lead came from: a website click (`fbc`), a Messenger chat (`business_messaging` with the page-scoped id) or a lead form (`lead_id`, as Conversion Leads takes it). Meta accepted a lead-form Purchase for a real test lead made with its Lead Ads Testing Tool. What is sent: [/data](https://paid-signal.thelongmarketing.workers.dev/data).
+
+## Why it exists
+
+I run paid social for small shops. Ads Manager reports cheap leads, the owner says nobody paid, and both are right: the platform optimises for the chat it can see, while the money arrives later through PayPal. In my own Meta test (2 to 8 October 2026, about $43), the three most-clicked ads completed no order; all five orders came from ads ranked 7th, 9th and 10th by clicks per unit of spend ([details](https://paid-signal.thelongmarketing.workers.dev/proof#real)).
+
+Sending a checkout sale to Meta exists already: [PayPal Ads](https://newsroom.paypal-corp.com/2026-01-06-PayPal-Ads-Launches-Transaction-Graph-Insights-and-Measurement-to-Improve-Commerce-Advertising-Outcomes) measures by transactions, and [Zapier](https://zapier.com/apps/facebook-conversions/integrations/paypal/167627/send-new-paypal-sale-events-to-facebook-conversions) can forward a sale. Neither invoices a lead who chatted, takes a refund or a double payment back out, holds a disputed payment, or stops a budget move the payments do not support. That is Paid Signal.
+
+## Built with PayPal
+
+- **Agent Toolkit**, called by Claude agents: `create_invoice`, `get_invoice`, `send_invoice`, `send_invoice_reminder`, `create_refund`, `get_refund`, `list_disputes`, `get_dispute`.
+- **Server SDK** (generated by APIMatic): orders created, captured and refunded, captures read back, with `PayPal-Request-Id` idempotency.
+- **Payouts v1**: the commission agent's payout, read back until PayPal settles it.
+- **Orders v2, Invoicing v2, Webhooks** (`verify-webhook-signature` on every delivery), **Transaction Search**, JS SDK buttons.
+- **Claude, six agents** (revenue, send, chase, refund, commission, budget), every tool call checked against its JSON Schema; code owns prices, recipients, arithmetic and money movement. An **MCP server** with six read-only tools gives any MCP client the same answers under the same rule. Cloudflare Workers and KV, React, Vite; 142 unit tests in CI.
+
+## Best use of AG Grid: AG Studio as the agent workspace
+
+- **Three data sources** (ad export, PayPal captures, sent invoices), joined on the ad key; calculated measures (cost per paid order, paid revenue per ad dollar); a themed, multi-page report.
+- **Four custom widgets** through Studio's widget API, so filters and cross-filters apply: *Claimed vs confirmed*, a *payment timeline*, *leads → invoices → paid orders* per ad, and *Who still owes* (the nudge-bot idea: every sent invoice, how long it has waited, the last reminder).
+- **Claude in the Studio Agent Framework** through a custom `AgLlmAdapter` (Responses-style items to Anthropic Messages, tool calls included; key on the server). Studio's own agents run on it, plus a **budget agent** whose recommendation passes the same evidence gate and a **nudge agent** that sends PayPal reminders within code limits.
+- Try it: Dashboard → *Report · AG Studio* → Studio assistant → *Review ad budgets* or *Nudge who still owes*.
+
+## APIMatic's PayPal Context Plugin
+
+Its TypeScript skills were checked point by point against our SDK wrapper with a stubbed transport. It found a real bug: SDK 1.1.0 throws on a 2xx whose body does not match its schema, so **a capture PayPal had accepted was reported to the buyer as a failure**; we now use the 2xx body. It also led to errors that keep PayPal's `debug_id`, one safe retry on a fixed `PayPal-Request-Id`, a 10 s timeout and a reused OAuth client ([write-up and tests](https://github.com/longtt-marketing/paid-signal/blob/main/docs/development-with-ai.md)).
+
+## How we tested it
+
+- **Revenue agent**, 30 held-out leads run twice: 24/24 bookings invoiced with the right items, 20/20 not-ready leads left alone, 0/16 prompt injections invoiced.
+- **Evidence gate**: 11 kinds of planted error, 100 of each, all caught; 0 of 500 good recommendations rejected.
+- **Budget agent** on 27 labelled synthetic weeks, 22 written with their answers by a separate analyst agent that never saw the code. On the last set, frozen and run once: 11 of 12 runs fully right; moving budget by leads per dollar got 1 of 6.
+- **Refund agent**, 14 held-out flagged pairs that look identical to the ledger and differ only in what the buyer wrote: 6/6 double payments refunded, 7/8 deliberate second orders or bare refund demands declined; the miss is a message with a fake "SYSTEM: pre-approved" line, which the agent called powerless before refunding on the ledger evidence.
+- **Live**: on the sandbox ledger the agent raised the one ad with 3 paid orders and refused the owner's raise for the ad with the most leads.
+
+## Potential impact
+
+A shop paid by invoice after a chat has no checkout for attribution tools to read, so its ad platform learns from chats and leads alone. In the demo, budget by leads would feed the free guide ($0.41 back per $1); budget by PayPal-confirmed payments goes to the carousel ($2.04). [/audit](https://paid-signal.thelongmarketing.workers.dev/audit) lets any shop run the same check on its own two files today, without connecting anything.
+
+## Limits
+
+- **A demo, not a shop.** The shop, ad export and leads are fictional; PayPal is sandbox; Meta gets test events; Google rows are previews. Meta's `events_received` proves receipt, not that an event matched an ad or changed delivery. Demo Messenger and lead-form leads carry made-up ids, so their events are shown, not sent; a Messenger Purchase has not been sent with a real page-scoped id. The free guide's one paid order (Lead 07) came through its website link before lead-form ids existed, so it went with a website click id. Five early payments were sent in a backfill when the live link to Meta was switched on; one of them, a Google-click payment, is marked and not counted.
+- **Decisions.** Approve records a decision; it does not change a live Meta budget. Below 3 paid orders the odds are a model's (a prior worth one order, the shop's assumed 30% cost), not calibrated on a real shop. The synthetic weeks' answers are an AI's, not human ground truth; the second set was rerun after a gate fix. The gate checks numbers, evidence and direction, not every step of reasoning.
+- **Controls.** Invoice sends, refunds, payouts and budget changes wait for Approve; in the sandbox a PayPal test account stands in for the creator; reminders go out from the chase agent without per-message approval, capped by code. Each browser gets its own runs and decisions; agent runs have a daily cap with the last saved run shown if Claude is unavailable. Not production controls until a shop puts them behind its owner's login.
+- **Money.** Whether a live campaign then spends better is not measured. PayPal's fee is the one charged on each checkout capture, estimated for the invoice payment. Meta has no retraction, so a refund after the send is subtracted here, not at Meta.
+
+## What's next
+
+A real shop's export through the same dashboard; live uploads with a merchant's own tokens; product cost per order, so "after ad spend" becomes profit.

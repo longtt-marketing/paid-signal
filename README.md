@@ -2,7 +2,9 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**Tell your ads who actually paid.**
+**AI agents run the money side of a sale. PayPal verifies what actually happened.**
+
+Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
 Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:51): https://www.youtube.com/watch?v=XoaclkwsF3I · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
 
