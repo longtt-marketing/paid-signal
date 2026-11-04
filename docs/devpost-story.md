@@ -47,7 +47,7 @@ Sending a checkout sale to Meta exists already: [PayPal Ads](https://newsroom.pa
 
 - **Three data sources** (ad export, PayPal captures, sent invoices), joined on the ad key; calculated measures (cost per paid order, paid revenue per ad dollar); a themed, multi-page report.
 - **Four custom widgets** through Studio's widget API, so filters and cross-filters apply: *Claimed vs confirmed*, a *payment timeline*, *leads → invoices → paid orders* per ad, and *Who still owes* (the nudge-bot idea: every sent invoice, how long it has waited, the last reminder).
-- **Claude in the Studio Agent Framework** through a custom `AgLlmAdapter` (Responses-style items to Anthropic Messages, tool calls included; key on the server). Studio's own agents run on it, plus a **budget agent** whose recommendation passes the same evidence gate and a **nudge agent** that sends PayPal reminders within code limits.
+- **Claude in the Studio Agent Framework** through a custom `AgLlmAdapter` (Responses-style items to Anthropic Messages, tool calls included; key on the server). Studio's own agents run on it, plus Studio faces of two of the six agents: the **budget agent**, whose recommendation passes the same evidence gate, and the chase agent as a **nudge agent** that sends PayPal reminders within code limits.
 - Try it: Dashboard → *Report · AG Studio* → Studio assistant → *Review ad budgets* or *Nudge who still owes*.
 
 ## APIMatic's PayPal Context Plugin

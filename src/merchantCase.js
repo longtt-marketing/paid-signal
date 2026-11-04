@@ -28,3 +28,29 @@ export function readMerchantCase(c) {
     groups, rank_by_cost_per_conversation: byCostPerConversation, rank_by_money_kept: byMoney, paid_signal_split: split,
   };
 }
+
+const esc = (/** @type {unknown} */ s) => String(s).replace(/[&<>"]/g, (ch) => /** @type {Record<string,string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+
+/**
+ * The judge page's shop section as static HTML, written into public/judge.html by scripts/eval-merchant-case.mjs,
+ * so the numbers are in the page itself and need no script to show.
+ * @param {ReturnType<typeof readMerchantCase>} r
+ * @param {{ payment?: string, attribution?: string }} c
+ */
+export function gapHTML(r, c) {
+  const pct = (/** @type {number} */ x) => `${(x * 100).toFixed(1)}%`;
+  const vnd = (/** @type {number} */ n) => `${(n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 1 })}M VND`;
+  const bar = (/** @type {string} */ label, /** @type {number} */ x, cls = "") =>
+    `<div class="gap-bar${cls ? " " + cls : ""}"><span>${label}</span><div><i style="width:${(x * 100).toFixed(1)}%"></i></div><span>${pct(x)}</span></div>`;
+  const cards = r.groups.map((g) => `<div class="gap-card"><span class="k">${esc(g.id)} · ${esc(g.name)}</span>`
+    + `<div class="nums"><b>${g.conversations.toLocaleString("en-US")}</b><i>chats →</i><b class="paid">${g.paid}</b><i>paid orders</i></div>`
+    + bar("of chats", g.share_conversations) + bar("of money", g.share_net, "money")
+    + `<small>${g.cost_per_conversation.toLocaleString("en-US")} VND a chat · ${g.roas.toFixed(2)}x ad spend back in paid money</small></div>`).join("");
+  const split = r.paid_signal_split.map((s) => `${s.id} ${Math.round(s.share_now * 100)}% → ${Math.round(s.share_proposed * 100)}%`).join(", ");
+  return `<h2 id="gap-h">Why it matters: one real shop's October</h2>`
+    + `<p class="gap-sub" id="gap-sub">A gift shop that sells in chat; the author runs its Meta ads. October 2026: ${vnd(r.totals.spend)} (about $${Math.round(r.totals.spend_usd).toLocaleString("en-US")}) on three ad groups, ${r.totals.conversations.toLocaleString("en-US")} chats, ${r.totals.paid} orders paid and kept after refunds.</p>`
+    + `<div class="gap-grid" id="gap-grid">${cards}</div>`
+    + `<p class="gap-rank" id="gap-rank">Ranked by cost per chat, the ad report's view: ${r.rank_by_cost_per_conversation.join(", ")}. Ranked by money paid and kept: <span class="go">${r.rank_by_money_kept.join(", ")}</span>. The cheapest chats came from the ad that brought the least money.</p>`
+    + `<p class="gap-src" id="gap-src"><b>How the shop counted.</b> ${esc(c.payment || "")} ${esc(c.attribution || "")} That matching is done by hand today; it is the step Paid Signal does from PayPal's records. The figures are reported by the author from the order book and the ad account; the account's exports are no longer accessible, so only totals are shown. "Money" is revenue after refunds, before product, delivery and fees.</p>`
+    + `<p class="gap-src"><b>What Paid Signal would suggest.</b> Its budget rule (the same code as the demo: paid orders kept per dollar of spend, refunds excluded) gives ${split}; a person decides, and Paid Signal does not change a live Meta budget. The shop's payments did not go through Paid Signal or PayPal: the shop is why it exists, not a result of it. Numbers: <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/merchant-case-2026-10.json">merchant-case-2026-10.json</a>.</p>`;
+}

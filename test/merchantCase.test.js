@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { readMerchantCase } from "../src/merchantCase.js";
+import { readMerchantCase, gapHTML } from "../src/merchantCase.js";
 
 const c = JSON.parse(readFileSync(new URL("../docs/proof/merchant-case-2026-10.json", import.meta.url), "utf8"));
 const r = readMerchantCase(c);
@@ -35,4 +35,11 @@ test("the two readings rank the ads in opposite order, and the demo's budget rul
 test("the page's copy is the current read", () => {
   const page = JSON.parse(readFileSync(new URL("../public/data/merchant-case.json", import.meta.url), "utf8"));
   assert.deepEqual(page.read, JSON.parse(JSON.stringify(r)));
+});
+
+test("the judge page carries the shop section as static HTML, matching the current read", () => {
+  const html = readFileSync(new URL("../public/judge.html", import.meta.url), "utf8");
+  const c = JSON.parse(readFileSync(new URL("../docs/proof/merchant-case-2026-10.json", import.meta.url), "utf8"));
+  assert.ok(html.includes(`<!--gap:start-->${gapHTML(r, c)}<!--gap:end-->`));
+  assert.ok(html.includes("69.4%") && html.includes("VietQR"));
 });
