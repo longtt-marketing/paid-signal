@@ -811,7 +811,10 @@ const app = {
         };
         const context = SAID[body.variant];
         if (!context) return json({ error: "Pick one of the two buyers." }, 400);
-        const stop = await claudeGuard(env, request, "refund tries", 4, 80); if (stop) return json({ error: stop }, 429);
+        // past the limit, show the last live decision for this buyer (with its time) instead of an error
+        const last = await env.LEDGER.get(`refund-try:${body.variant}`, "json");
+        const stop = await claudeGuard(env, request, "refund tries", 10, 120);
+        if (stop) return last ? json({ ...last, replay: true, note: "Today's limit for live tries is reached, so this is the last live decision for this buyer." }) : json({ error: stop }, 429);
         const pair = { first: { capture_id: "TRY-1ST", payer_key: "same-payer", ad: "trial_video", amount: "49.00", currency: "USD", captured_at: "2026-10-28T10:49:51.000Z" },
           second: { capture_id: "TRY-2ND", payer_key: "same-payer", ad: "trial_video", amount: "49.00", currency: "USD", captured_at: "2026-10-28T10:53:27.000Z" }, seconds: 216, context };
         const tools = { create_refund: { execute: async () => JSON.stringify({ id: "SIMULATED", status: "COMPLETED", note: "simulated on the judge path; no money moved" }) },
@@ -819,7 +822,9 @@ const app = {
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REFUND_SYSTEM, tools: REFUND_TOOLS });
         try {
           const out = await runRefundAgent({ llm, tools, pair });
-          return json({ variant: body.variant, said: context, decision: out.refund ? "refund" : "decline", summary: out.summary, trace: out.trace, simulated: true });
+          const res = { variant: body.variant, said: context, decision: out.refund ? "refund" : "decline", summary: out.summary, trace: out.trace, simulated: true, at: new Date().toISOString() };
+          await env.LEDGER.put(`refund-try:${body.variant}`, JSON.stringify(res));
+          return json(res);
         } catch (e) { return json({ error: `The refund agent could not run: ${String(e?.message || e).slice(0, 200)}` }, 502); }
       }
 

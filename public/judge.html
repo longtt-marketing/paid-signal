@@ -60,6 +60,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .ab{margin:10px 0 14px}.ab-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}.ab-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}.ab-card .quote{margin:0;font-size:16px}
 @media (max-width:640px){.ab-grid{grid-template-columns:1fr}}
 .hero-step{border:2px solid var(--ink)}.hero-step h2 em{background:var(--ink);color:#fff;padding:3px 8px;border-radius:6px;font-size:11px}
+.more-detail{border:1px solid var(--line);border-radius:16px;padding:12px 16px;background:var(--card)}.more-detail summary{cursor:pointer;font-weight:600}.more-detail .step{margin-top:12px}
 .jump-list{margin:0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:14px}
 .jump-list a{font-weight:600;text-decoration-thickness:1px;text-underline-offset:3px}
 @media (max-width:640px){.top{padding:14px 16px}main{padding:28px 16px 64px}.vs{grid-template-columns:1fr;text-align:left}.vs i{display:none}dl{grid-template-columns:1fr;gap:2px}dt{margin-top:6px}}
@@ -100,15 +101,20 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section class="step" id="ask"><h2><em>1</em>The owner asks</h2><p class="note">Loading the recorded run…</p></section>
   <section class="step" id="answer"><h2><em>2</em>Claude reads the payments and answers; code checks the move</h2></section>
   <section class="step" id="capture"><h2><em>3</em>Open the PayPal payment behind the answer</h2></section>
-  <section class="step" id="week"><h2><em>4</em>A harder week: a raise and a cut together</h2><p class="note">On the live ledger only one ad has 3 paid orders, so only a raise can show there. This labelled synthetic week has enough orders on two ads to need a raise and a cut at once; its payments are made up, not PayPal captures.</p></section>
 
-  <section class="step" id="loop"><h2><em>5</em>The invoice loop: a real lead becomes a PayPal payment</h2>
-    <h3 class="substep">Live invoice loop</h3><p class="note">Loading the ledger…</p>
-  </section>
+
+
 
   <section class="step" id="refund"><h2><em>6</em>The refund agent: a double payment goes back to the buyer</h2><p class="note">Loading the ledger…</p></section>
 
   <section class="step" id="commission"><h2><em>7</em>The commission agent: the creator is paid per paid order, not per lead</h2><p class="note">Loading the ledger…</p></section>
+
+  <details class="more-detail"><summary>More detail: one real lead's invoice loop, and a synthetic week with a raise and a cut</summary>
+  <section class="step" id="loop"><h2><em>5</em>The invoice loop: a real lead becomes a PayPal payment</h2>
+    <h3 class="substep">Live invoice loop</h3><p class="note">Loading the ledger…</p>
+  </section>
+  <section class="step" id="week"><h2><em>4</em>A harder week: a raise and a cut together</h2><p class="note">On the live ledger only one ad has 3 paid orders, so only a raise can show there. This labelled synthetic week has enough orders on two ads to need a raise and a cut at once; its payments are made up, not PayPal captures.</p></section>
+  </details>
 
   <h2 class="substep">More</h2>
   <div class="more" aria-label="More pages">

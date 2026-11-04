@@ -313,7 +313,8 @@ function twoBuyers() {
       btn.disabled = true; out.textContent = "Claude is weighing the pair and what the buyer wrote…";
       try {
         const d = await getJSON("/api/judge/refund-try", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ variant }) });
-        out.replaceChildren($("p", { className: `verdict ${d.decision === "refund" ? "ok" : ""}`, textContent: d.decision === "refund" ? "Refunds the second payment" : "Declines: no refund" }), $("p", { className: "reason", textContent: d.summary }));
+        out.replaceChildren($("p", { className: `verdict ${d.decision === "refund" ? "ok" : ""}`, textContent: d.decision === "refund" ? "Refunds the second payment" : "Declines: no refund" }), $("p", { className: "reason", textContent: d.summary }),
+          ...(d.replay ? [$("p", { className: "note", textContent: `${d.note} Decided ${new Date(d.at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.` })] : []));
       } catch (e) { out.textContent = e.message; } finally { btn.disabled = false; }
     };
     return $("div", { className: "ab-card" }, [$("b", { textContent: label }), $("p", { className: "quote", textContent: `“${quote}”` }), btn, out]);
