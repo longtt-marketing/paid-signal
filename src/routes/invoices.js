@@ -17,6 +17,12 @@ export async function route({ request, env, url, pp, orders, ip }) {
     // and PayPal's Agent Toolkit creates the drafts. Nothing is sent: each draft waits in Approvals.
     // The judge becomes the customer: the judge approves the draft Claude just made, the send agent sends it through the
     // Agent Toolkit, and the judge pays it on PayPal's own invoice page as the sandbox buyer. Only drafts from this browser.
+    // The judge's own invoices ("Be the customer") can run on a second sandbox app, a US business account that accepts
+    // PayPal's test cards, so a judge pays without a sandbox login. Off until TRY_PAYPAL_CLIENT_ID/SECRET are set.
+    const tryApp = Boolean(env.TRY_PAYPAL_CLIENT_ID && env.TRY_PAYPAL_CLIENT_SECRET);
+    const tryEnv = tryApp ? { ...env, PAYPAL_CLIENT_ID: env.TRY_PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET: env.TRY_PAYPAL_CLIENT_SECRET } : env;
+    const tpp = tryApp ? paypal({ clientId: env.TRY_PAYPAL_CLIENT_ID, secret: env.TRY_PAYPAL_CLIENT_SECRET }) : pp;
+
     if (url.pathname === "/api/judge/try/send" && request.method === "POST") {
       let body; try { body = await request.json(); } catch { return json({ error: "Send the invoice id as JSON." }, 400); }
       const rec = /^INV2-[A-Z0-9-]+$/.test(String(body.invoice_id || "")) ? await env.LEDGER.get(`try:${body.invoice_id}`, "json") : null;
@@ -24,12 +30,12 @@ export async function route({ request, env, url, pp, orders, ip }) {
       if (rec.status !== "DRAFT") return json({ invoice: publicTry(rec) });
       if (!(Number(rec.amount) > 0 && Number(rec.amount) <= 200)) return json({ error: "Only small demo invoices are sent." }, 400);
       const stop = await claudeGuard(env, request, "judge sends", 3, 60); if (stop) return json({ error: stop }, 429);
-      const tools = toolkitTools(env, { invoices: { get: true, send: true } });
+      const tools = toolkitTools(tryEnv, { invoices: { get: true, send: true } });
       const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: SEND_SYSTEM, tools: SEND_TOOLS });
       let agent;
       try { agent = await runSendAgent({ llm, tools, approved: { id: rec.id, lead: "the judge (as a customer)", ad: rec.ad, amount: String(rec.amount) } }); }
       catch (e) { return json({ error: `The send agent could not run: ${String(e?.message || e).slice(0, 200)}` }, 502); }
-      const fresh = await pp.getInvoice(rec.id);
+      const fresh = await tpp.getInvoice(rec.id);
       Object.assign(rec, { status: fresh.status, invoice_number: fresh.detail?.invoice_number || null, pay_url: fresh.detail?.metadata?.recipient_view_url || null,
         ...(agent.sent && fresh.status && fresh.status !== "DRAFT" ? { sent_at: new Date().toISOString(), sent_by: "send agent (Claude + PayPal Agent Toolkit)" } : {}) });
       await env.LEDGER.put(`try:${rec.id}`, JSON.stringify(rec), { expirationTtl: 60 * 86400 });
@@ -41,7 +47,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const id = url.searchParams.get("id") || "";
       let rec = /^INV2-[A-Z0-9-]+$/.test(id) ? await env.LEDGER.get(`try:${id}`, "json") : null;
       if (!rec || rec.vid !== visitorId(request)) return json({ error: "Unknown invoice for this browser." }, 404);
-      if (rec.status !== "PAID" && rec.status !== "DRAFT") { try { rec = (await tryPaid(env, await pp.getInvoice(id))) || rec; } catch {} }
+      if (rec.status !== "PAID" && rec.status !== "DRAFT") { try { rec = (await tryPaid(env, await tpp.getInvoice(id))) || rec; } catch {} }
       return json({ invoice: publicTry(rec), checked_at: new Date().toISOString() });
     }
 
@@ -54,7 +60,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const t0 = Date.now(), lead = { lead: "Judge lead", ad: "parent_carousel", source: "other", click_id: "", channel: "web", email: "judge-lead@example.com", message: body.message.trim() };
       try {
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });
-        const toolkit = toolkitTools(env, { invoices: { create: true } });
+        const toolkit = toolkitTools(tryEnv, { invoices: { create: true } });
         const createDraft = async (p) => {
           const params = { currency_code: "USD", reference: "Kite Robotics booking", note: p.note, invoicer_business_name: "Kite Robotics Club (demo)",
             primary_recipients: [{ billing_info: { email_address: lead.email, name: { given_name: lead.lead } } }],
@@ -73,7 +79,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
         let paypalRecord = null;
         if (draft?.id) {
           try {
-            const invoice = await pp.getInvoice(draft.id);
+            const invoice = await tpp.getInvoice(draft.id);
             paypalRecord = { status: invoice.status || null, invoice_number: invoice.detail?.invoice_number ?? invoice.invoice_number ?? null,
               total_amount: invoice.amount?.value ?? null, currency: invoice.amount?.currency_code ?? invoice.detail?.currency_code ?? null,
               line_items: Array.isArray(invoice.items) ? invoice.items : [], read_at: new Date().toISOString() };

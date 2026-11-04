@@ -8,3 +8,6 @@ ANTHROPIC_WORKSPACE_ID=
 META_DATASET_ID=
 META_CAPI_TOKEN=
 META_TEST_CODE=
+# Optional: a second sandbox app (US business account) for the judge's own invoices, so they can be paid with a test card
+TRY_PAYPAL_CLIENT_ID=
+TRY_PAYPAL_CLIENT_SECRET=
