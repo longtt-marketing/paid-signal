@@ -6,7 +6,7 @@
 
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
-Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:51): https://www.youtube.com/watch?v=XoaclkwsF3I · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
+Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:10): https://www.youtube.com/watch?v=WfoNL22Xv5k · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
 
 Ad platforms optimise for what they can see: clicks, leads, chat taps. For a small business that gets paid through
 PayPal, the thing that matters, a payment, never reaches the ad platform. So budgets drift toward ads that produce
