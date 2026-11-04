@@ -62,5 +62,5 @@ export function gapHTML(r, c) {
 export function hookHTML(r) {
   const a = r.groups.reduce((x, g) => (g.share_conversations > x.share_conversations ? g : x));
   const pct = (/** @type {number} */ x) => `${(x * 100).toFixed(1)}%`;
-  return `In one real shop's October (figures reported by the author), the ad with <b>${pct(a.share_conversations)} of the chats</b> brought <b>${pct(a.share_net)} of the money</b>; its own book, run through our ledger, has its 7 double transfers held.`;
+  return `In one real shop's October (figures reported by the author), the ad with <b>${pct(a.share_conversations)} of the chats</b> brought <b>${pct(a.share_net)} of the money</b>. Its book, run through our ledger, matches the shop's workbook, and its 7 double transfers are held.`;
 }

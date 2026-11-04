@@ -4,7 +4,8 @@
   "paid": 705,
   "refunded_captures": 30,
   "revenue": 1317000000,
-  "customers": 728
+  "first_payments": 728,
+  "repeat_customers": 0
  },
  "groups": [
   {
@@ -41,6 +42,12 @@
  "matches_book": true,
  "duplicates": {
   "in_book": 7,
+  "same_order": {
+   "flagged": 7,
+   "caught": 7,
+   "false_alarms": 0,
+   "missed": 0
+  },
   "card_window": {
    "flagged": 2,
    "caught": 2,

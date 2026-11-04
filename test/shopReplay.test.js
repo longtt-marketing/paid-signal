@@ -22,7 +22,9 @@ test("shop replay: the ledger code reproduces the shop's hand-made reconciliatio
 test("shop replay: double transfers are held as they arrive; the checkout window misses most, the bank window none", () => {
   const d = r.duplicates;
   assert.equal(d.in_book, 7);
+  assert.deepEqual([d.same_order.caught, d.same_order.false_alarms], [7, 0]);
   assert.deepEqual([d.card_window.caught, d.card_window.false_alarms], [2, 0]);
+  assert.equal(r.totals.repeat_customers, 0); // one customer id per order: false alarms cannot be measured on this book
   assert.deepEqual([d.bank_window.caught, d.bank_window.false_alarms, d.bank_window.missed], [7, 0, 0]);
   assert.deepEqual(d.gap_minutes, [4, 5, 11, 15, 24, 26, 31]);
 });

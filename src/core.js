@@ -349,7 +349,8 @@ export async function commissionState(env) {
   const orders = commissionOrders(payments, CREATOR, heldDuplicates(payments), paidOut, disputeState);
   // a refund or a lost dispute after the payout: the commission on it is owed back (shown, not clawed back automatically)
   const owedBack = paid.flatMap((b) => (b.capture_ids || []).filter((id) => { const p = payments.find((x) => x.capture_id === id); return p && (Number(p.refunded_amount || 0) >= Number(p.amount) || disputeState(p) === "lost"); }));
-  return { orders, batches: paid.sort((a, b) => String(b.at).localeCompare(String(a.at))), owed_back: owedBack };
+  // the agent's own sentence was written before PayPal finished the batch; judges see PayPal's read-back instead
+  return { orders, batches: paid.sort((a, b) => String(b.at).localeCompare(String(a.at))).map(({ summary, ...b }) => b), owed_back: owedBack };
 }
 
 // metaEvents hashes the email itself; here only the stored hash exists, so pass it through as an already-hashed field.

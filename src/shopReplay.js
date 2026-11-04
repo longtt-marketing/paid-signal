@@ -45,18 +45,21 @@ export function replayShop({ orders, payments, groups }) {
       false_alarms: [...ids].filter((x) => !inBook.has(x)).length, missed: [...inBook].filter((x) => !ids.has(x)).length };
   };
   const bankFlags = possibleDuplicates(arriving);
+  // the time rule alone (no order id), so the window's own effect is visible
+  const noOrder = arriving.map((p) => ({ ...p, order_id: undefined }));
   const minutes = bankFlags.filter((f) => inBook.has(f.capture_id)).map((f) => Math.round(f.seconds / 60)).sort((x, y) => x - y);
   return {
     totals: { payments: ledger.length, paid: final.totals.paid, refunded_captures: final.totals.refunded, revenue: final.totals.revenue_cents / 100,
-      customers: new Set(ledger.map((p) => p.payer_email_sha256)).size },
+      first_payments: ledger.filter((p) => !p.duplicate_in_book).length, repeat_customers: orders.length - new Set(orders.map((o) => o["Mã khách ẩn danh"])).size },
     groups: rows,
     matches_book: rows.every((r) => r.matches),
     duplicates: {
       in_book: inBook.size,
       // the window the live PayPal demo uses (a double click at checkout lands within seconds)
-      card_window: score(possibleDuplicates(arriving.map((p) => ({ ...p, method: "paypal" })))),
+      same_order: score(possibleDuplicates(arriving)),
+      card_window: score(possibleDuplicates(noOrder.map((p) => ({ ...p, method: "paypal" })))),
       // bank transfers: a customer who thinks the first transfer failed sends again many minutes later
-      bank_window: score(bankFlags),
+      bank_window: score(possibleDuplicates(noOrder)),
       bank_window_minutes: BANK_TRANSFER_WINDOW_MS / 60000,
       gap_minutes: minutes,
     },
@@ -73,6 +76,6 @@ export function replayHTML(r) {
   const d = r.duplicates;
   const groups = r.groups.map((g) => `${g.id}: ${g.paid} orders, ${vnd(g.revenue)}`).join(" · ");
   return `<h3 class="replay-h">The shop's book, run through Paid Signal's own ledger code</h3>`
-    + `<p class="replay-p">${r.totals.payments} bank transfers from ${r.totals.customers.toLocaleString("en-US")} customers and every refund, fed to the same <code>reconcile()</code> the demo uses. It ${r.matches_book ? "reproduces" : "does not reproduce"} the accountant's hand-made result: ${r.totals.paid} paid orders, ${vnd(r.totals.revenue)} kept (${groups}).</p>`
-    + `<p class="replay-p"><b>What it would have caught as the money arrived:</b> the book has ${d.in_book} double transfers, ${d.gap_minutes[0]} to ${d.gap_minutes[d.gap_minutes.length - 1]} minutes apart (a customer thinks the first transfer failed and sends again). With the checkout window the PayPal demo uses (10 minutes) the ledger holds ${d.card_window.caught} of ${d.in_book}. For bank transfers the window is now ${d.bank_window_minutes} minutes: ${d.bank_window.caught} of ${d.in_book} held before anyone counted them, ${d.bank_window.false_alarms} false alarms. That window was set after reading this book, so this is a fit, not an out-of-sample test.</p>`;
+    + `<p class="replay-p">${r.totals.payments} bank transfers (${r.totals.first_payments} first payments and their repeats) and every refund, fed to the same <code>reconcile()</code> the demo uses. It ${r.matches_book ? "gives the same result as" : "does not match"} the shop's reconciliation workbook: ${r.totals.paid} paid orders kept, ${vnd(r.totals.revenue)} (${groups}). That checks the arithmetic, the refunds and the order matching; it is not a test of judgement.</p>`
+    + `<p class="replay-p"><b>The double transfers:</b> the book has ${d.in_book}, ${d.gap_minutes[0]} to ${d.gap_minutes[d.gap_minutes.length - 1]} minutes apart (a customer thinks the first transfer failed and sends again). Each is a second transfer for the same order code, so the ledger now holds a bank transfer sent again for one order whatever the gap: ${d.same_order.caught} of ${d.in_book}. The time rule alone (same payer, same ad, close together, for payments with no order id) held ${d.card_window.caught} of ${d.in_book} with the 10-minute checkout window and ${d.bank_window.caught} of ${d.in_book} with the ${d.bank_window_minutes}-minute window bank transfers now get, a window set after reading this book. Every customer in this book ordered once, so false alarms cannot be measured here.</p>`;
 }
