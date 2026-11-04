@@ -795,6 +795,7 @@ const app = {
         for (const b of st.batches.filter((x) => !done(x)).slice(0, 3)) {
           try {
             const out = await pp.getPayout(b.batch_id);
+            b.status = out?.batch_header?.batch_status || b.status;
             b.read_back = { status: out?.batch_header?.batch_status || null, item_status: out?.items?.[0]?.transaction_status || null, time_completed: out?.batch_header?.time_completed || null,
               transaction_id: out?.items?.[0]?.transaction_id || null, read_at: new Date().toISOString() };
             await env.LEDGER.put(`commission:${b.batch_id}`, JSON.stringify(b)); changed = true;
