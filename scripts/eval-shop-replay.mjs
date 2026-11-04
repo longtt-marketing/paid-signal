@@ -7,7 +7,7 @@ import { replayShop, replayHTML } from "../src/shopReplay.js";
 const read = (f) => readFileSync(new URL(`../docs/proof/${f}`, import.meta.url), "utf8");
 const rows = (f) => parseCsv(read(f)); // objects keyed by the header row
 const c = JSON.parse(read("merchant-case-2026-10.json"));
-const out = replayShop({ orders: rows("merchant-case-orders-2026-10.csv"), payments: rows("merchant-case-payments-2026-10.csv"), groups: c.groups });
+const out = replayShop({ orders: rows("merchant-case-orders-2026-10.csv"), payments: rows("merchant-case-payments-2026-10.csv"), refunds: rows("merchant-case-refunds-2026-10.csv"), groups: c.groups });
 writeFileSync(new URL("../public/data/shop-replay.json", import.meta.url), JSON.stringify(out, null, 1) + "\n");
 const page = new URL("../public/judge.html", import.meta.url);
 writeFileSync(page, readFileSync(page, "utf8").replace(/<!--replay:start-->[\s\S]*?<!--replay:end-->/, () => `<!--replay:start-->${replayHTML(out)}<!--replay:end-->`));

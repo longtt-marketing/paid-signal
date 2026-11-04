@@ -36,7 +36,8 @@ export async function route({ request, env, url, pp, orders, ip }) {
     if (url.pathname === "/api/refund" && request.method === "POST") {
       const { capture_id, amount } = await request.json();
       const cur = await env.LEDGER.get(`pay:${capture_id}`, "json");
-      if (!cur) return json({ error: "Unknown capture." }, 404);
+      // a visitor sees and refunds only the evidence ledger (previewed below) and their own payments, never another visitor's
+      if (!cur || !(isEvidence(cur) || cur.visitor === visitorId(request))) return json({ error: "Unknown capture." }, 404);
       const left = (Math.round(Number(cur.amount) * 100) - Math.round(Number(cur.refunded_amount || 0) * 100)) / 100;
       if (amount !== undefined && !(Number(amount) > 0 && Number(amount) <= left)) return json({ error: `Refund between $0.01 and $${left.toFixed(2)}.` }, 400);
       // the seeded demo payments carry the scenarios page and the dashboard story through judging: preview, don't send
@@ -143,7 +144,8 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, user_agent, psid, lead_id, ...p }) => ({ ...p, ...(p.refunded_at ? { refunded_at: utc(p.refunded_at) } : {}), clicked_at: p.clicked_at || null, payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));
       // a Google-click buyer sent to Meta before Google buyers were routed to Google only: still a fact, no longer counted
       const source = Object.fromEntries(payments.map((p) => [p.capture_id, p.source]));
-      const sends = meta.map((m) => (m.ok && source[m.capture_id] === "g" ? { ...m, superseded: "Google click, sent before Google buyers went to Google only" } : m));
+      // Meta's answers only for the payments this visitor can see, so no other visitor's capture id leaks through them
+      const sends = meta.filter((m) => m.capture_id in source).map((m) => (m.ok && source[m.capture_id] === "g" ? { ...m, superseded: "Google click, sent before Google buyers went to Google only" } : m));
       return json({ payments: keyed,
         duplicates: possibleDuplicates(payments), meta: sends, meta_live: Boolean(env.META_CAPI_TOKEN && env.META_DATASET_ID) });
     }

@@ -8,7 +8,7 @@ import { replayShop, replayHTML, shopTime } from "../src/shopReplay.js";
 
 const read = (f) => readFileSync(new URL(`../docs/proof/${f}`, import.meta.url), "utf8");
 const c = JSON.parse(read("merchant-case-2026-10.json"));
-const r = replayShop({ orders: parseCsv(read("merchant-case-orders-2026-10.csv")), payments: parseCsv(read("merchant-case-payments-2026-10.csv")), groups: c.groups });
+const r = replayShop({ orders: parseCsv(read("merchant-case-orders-2026-10.csv")), payments: parseCsv(read("merchant-case-payments-2026-10.csv")), refunds: parseCsv(read("merchant-case-refunds-2026-10.csv")), groups: c.groups });
 
 test("shop replay: the ledger code reproduces the shop's hand-made reconciliation", () => {
   assert.equal(r.totals.payments, 735);
