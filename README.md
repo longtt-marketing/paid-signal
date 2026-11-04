@@ -8,7 +8,7 @@ Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers
 
 Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:10): https://www.youtube.com/watch?v=WfoNL22Xv5k · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
 
-**One real shop's October** (a gift shop that sells in chat; the author runs its Meta ads; 260M VND, about $10,000, of spend; figures reported by the author, totals only; paid by bank transfer and matched to orders by the shop's accountant, ad group taken from the chat that started each order): the ad with 69.4% of the chats brought 19.3% of the money, and the ad with 20.7% of the chats brought 56.3%. By cost per chat the ads rank A, B, C; by money kept per ad dollar, B, C, A. Numbers: [docs/proof/merchant-case-2026-10.json](docs/proof/merchant-case-2026-10.json), read by [src/merchantCase.js](src/merchantCase.js).
+**One real shop's October** (a gift shop that sells in chat; the author runs its Meta ads; 260M VND, about $10,000, of spend; figures reported by the author; the shop's book is published in docs/proof (invoices, payments, refunds, anonymised ids) and `node scripts/eval-shop-replay.mjs` runs it through the same ledger code: 705 paid orders and 1,317M VND, as the accountant found, and its 7 double transfers held on arrival with the 60-minute bank-transfer window; paid by bank transfer and matched to orders by the shop's accountant, ad group taken from the chat that started each order): the ad with 69.4% of the chats brought 19.3% of the money, and the ad with 20.7% of the chats brought 56.3%. By cost per chat the ads rank A, B, C; by money kept per ad dollar, B, C, A. Numbers: [docs/proof/merchant-case-2026-10.json](docs/proof/merchant-case-2026-10.json), read by [src/merchantCase.js](src/merchantCase.js).
 
 Ad platforms optimise for what they can see: clicks, leads, chat taps. For a small business that gets paid through
 PayPal, the thing that matters, a payment, never reaches the ad platform. So budgets drift toward ads that produce
@@ -170,7 +170,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 153 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 156 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

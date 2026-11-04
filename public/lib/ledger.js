@@ -285,14 +285,19 @@ export function supportedMoves(rec, minPaid = 3, costs = SHOP_COSTS) {
   return out;
 }
 
+// A bank transfer sent twice comes minutes apart, not seconds: the customer thinks the first one failed. The gift shop's
+// book (docs/proof) had double transfers 4 to 31 minutes apart, so bank transfers get a wider window than checkout.
+export const BANK_TRANSFER_WINDOW_MS = 60 * 60 * 1000;
+
 /** Two live captures from the same payer for the same ad within `windowMs` look like a double click at checkout. */
 export function possibleDuplicates(payments, windowMs = 10 * 60 * 1000) {
+  const win = (/** @type {any} */ p) => (p.method === "bank_transfer" ? BANK_TRANSFER_WINDOW_MS : windowMs);
   const at = (p) => Date.parse(p.captured_at);
   const live = payments.filter((p) => p.payer_email_sha256 && cents(p.refunded_amount || 0) < cents(p.amount)).sort((a, b) => at(a) - at(b));
   // a second payment a person confirmed as a separate order (e.g. a second child) counts as a paid order again
   const out = [];
   for (const [i, b] of live.entries()) {
-    const a = live.slice(0, i).reverse().find((x) => x.payer_email_sha256 === b.payer_email_sha256 && x.ad === b.ad && at(b) - at(x) <= windowMs);
+    const a = live.slice(0, i).reverse().find((x) => x.payer_email_sha256 === b.payer_email_sha256 && x.ad === b.ad && at(b) - at(x) <= win(b));
     if (a && !b.confirmed_distinct) out.push({ capture_id: b.capture_id, first: a.capture_id, seconds: Math.round((at(b) - at(a)) / 1000) });
   }
   return out;
