@@ -1,6 +1,6 @@
 // Sends the ledger's paid orders that were captured before live sending existed to the shop's Meta dataset as TEST events,
 // and stores Meta's answer under meta:<capture> marked backfill, so the dashboard can show which payments Meta received.
-// New captures are sent by the Worker itself the moment PayPal confirms them (src/worker.js sendToMeta).
+// New captures are sent by the Worker itself the moment PayPal confirms them (sendToMeta in src/core.js).
 // Needs META_DATASET_ID, META_CAPI_TOKEN, META_TEST_CODE in .dev.vars. Usage: node scripts/meta-backfill.mjs
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";

@@ -4,8 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 
-const worker = readFileSync(new URL("../src/worker.js", import.meta.url), "utf8");
-const allowed = new Set(worker.match(/const STUDIO_TOOLS = new Set\(\[([\s\S]*?)\]\)/)[1].match(/"([a-z_]+)"/g).map((s) => s.slice(1, -1)));
+import { STUDIO_TOOLS as allowed } from "../src/core.js";
 
 const studioDist = new URL("../web/node_modules/ag-studio/dist/package/main.esm.mjs", import.meta.url);
 

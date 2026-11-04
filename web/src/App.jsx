@@ -270,7 +270,7 @@ export default function App({ first = null }) {
           </nav>
           <div className="top-end">
             <span className="live"><i />PayPal sandbox · live</span>
-            <a className="cta" href="/judge">Judge path, 60 s</a>
+            <a className="cta" href="/judge">Judge path</a>
             <a className="hero-link" href="/audit">Audit your own ads</a>
           </div>
         </div>
@@ -286,8 +286,8 @@ export default function App({ first = null }) {
               <svg width="56" height="40" viewBox="0 0 56 40" aria-hidden="true"><path d="M2 20h46M38 8l12 12-12 12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
               <div><b className="n paid">{(t || first)?.paid ?? "…"}</b><span>paid {(t || first)?.paid === 1 ? "order" : "orders"} PayPal confirms</span></div>
             </div>
-            <p className="pitch">{t ? `Ad platforms learn from the ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}: the ${state?.meta?.events?.length ?? 0} from Meta ads go back to Meta (test events in this demo), the Google ones to Google.` : "Ad platforms learn from leads. PayPal knows who paid."}</p>
-            <div className="hero-actions"><a className="cta" href="/judge">Judge path, 60 s</a><a className="hero-link" href="/audit">Audit your own ads</a></div>
+            <p className="pitch">{t ? `Ad platforms learn from the ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}: the ${state?.meta?.events?.length ?? 0} from Meta ads go back to Meta (test events in this demo); the Google ones become an offline-conversion file for Google Ads.` : "Ad platforms learn from leads. PayPal knows who paid."}</p>
+            <div className="hero-actions"><a className="cta" href="/judge">Judge path</a><a className="hero-link" href="/audit">Audit your own ads</a></div>
             {t && <div className="chips-row">
               <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
               {t.held > 0 && <span title="Same payer, same ad, minutes apart: not counted as a paid order, and kept from the ad platforms"><b>{t.held}</b> possible duplicate held</span>}

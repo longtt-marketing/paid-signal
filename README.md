@@ -144,7 +144,7 @@ For Claude Desktop: `npx mcp-remote https://paid-signal.thelongmarketing.workers
 ## Architecture
 
 ```
-Cloudflare Worker (src/worker.js)
+Cloudflare Worker (src/worker.js wires src/core.js and the route groups in src/routes/: payments, invoices, judge, agents)
   ├─ PayPal REST: orders, captures, refunds, invoicing, webhooks, transaction search   (src/paypal.js)
   ├─ ledger in Workers KV: captures (payer email kept only as a SHA-256 hash), invoices
   ├─ reconciliation + Meta/Google payloads, in cents                                    (src/ledger.js)
