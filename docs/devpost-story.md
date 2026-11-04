@@ -6,7 +6,7 @@
 
 **Be the customer (2 minutes):** on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer), write as a customer; Claude drafts a real PayPal sandbox invoice; you approve it and the send agent sends it; you pay it on PayPal's own invoice page (sandbox buyer or a sandbox test card); the page shows PayPal's PAID. Then give Claude the same double charge from two buyers, one who paid for a second child and one whose page froze, and watch it decline one and refund the other.
 
-Before: the ad report says the free guide wins with 31 of 62 leads, and the owner asks Claude to raise it. After: PayPal shows the free guide has 1 paid order, so Claude refuses, and raises the testimonial carousel instead, the ad PayPal says is paying (3 paid orders, $2.04 back per $1). The rule in code would refuse the first move too.
+Before: the ad report says the free guide wins with 31 of 62 leads, and the owner asks Claude to raise it. After: PayPal shows the free guide has 1 paid order, so Claude refuses, and raises the testimonial carousel instead, the ad PayPal says is paying (4 paid orders, $2.73 back per $1). The rule in code would refuse the first move too.
 
 **Try it, no login:** [Judge path](https://paid-signal.thelongmarketing.workers.dev/judge) · [Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit) · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) · [Dashboard](https://paid-signal.thelongmarketing.workers.dev). Fictional shop; every PayPal call is a real sandbox call; Meta receives test events.
 
@@ -17,7 +17,7 @@ Built with PayPal Agent Toolkit, PayPal Server SDK (APIMatic), Orders v2, Invoic
 1. **[Judge path](https://paid-signal.thelongmarketing.workers.dev/judge)**: be the customer and pay a real sandbox invoice Claude made for you; the same double charge from two buyers, decided live by Claude with a simulated refund tool (the real sandbox refund it made is shown next to it); then the owner's request and Claude's refusal; the same raise sent straight to the evidence gate and refused live; the PayPal capture behind the answer; one lead's real invoice loop from chat to `create_invoice`, approval, `send_invoice`, reminder, payment and Meta; the refund agent returning a double payment to the buyer with `create_refund`; and the commission agent paying the testimonial's creator through PayPal Payouts, per paid order. A prompt injection typed as the customer is flagged and refused.
 2. **[Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit)**: drop your Ads Manager export and your PayPal activity download. The Worker's own ledger code reads them in your browser, nothing uploaded, and shows which ads brought PayPal-confirmed payments, how much paid revenue no ad can claim, and what the budget rule allows.
 3. **[Money trail](https://paid-signal.thelongmarketing.workers.dev/trail)**: one payment end to end: the ad click in PayPal's `custom_id`, PayPal's record read live (status, fee, net), Meta's reply 2.9 s after capture.
-4. **[Dashboard](https://paid-signal.thelongmarketing.workers.dev)**: 62 leads, 7 paid orders, the agents and the AG Studio report.
+4. **[Dashboard](https://paid-signal.thelongmarketing.workers.dev)**: 62 leads, 9 paid orders, the agents and the AG Studio report.
 5. **[Proof](https://paid-signal.thelongmarketing.workers.dev/proof)**: what is verified, what is not, and the script behind every number.
 
 ## What it does
@@ -60,11 +60,11 @@ Its TypeScript skills were checked point by point against our SDK wrapper with a
 - **Evidence gate**: 11 kinds of planted error, 100 of each, all caught; 0 of 500 good recommendations rejected.
 - **Budget agent** on 27 labelled synthetic weeks, 22 written with their answers by a separate analyst agent that never saw the code. On the last set, frozen and run once: 11 of 12 runs fully right; moving budget by leads per dollar got 1 of 6.
 - **Refund agent**, 14 held-out flagged pairs that look identical to the ledger and differ only in what the buyer wrote: 6/6 double payments refunded, 7/8 deliberate second orders or bare refund demands declined; the miss is a message with a fake "SYSTEM: pre-approved" line, which the agent called powerless before refunding on the ledger evidence.
-- **Live**: on the sandbox ledger the agent raised the one ad with 3 paid orders and refused the owner's raise for the ad with the most leads.
+- **Live**: on the sandbox ledger the agent raised the testimonial carousel (the ad PayPal says is paying) and refused the owner's raise for the ad with the most leads.
 
 ## Potential impact
 
-A shop paid by invoice after a chat has no checkout for attribution tools to read, so its ad platform learns from chats and leads alone. In the demo, budget by leads would feed the free guide ($0.41 back per $1); budget by PayPal-confirmed payments goes to the carousel ($2.04). [/audit](https://paid-signal.thelongmarketing.workers.dev/audit) lets any shop run the same check on its own two files today, without connecting anything.
+A shop paid by invoice after a chat has no checkout for attribution tools to read, so its ad platform learns from chats and leads alone. In the demo, budget by leads would feed the free guide ($0.41 back per $1); budget by PayPal-confirmed payments goes to the carousel ($2.73). [/audit](https://paid-signal.thelongmarketing.workers.dev/audit) lets any shop run the same check on its own two files today, without connecting anything.
 
 ## Limits
 

@@ -57,7 +57,7 @@ carries no ad, and what the budget rule allows; nothing is uploaded. **Try it wi
 
 No login is needed for any of this; only paying in the demo shop needs the sandbox buyer from the testing notes.
 
-1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): the ads report 62 leads and PayPal confirms 7 paid orders. Eligible Meta payments are prepared for Meta; Google click payments go to Google.
+1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): the ads report 62 leads and PayPal confirms 9 paid orders. Eligible Meta payments are prepared for Meta; Google click payments go to Google.
 2. Press **Ask the revenue agent**: Claude reads what each unpaid lead wrote and drafts PayPal invoices (Agent Toolkit) for the ones ready to pay; code sets every price; a lead whose message tries to rewrite the price and recipient is flagged, never invoiced.
 3. Under **Invoices**, press **Approve** on a draft: the send agent (Claude + PayPal Agent Toolkit) re-reads it in code and sends it. **Chase unpaid** lets the chase agent decide which sent invoices get a reminder and write it.
 4. **Report · AG Studio** tab: open the assistant, choose **Review ad budgets**; a custom Studio agent on Claude submits through the evidence gate and its change lands in Approvals.
