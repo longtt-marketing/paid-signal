@@ -6,7 +6,7 @@ const CHANGE = { increase: "Raise the budget", reduce: "Cut the budget", pause: 
 const NAMES = { free_guide: "Free guide · lead form", trial_video: "Trial class · video", parent_carousel: "Testimonial · carousel", holiday_static: "Holiday camp · static" };
 const name = (ad) => NAMES[ad] || ad;
 const box = (id) => document.getElementById(id);
-const head = (id) => { const s = box(id); const h = s.querySelector("h2"); s.replaceChildren(h, ...(id === "loop" ? [box("try-it")] : []).filter(Boolean)); return s; };
+const head = (id) => { const s = box(id); const h = s.querySelector("h2"); s.replaceChildren(h); return s; };
 
 async function getJSON(url, init) { const r = await fetch(url, init); const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.error || `HTTP ${r.status}`); e.fallback = j.fallback; throw e; } return j; }
 
@@ -26,12 +26,53 @@ function showTryResult(out) {
     return `PayPal says: ${record.status || "status unavailable"}, ${total}, ${items} (read back from PayPal at ${time})`;
   };
   result.replaceChildren(
-    $("p", { className: `verdict ${drafted ? "ok" : ""}`, textContent: drafted ? "Drafted. The invoice was not sent." : "Skipped." }),
+    $("p", { className: `verdict ${drafted ? "ok" : ""}`, textContent: drafted ? "Drafted on PayPal. Nothing is sent until you approve." : "Skipped." }),
     $("p", { className: "reason", textContent: `Reason: ${out.reason}${out.flag ? ` Flag: ${out.flag}.` : ""}` }),
     ...(drafted ? [$("p", { className: "note", textContent: `Invoice ${out.invoice_id}, ${money(Math.round(Number(out.amount) * 100))}. ${out.line_items.map((x) => `${x.name} at $${x.unit}`).join(", ")}` }),
       ...(out.paypal ? [$("p", { className: "note paypal-readback", textContent: paypalText(out.paypal) })] : [])] : []),
     $("p", { className: "chain", textContent: `Tool trace: ${trace || "No tool call."} · ${out.ms} ms` }),
+    ...(drafted ? [journey(out)] : []),
   );
+}
+
+// Be the customer: approve the draft, the send agent sends it, the judge pays it on PayPal, PayPal's answer comes back here.
+function journey(out) {
+  const wrap = $("div", { className: "journey" }), status = $("p", { className: "note", role: "status" });
+  const when = (t) => (t ? new Date(t).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "");
+  const send = $("button", { className: "btn primary", type: "button", textContent: "Approve: send this invoice to me" });
+  const step = (n, text) => $("p", { className: "jstep", innerHTML: "" }, [$("b", { textContent: `${n} ` }), text]);
+  let timer = null;
+  const showPaid = (inv) => {
+    clearInterval(timer);
+    wrap.replaceChildren($("div", { className: "receipt" }, [
+      $("p", { className: "verdict ok", textContent: "PayPal says PAID." }),
+      $("p", { textContent: `Invoice ${inv.invoice_number || inv.id}, ${money(Math.round(Number(inv.paid?.amount || inv.amount) * 100))}. PayPal payment ${inv.paid?.payment_id || "id pending"}${inv.paid?.paypal_payment_date ? `, PayPal date ${inv.paid.paypal_payment_date}` : ""}; seen here ${when(inv.paid?.seen_at)}.` }),
+      $("p", { className: "note", textContent: "Claude drafted it, you approved it, the send agent sent it, you paid it, and PayPal confirmed it. This payment stays in your session: the shop's ledger and the numbers in the story do not move." }),
+      $("a", { href: "#refund", textContent: "Next: what an agent does with money it should give back →" })]));
+  };
+  const poll = (id) => {
+    const check = async () => {
+      try { const d = await getJSON(`/api/judge/try/status?id=${encodeURIComponent(id)}`); status.textContent = `PayPal status: ${d.invoice.status} (checked ${when(d.checked_at)})`; if (d.invoice.status === "PAID") showPaid(d.invoice); }
+      catch (e) { status.textContent = e.message; }
+    };
+    check(); timer = setInterval(check, 6000); setTimeout(() => clearInterval(timer), 15 * 60 * 1000);
+  };
+  send.onclick = async () => {
+    send.disabled = true; status.textContent = "The send agent is reading the invoice from PayPal and sending it…";
+    try {
+      const d = await getJSON("/api/judge/try/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ invoice_id: out.invoice_id }) });
+      const inv = d.invoice;
+      if (inv.status === "DRAFT") { status.textContent = `Not sent: ${d.agent?.summary || "the agent did not send it"}`; send.disabled = false; return; }
+      wrap.replaceChildren(
+        step("2", `Sent by the send agent (get_invoice, then send_invoice) ${when(inv.sent_at)}. PayPal status: ${inv.status}.`),
+        step("3", "Pay it as the customer on PayPal's own invoice page: log in as the sandbox buyer from the testing instructions, or pay by card under Other ways to pay with a PayPal sandbox test card. No real money moves."),
+        inv.pay_url ? $("a", { className: "btn primary", href: inv.pay_url, target: "_blank", rel: "noopener noreferrer", textContent: `Pay ${money(Math.round(Number(inv.amount) * 100))} on PayPal ↗` }) : $("p", { className: "note", textContent: "PayPal gave no payment link." }),
+        step("4", "This page asks PayPal every few seconds and shows the receipt when it is paid."), status);
+      poll(inv.id);
+    } catch (e) { status.textContent = e.message; send.disabled = false; }
+  };
+  wrap.append(step("1", "You are the owner now: approve it and the send agent sends it to you, the customer."), $("div", { className: "row" }, [send]), status);
+  return wrap;
 }
 
 const tryExamples = {
@@ -220,6 +261,7 @@ const showRefund = (d) => {
     sec.append($("p", { textContent: `Open now: ${o.capture_id}, ${o.seconds} s after ${o.first}, same payer and ad.` }), $("div", { className: "row" }, [btn]), out);
   }
   if (!r?.refund && !(d.open || []).length) sec.append($("p", { className: "note", textContent: "No double payment is flagged right now." }));
+  sec.insertBefore(twoBuyers(), sec.children[1] || null);
   sec.append($("p", { className: "note", textContent: `PayPal sandbox; read live ${when(d.checked_at || new Date().toISOString())}.` }));
 };
 getJSON("/api/judge/refund-loop").then(showRefund).catch((e) => head("refund").append($("p", { className: "note err", textContent: e.message })));
@@ -252,3 +294,32 @@ const showCommission = (d) => {
   sec.append($("p", { className: "note", textContent: `PayPal sandbox: a test account stands in for the creator. Read live ${when(d.checked_at)}.` }));
 };
 getJSON("/api/judge/commission").then(showCommission).catch((e) => head("commission").append($("p", { className: "note err", textContent: e.message })));
+
+// The three result cards at the top: the refund and the payout as PayPal reports them now.
+Promise.all([getJSON("/api/judge/refund-loop").catch(() => null), getJSON("/api/judge/commission").catch(() => null)]).then(([r, c]) => {
+  const rf = r?.last?.refund, pill = (id, text) => { const e = document.querySelector(`#${id} .pp`); if (e && text) e.textContent = text; };
+  if (rf) pill("win-refund", `PayPal: $${Number(rf.amount).toFixed(2)} refunded, ${rf.read_back?.status || rf.status}`);
+  const b = c?.batches?.[0];
+  if (b) pill("win-pay", `PayPal Payouts: $${Number(b.total).toFixed(2)} for ${(b.capture_ids || []).length} orders, ${b.read_back?.item_status || b.status}`);
+});
+
+// Same double charge, two buyers: Claude decides each live (refund tool simulated; the real refund is shown below).
+function twoBuyers() {
+  const wrap = $("div", { className: "ab" });
+  const card = (variant, label, quote) => {
+    const out = $("div", { className: "ab-out", role: "status" });
+    const btn = $("button", { className: "btn", type: "button", textContent: `Ask Claude: ${label}` });
+    btn.onclick = async () => {
+      btn.disabled = true; out.textContent = "Claude is weighing the pair and what the buyer wrote…";
+      try {
+        const d = await getJSON("/api/judge/refund-try", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ variant }) });
+        out.replaceChildren($("p", { className: `verdict ${d.decision === "refund" ? "ok" : ""}`, textContent: d.decision === "refund" ? "Refunds the second payment" : "Declines: no refund" }), $("p", { className: "reason", textContent: d.summary }));
+      } catch (e) { out.textContent = e.message; } finally { btn.disabled = false; }
+    };
+    return $("div", { className: "ab-card" }, [$("b", { textContent: label }), $("p", { className: "quote", textContent: `“${quote}”` }), btn, out]);
+  };
+  wrap.append($("p", { textContent: "Same payer, same ad, $49 twice, 216 seconds apart. To the ledger these two cases are identical; only what the buyer wrote differs. Ask Claude about each:" }),
+    $("div", { className: "ab-grid" }, [card("siblings", "Buyer A", "And her brother Sam too, I paid for him separately."), card("twice", "Buyer B", "The page froze after I pressed Pay, so I pressed it again.")]),
+    $("p", { className: "note", textContent: "Live Claude with the same prompt and code limits; here the refund tool is simulated, so no money moves. The real refund it made is below. Held-out test of this judgment: 13 of 14 (/proof)." }));
+  return wrap;
+}

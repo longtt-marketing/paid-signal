@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <title>Paid Signal: judge path</title>
-<meta name="description" content="Sixty seconds, no login: the owner asks to fund the ad with the most leads, Claude checks PayPal-confirmed payments and declines, code checks the move, and the PayPal capture behind it opens live.">
+<meta name="description" content="Be the customer: Claude invoices you through PayPal, you pay in the sandbox, PayPal confirms. Then the same double charge with two buyers, an ad PayPal cannot back, and a creator paid per real sale.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -53,6 +53,13 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .more{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .more a{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none}
 .more a b{display:block}.more a span{font-size:13px;color:var(--faint)}
+.wins{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.win{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;text-decoration:none;color:var(--ink)}
+.win:hover{border-color:var(--paid);color:var(--ink)}.win .k{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}.win b{font-size:20px;line-height:1.2;letter-spacing:-.01em}.win .pp{align-self:flex-start;font:600 12px "Inter Tight",sans-serif;background:var(--paid-bg);color:var(--paid);border-radius:999px;padding:3px 9px}.win small{color:var(--mute);font-size:13px}
+@media (max-width:760px){.wins{grid-template-columns:1fr}}
+.journey{margin-top:14px;padding:14px 16px;border:1px solid var(--paid);border-radius:14px;background:var(--paid-bg)}.journey .jstep{margin:6px 0}.journey .btn{margin:6px 0}.receipt a{font-weight:600}
+.ab{margin:10px 0 14px}.ab-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}.ab-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}.ab-card .quote{margin:0;font-size:16px}
+@media (max-width:640px){.ab-grid{grid-template-columns:1fr}}
+.hero-step{border:2px solid var(--ink)}.hero-step h2 em{background:var(--ink);color:#fff;padding:3px 8px;border-radius:6px;font-size:11px}
 .jump-list{margin:0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:14px}
 .jump-list a{font-weight:600;text-decoration-thickness:1px;text-underline-offset:3px}
 @media (max-width:640px){.top{padding:14px 16px}main{padding:28px 16px 64px}.vs{grid-template-columns:1fr;text-align:left}.vs i{display:none}dl{grid-template-columns:1fr;gap:2px}dt{margin-top:6px}}
@@ -61,10 +68,26 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 <body>
 <header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav aria-label="Main"><a href="/">Dashboard</a><a href="/judge">Judge path</a><a href="/audit">Audit</a><a href="/proof">Proof</a></nav></header>
 <main>
-  <p class="jump-list"><strong>In 60 seconds you will see:</strong> <a href="#ask">the owner's ask</a> · <a href="#answer">Claude refuses with the rule in code</a> · <a href="#contrast">the raise PayPal supports</a> · <a href="#loop">a live invoice you can trigger</a> · <a href="#capture">the PayPal capture behind it</a> · <a href="#refund">an agent refunding a double payment</a> · <a href="#commission">an agent paying a creator with PayPal Payouts</a></p>
+  <p class="jump-list"><strong>Two minutes:</strong> <a href="#customer">be the customer and pay a real PayPal sandbox invoice</a> · <a href="#refund">same double charge, two buyers, two decisions</a> · <a href="#answer">Claude refuses to fund an ad PayPal can't back</a> · <a href="#commission">a creator paid per real sale</a></p>
   <div>
-    <h1>The ad with the most leads is not always the ad worth funding.</h1>
-    <p class="lede">Sixty seconds, no login. The owner asks Claude to fund the ad with the most leads; Claude checks what PayPal says was paid, and code checks the move.</p>
+    <h1>AI agents run the money side of a sale. PayPal verifies what actually happened.</h1>
+    <p class="lede">For shops that sell in a chat and get paid by PayPal invoice. No login. Every PayPal call here is a real sandbox call.</p>
+  </div>
+  <section class="step hero-step" id="customer"><h2><em>▶</em>Be the customer</h2>
+    <div class="try" id="try-it"><p class="note">Write as a fictional customer. Claude decides; a booking becomes a real PayPal sandbox invoice. Approve it as the owner, pay it on PayPal as the customer, and watch PayPal confirm it here. About two minutes; no real money.</p>
+      <div class="try-examples" aria-label="Example customer messages">
+        <button type="button" data-example="booking">Clear booking</button><button type="button" data-example="not-ready">Not ready</button><button type="button" data-example="injection">Prompt injection</button>
+      </div>
+      <textarea id="try-message" maxlength="500" aria-label="Fictional customer message">Please book one trial class for Saturday and send me the invoice.</textarea>
+      <div class="row"><button class="btn primary" type="button" id="try-run">Ask the revenue agent</button></div>
+      <div class="try-result" id="try-result" role="status" aria-live="polite"><p class="note">Choose an example or write a message, then ask the agent.</p></div>
+    </div>
+  </section>
+  <h2 class="substep">What the agents already did with PayPal money</h2>
+  <div class="wins" aria-label="What the agents did with real PayPal sandbox money">
+    <a class="win" href="#answer"><span class="k">1 · Says no</span><b>Claude refuses to fund the ad with 31 leads</b><span class="pp">PayPal: 1 paid order</span><small>It raises the ad PayPal says is paying instead; the rule in code agrees.</small></a>
+    <a class="win" href="#refund" id="win-refund"><span class="k">2 · Gives money back</span><b>The refund agent returns a double payment</b><span class="pp">PayPal: refund …</span><small>A person approves; Claude checks the pair and calls create_refund.</small></a>
+    <a class="win" href="#commission" id="win-pay"><span class="k">3 · Pays out</span><b>The commission agent pays the ad's creator per paid order</b><span class="pp">PayPal Payouts: …</span><small>Not per lead: refunded orders earn nothing.</small></a>
   </div>
   <div class="vs" id="vs" aria-live="polite"><div><b>–</b><span>leads the ad report gives this ad</span></div><i>→</i><div class="paid"><b>–</b><span>paid orders PayPal confirms for it</span></div></div>
   <p class="note">PayPal confirms the payment. Paid Signal prepares eligible website click, Messenger and lead-form events for Meta; Google click payments go to Google.</p>
@@ -79,15 +102,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section class="step" id="capture"><h2><em>3</em>Open the PayPal payment behind the answer</h2></section>
   <section class="step" id="week"><h2><em>4</em>A harder week: a raise and a cut together</h2><p class="note">On the live ledger only one ad has 3 paid orders, so only a raise can show there. This labelled synthetic week has enough orders on two ads to need a raise and a cut at once; its payments are made up, not PayPal captures.</p></section>
 
-  <section class="step" id="loop"><h2><em>5</em>The invoice loop: a lead becomes a PayPal payment</h2>
-    <div class="try" id="try-it"><h3>Try it yourself</h3><p class="note">Write as a fictional customer. The revenue agent can create a PayPal sandbox draft for this try, but it is never sent.</p>
-      <div class="try-examples" aria-label="Example customer messages">
-        <button type="button" data-example="booking">Clear booking</button><button type="button" data-example="not-ready">Not ready</button><button type="button" data-example="injection">Prompt injection</button>
-      </div>
-      <textarea id="try-message" maxlength="500" aria-label="Fictional customer message">Please book one trial class for Saturday and send me the invoice.</textarea>
-      <div class="row"><button class="btn primary" type="button" id="try-run">Ask the revenue agent</button></div>
-      <div class="try-result" id="try-result" role="status" aria-live="polite"><p class="note">Choose an example or write a message, then ask the agent.</p></div>
-    </div>
+  <section class="step" id="loop"><h2><em>5</em>The invoice loop: a real lead becomes a PayPal payment</h2>
     <h3 class="substep">Live invoice loop</h3><p class="note">Loading the ledger…</p>
   </section>
 

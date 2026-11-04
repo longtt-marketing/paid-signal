@@ -377,6 +377,20 @@ async function recordInvoicePayment(env, invoice, url = new URL("https://paid-si
   await forget("pay:"); await forget("inv:");
 }
 
+/** A judge's try invoice that PayPal reports paid: kept on the try record (the judge's session), not in the shop's ledger. */
+async function tryPaid(env, invoice) {
+  const rec = await env.LEDGER.get(`try:${invoice.id}`, "json");
+  if (!rec) return null;
+  const t = (invoice.payments?.transactions || [])[0];
+  rec.status = invoice.status || rec.status;
+  if (t && !rec.paid) rec.paid = { payment_id: t.payment_id || null, amount: t.amount?.value || rec.amount, currency: t.amount?.currency_code || "USD",
+    paypal_payment_date: t.payment_date_time || t.payment_date || null, method: t.method || null, seen_at: new Date().toISOString() };
+  await env.LEDGER.put(`try:${invoice.id}`, JSON.stringify(rec), { expirationTtl: 60 * 86400 });
+  return rec;
+}
+const publicTry = (r) => r && { id: r.id, status: r.status, amount: r.amount, lines: r.lines, sent_at: r.sent_at || null, sent_by: r.sent_by || null, pay_url: r.pay_url || null,
+  invoice_number: r.invoice_number || null, paid: r.paid || null, created_at: r.created_at };
+
 /** Re-check PayPal invoices; the public refresh is throttled, while the scheduled check must always run. */
 async function syncInvoices(env, pp, url, force = false) {
   const all = await cachedList(env, "inv:");
@@ -463,7 +477,7 @@ const app = {
       const origin = request.headers.get("origin");
       if (origin && origin !== url.origin && url.pathname !== "/mcp") return json({ error: "Cross-site requests are not accepted." }, 403);
       // the routes that spend Claude turns answer only this site's own pages, which always send their Origin
-      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/judge/try" || url.pathname === "/api/invoices/approve" || url.pathname === "/api/refund" || url.pathname === "/api/duplicates/refund" || url.pathname === "/api/commissions/pay" || url.pathname === "/api/decisions") && origin !== url.origin)
+      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/judge/try" || url.pathname === "/api/invoices/approve" || url.pathname === "/api/refund" || url.pathname === "/api/duplicates/refund" || url.pathname === "/api/commissions/pay" || url.pathname === "/api/judge/try/send" || url.pathname === "/api/judge/refund-try" || url.pathname === "/api/decisions") && origin !== url.origin)
         return json({ error: "Only the Paid Signal page can call this." }, 403);
       if (env.BURST && !(await env.BURST.limit({ key: ip })).success) return json({ error: "Too many requests. Wait a minute and try again." }, 429);
     }
@@ -531,7 +545,11 @@ const app = {
           if (known) await sendToMeta(env, url, known);
           else if (orderId) await sendToMeta(env, url, await recordCapture(env, await orders.getOrder(orderId)));
         }
-        if (event.event_type === "INVOICING.INVOICE.PAID" && res.id) await recordInvoicePayment(env, await pp.getInvoice(res.id), url);
+        if (event.event_type === "INVOICING.INVOICE.PAID" && res.id) {
+          // a judge's own try invoice is kept in the judge's session record, never in the shop's ledger
+          if (await env.LEDGER.get(`try:${res.id}`)) await tryPaid(env, await pp.getInvoice(res.id));
+          else await recordInvoicePayment(env, await pp.getInvoice(res.id), url);
+        }
         // a buyer's dispute takes the payment out of paid orders (and out of what the ad platforms are told) while it is open
         if (/^CUSTOMER\.DISPUTE\./.test(event.event_type)) await applyDispute(env, res);
         if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
@@ -623,6 +641,37 @@ const app = {
 
       // The revenue agent reads what each unpaid lead wrote and proposes invoices; code prices and checks every proposal,
       // and PayPal's Agent Toolkit creates the drafts. Nothing is sent: each draft waits in Approvals.
+      // The judge becomes the customer: the judge approves the draft Claude just made, the send agent sends it through the
+      // Agent Toolkit, and the judge pays it on PayPal's own invoice page as the sandbox buyer. Only drafts from this browser.
+      if (url.pathname === "/api/judge/try/send" && request.method === "POST") {
+        let body; try { body = await request.json(); } catch { return json({ error: "Send the invoice id as JSON." }, 400); }
+        const rec = /^INV2-[A-Z0-9-]+$/.test(String(body.invoice_id || "")) ? await env.LEDGER.get(`try:${body.invoice_id}`, "json") : null;
+        if (!rec || !rec.vid || rec.vid !== visitorId(request)) return json({ error: "Only an invoice Claude drafted for you in this browser can be sent." }, 404);
+        if (rec.status !== "DRAFT") return json({ invoice: publicTry(rec) });
+        if (!(Number(rec.amount) > 0 && Number(rec.amount) <= 200)) return json({ error: "Only small demo invoices are sent." }, 400);
+        const stop = await claudeGuard(env, request, "judge sends", 3, 60); if (stop) return json({ error: stop }, 429);
+        const tools = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
+          configuration: { actions: { invoices: { get: true, send: true } }, context: { sandbox: true } } }).getTools();
+        const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: SEND_SYSTEM, tools: SEND_TOOLS });
+        let agent;
+        try { agent = await runSendAgent({ llm, tools, approved: { id: rec.id, lead: "the judge (as a customer)", ad: rec.ad, amount: String(rec.amount) } }); }
+        catch (e) { return json({ error: `The send agent could not run: ${String(e?.message || e).slice(0, 200)}` }, 502); }
+        const fresh = await pp.getInvoice(rec.id);
+        Object.assign(rec, { status: fresh.status, invoice_number: fresh.detail?.invoice_number || null, pay_url: fresh.detail?.metadata?.recipient_view_url || null,
+          ...(agent.sent && fresh.status && fresh.status !== "DRAFT" ? { sent_at: new Date().toISOString(), sent_by: "send agent (Claude + PayPal Agent Toolkit)" } : {}) });
+        await env.LEDGER.put(`try:${rec.id}`, JSON.stringify(rec), { expirationTtl: 60 * 86400 });
+        return json({ invoice: publicTry(rec), agent: { summary: agent.summary, trace: agent.trace } });
+      }
+
+      // The judge's invoice as PayPal reports it now: read live until it is paid.
+      if (url.pathname === "/api/judge/try/status") {
+        const id = url.searchParams.get("id") || "";
+        let rec = /^INV2-[A-Z0-9-]+$/.test(id) ? await env.LEDGER.get(`try:${id}`, "json") : null;
+        if (!rec || rec.vid !== visitorId(request)) return json({ error: "Unknown invoice for this browser." }, 404);
+        if (rec.status !== "PAID" && rec.status !== "DRAFT") { try { rec = (await tryPaid(env, await pp.getInvoice(id))) || rec; } catch {} }
+        return json({ invoice: publicTry(rec), checked_at: new Date().toISOString() });
+      }
+
       if (url.pathname === "/api/judge/try" && request.method === "POST") {
         let body;
         try { body = await request.json(); } catch { return json({ error: "Send a message as JSON." }, 400); }
@@ -641,7 +690,7 @@ const app = {
             let out = {}; try { out = JSON.parse(String(await toolkit.create_invoice.execute(params))); } catch {}
             const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
             if (!/^INV2-[A-Z0-9-]+$/.test(id)) return { error: "PayPal returned no invoice id" };
-            await env.LEDGER.put(`try:${id}`, JSON.stringify({ id, lead: lead.lead, ad: lead.ad, email: lead.email, channel: lead.channel,
+            await env.LEDGER.put(`try:${id}`, JSON.stringify({ id, vid: visitorId(request), lead: lead.lead, ad: lead.ad, email: lead.email, channel: lead.channel,
               amount: p.total, lines: p.lines, note: p.note, reason: p.reason, status: "DRAFT", drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() }));
             return { id };
           };
@@ -750,6 +799,28 @@ const app = {
         const run = { pair, approved_at: approvedAt, finished_at: new Date().toISOString(), refund: agent.refund, summary: agent.summary, trace: agent.trace };
         if (agent.refund?.id) await env.LEDGER.put("run:refund", JSON.stringify(run));
         return json(run);
+      }
+
+      // Same double charge, two buyers: the judge picks what the buyer wrote and the refund agent decides live. Real Claude and
+      // the same code limits; the refund tool is simulated here (no money moves), the real refund is the one below it.
+      if (url.pathname === "/api/judge/refund-try" && request.method === "POST") {
+        let body; try { body = await request.json(); } catch { body = {}; }
+        const SAID = {
+          siblings: ["Booked the trial for my daughter Mia.", "And her brother Sam too, I paid for him separately."],
+          twice: ["Booked one trial for Mia.", "The page froze after I pressed Pay, so I pressed it again. I think I paid twice."],
+        };
+        const context = SAID[body.variant];
+        if (!context) return json({ error: "Pick one of the two buyers." }, 400);
+        const stop = await claudeGuard(env, request, "refund tries", 4, 80); if (stop) return json({ error: stop }, 429);
+        const pair = { first: { capture_id: "TRY-1ST", payer_key: "same-payer", ad: "trial_video", amount: "49.00", currency: "USD", captured_at: "2026-10-28T10:49:51.000Z" },
+          second: { capture_id: "TRY-2ND", payer_key: "same-payer", ad: "trial_video", amount: "49.00", currency: "USD", captured_at: "2026-10-28T10:53:27.000Z" }, seconds: 216, context };
+        const tools = { create_refund: { execute: async () => JSON.stringify({ id: "SIMULATED", status: "COMPLETED", note: "simulated on the judge path; no money moved" }) },
+          get_refund: { execute: async (a) => JSON.stringify({ id: a.refund_id, status: "COMPLETED", amount: { value: "49.00", currency_code: "USD" } }) } };
+        const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REFUND_SYSTEM, tools: REFUND_TOOLS });
+        try {
+          const out = await runRefundAgent({ llm, tools, pair });
+          return json({ variant: body.variant, said: context, decision: out.refund ? "refund" : "decline", summary: out.summary, trace: out.trace, simulated: true });
+        } catch (e) { return json({ error: `The refund agent could not run: ${String(e?.message || e).slice(0, 200)}` }, 502); }
       }
 
       // The last refund the refund agent made, for the judge path: the flagged pair, the approval, the toolkit calls, PayPal's status.
