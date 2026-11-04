@@ -197,7 +197,7 @@ getJSON("/api/runs/week").then(({ run }) => {
   if (!run) { sec.append($("p", { className: "note", textContent: "No synthetic week has been run yet; the dashboard's “Or try a synthetic week” runs one." })); return; }
   sec.append($("p", { className: "reason" }, [$("span", { className: "tag", textContent: `SYNTHETIC: ${run.week.name}` }), ` ${run.week.story}`]));
   const up = (run.recommendation.actions || []).find((a) => a.change === "increase");
-  if (up) { box("c-syn").textContent = `${name(up.ad)} → raise`; box("c-syn-why").textContent = "Enough paid orders, and it covers its spend after costs and PayPal fees: the same agent and gate allow the raise (step 4)."; }
+  if (up) { box("c-syn").textContent = `${name(up.ad)} → raise`; box("c-syn-why").textContent = "Enough paid orders, and it covers its spend after costs and PayPal fees: the same agent and gate allow the raise (step 7, under More detail)."; }
   for (const a of run.recommendation.actions || []) {
     const up = a.change === "increase", down = a.change === "reduce" || a.change === "pause";
     sec.append($("p", { className: `verdict ${up ? "ok" : ""}`, style: down || up ? "" : "background:var(--grey-bg);color:var(--grey)", textContent: `${CHANGE[a.change] || a.change}: ${name(a.ad)}` }),
@@ -275,7 +275,7 @@ const showCommission = (d) => {
   sec.append($("div", { className: "loop" }, d.orders.map((o) => row(o.eligible ? "Earns" : /already paid/.test(o.why_not || "") ? "Paid" : "Does not earn", `Capture ${o.capture_id}, ${money(Math.round(Number(o.amount) * 100))}${o.via === "invoice" ? " (invoice after a chat)" : ""}${o.why_not ? `: ${o.why_not.replace("commission already paid", "commission paid")}` : ""}`,
     $("a", { href: `/trail?capture=${encodeURIComponent(o.capture_id)}`, textContent: " trail →" })))));
   for (const b of d.batches) sec.append($("div", { className: "rule" }, [$("b", { textContent: `Paid by the commission agent, ${when(b.at)}: ` }),
-    `PayPal Payouts batch ${b.batch_id}, ${money(Math.round(Number(b.total) * 100))} for ${(b.capture_ids || []).length} paid order(s), PayPal now says ${b.read_back?.item_status || b.read_back?.status || b.status}${b.read_back?.transaction_id ? ` (transaction ${b.read_back.transaction_id})` : ""}. `, b.summary ? `The agent at the time: “${b.summary}”` : ""]));
+    `PayPal Payouts batch ${b.batch_id}, ${money(Math.round(Number(b.total) * 100))} for ${(b.capture_ids || []).length} paid order(s), the payment to the creator (the batch's item) is ${b.read_back?.item_status || "not read yet"} and the batch is ${b.read_back?.status || b.status}, read from PayPal${b.read_back?.transaction_id ? `, transaction ${b.read_back.transaction_id}` : ""}. `, b.summary ? `The agent at the time: “${b.summary}”` : ""]));
   if (d.owed_back?.length) sec.append($("p", { className: "note", textContent: `Owed back after a refund or lost dispute: ${d.owed_back.join(", ")} (shown, not clawed back automatically).` }));
   if (earning) {
     const btn = $("button", { className: "btn primary", type: "button", textContent: `Approve: let the agent pay ${earning} order(s) of commission` });
@@ -300,7 +300,7 @@ Promise.all([getJSON("/api/judge/refund-loop").catch(() => null), getJSON("/api/
   const rf = r?.last?.refund, pill = (id, text) => { const e = document.querySelector(`#${id} .pp`); if (e && text) e.textContent = text; };
   if (rf) pill("win-refund", `PayPal: $${Number(rf.amount).toFixed(2)} refunded, ${rf.read_back?.status || rf.status}`);
   const b = c?.batches?.[0];
-  if (b) pill("win-pay", `PayPal Payouts: $${Number(b.total).toFixed(2)} for ${(b.capture_ids || []).length} orders, ${b.read_back?.item_status || b.status}`);
+  if (b) pill("win-pay", `PayPal Payouts: $${Number(b.total).toFixed(2)} for ${(b.capture_ids || []).length} orders, creator's item ${b.read_back?.item_status || b.status}`);
 });
 
 // Same double charge, two buyers: Claude decides each live (refund tool simulated; the real refund is shown below).
@@ -331,7 +331,7 @@ async function shopGap() {
   const pct = (x) => `${(x * 100).toFixed(1)}%`;
   try {
     const { read: r } = await getJSON("/data/merchant-case.json");
-    box("gap-sub").textContent = `A gift shop that sells in chat; the author runs its Meta ads. October 2026: ${vnd(r.totals.spend)} (about $${Math.round(r.totals.spend_usd).toLocaleString("en-US")}) on three ad groups, ${r.totals.conversations.toLocaleString("en-US")} chats, ${r.totals.paid} orders paid and kept after refunds.`;
+    box("gap-sub").textContent = `A gift shop that sells in chat; the author runs its Meta ads and reports these figures from the shop's order book and the ad account (that account's exports are no longer accessible, so only totals are shown). October 2026: ${vnd(r.totals.spend)} (about $${Math.round(r.totals.spend_usd).toLocaleString("en-US")}) on three ad groups, ${r.totals.conversations.toLocaleString("en-US")} chats, ${r.totals.paid} orders paid and kept after refunds.`;
     const bar = (label, x, cls) => $("div", { className: `gap-bar ${cls || ""}` }, [$("span", { textContent: label }), $("div", {}, $("i", { style: `width:${(x * 100).toFixed(1)}%` })), $("span", { textContent: pct(x) })]);
     box("gap-grid").replaceChildren(...r.groups.map((g) => $("div", { className: "gap-card" }, [
       $("span", { className: "k", textContent: `${g.id} · ${g.name}` }),
@@ -342,7 +342,7 @@ async function shopGap() {
     box("gap-rank").replaceChildren("Ranked by cost per chat, the ad report's view: ", r.rank_by_cost_per_conversation.join(", "), ". Ranked by money paid and kept: ",
       $("span", { className: "go", textContent: r.rank_by_money_kept.join(", ") }), ". The cheapest chats came from the ad that brought the least money.");
     const split = r.paid_signal_split.map((s) => `${s.id} ${Math.round(s.share_now * 100)}% → ${Math.round(s.share_proposed * 100)}%`).join(", ");
-    box("gap-src").replaceChildren(`Paid Signal's budget rule (the same code as the demo) points the money ${split}; a person approves each step. These payments did not go through Paid Signal: the shop is why it exists, not a result of it. Numbers: `,
+    box("gap-src").replaceChildren(`Paid Signal's budget rule (the same code as the demo: paid orders kept per dollar of spend, refunds excluded, not revenue or profit) would suggest ${split}; a person decides, and Paid Signal does not change a live Meta budget. The shop's payments did not go through Paid Signal or PayPal: the shop is why it exists, not a result of it. "Money" is revenue after refunds, before product, delivery and fees. Numbers: `,
       $("a", { href: "https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/merchant-case-2026-10.json", textContent: "merchant-case-2026-10.json" }), ".");
   } catch (e) { box("gap-sub").textContent = `The shop's numbers could not load (${e.message}).`; }
 }

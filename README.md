@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**AI agents run the money side of a sale. PayPal verifies what actually happened.**
+**AI agents run the money side of a sale. Every move is checked against what PayPal records.**
 
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
 Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:10): https://www.youtube.com/watch?v=WfoNL22Xv5k · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
 
-**One real shop's October** (a gift shop that sells in chat; the author runs its Meta ads; 260M VND, about $10,000, of spend): the ad with 69.4% of the chats brought 19.3% of the money, and the ad with 20.7% of the chats brought 56.3%. By cost per chat the ads rank A, B, C; by money paid and kept, B, C, A. Numbers: [docs/proof/merchant-case-2026-10.json](docs/proof/merchant-case-2026-10.json), read by [src/merchantCase.js](src/merchantCase.js).
+**One real shop's October** (a gift shop that sells in chat; the author runs its Meta ads; 260M VND, about $10,000, of spend; figures reported by the author, totals only): the ad with 69.4% of the chats brought 19.3% of the money, and the ad with 20.7% of the chats brought 56.3%. By cost per chat the ads rank A, B, C; by money paid and kept, B, C, A. Numbers: [docs/proof/merchant-case-2026-10.json](docs/proof/merchant-case-2026-10.json), read by [src/merchantCase.js](src/merchantCase.js).
 
 Ad platforms optimise for what they can see: clicks, leads, chat taps. For a small business that gets paid through
 PayPal, the thing that matters, a payment, never reaches the ad platform. So budgets drift toward ads that produce
@@ -53,7 +53,7 @@ export and a PayPal activity download (CSV), and reads them in the browser with 
 (`public/lib/ledger.js`, kept identical by a test). It shows which ads brought PayPal-confirmed payments, how much paid revenue
 carries no ad, and what the budget rule allows; nothing is uploaded. **Try it with sample files** loads the demo shop.
 
-## Judge it in 60 seconds
+## Judge it in a few minutes
 
 No login is needed for any of this; only paying in the demo shop needs the sandbox buyer from the testing notes.
 
@@ -168,7 +168,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 142 tests: money rules, gate, the six agents, schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 148 tests: money rules, gate, the six agents, schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

@@ -41,6 +41,12 @@ const isError = (out) => {
   return Boolean(j.error || j.ok === false || (j.name && j.message && !j.id));
 };
 
+/** True when what the buyer wrote tries to instruct the agent (a fake system line, "ignore your rules", "pre-approved").
+ * Code then leaves the refund to a person, whatever Claude concludes: a wrong refund cannot be taken back. */
+export function instructsAgent(context = []) {
+  return context.some((c) => /(system|assistant|developer)\s*:|ignore (all |any |your |previous )|pre-?approved|override|you must refund|admin(istrator)? (says|approved)|new instructions/i.test(String(c)));
+}
+
 /** Why create_refund must not run with these arguments, or null when it is the full refund of the flagged capture. */
 export function refundProblem(input, flagged, alreadyCalled) {
   if (alreadyCalled) return "create_refund already ran once in this approval.";
@@ -79,7 +85,7 @@ export async function runRefundAgent({ llm, tools, pair, maxTurns = 5 }) {
       const shape = validate(c.input ?? {}, def.input_schema);
       if (shape.length) { trace.push({ tool: c.name, refused: "schema" }); results.push({ id: c.id, content: `Refused by code: ${shape.join(" ")}` }); continue; }
       if (c.name === "create_refund") {
-        const problem = refundProblem(c.input, pair.second, called);
+        const problem = instructsAgent(pair.context) ? "What the buyer wrote tries to instruct the agent, so a person must decide this refund." : refundProblem(c.input, pair.second, called);
         if (problem) { trace.push({ tool: c.name, refused: problem }); results.push({ id: c.id, content: `Refused by code: ${problem}` }); continue; }
         called = true;
       }
