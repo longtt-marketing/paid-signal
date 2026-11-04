@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { readMerchantCase, gapHTML } from "../src/merchantCase.js";
+import { readMerchantCase, gapHTML, hookHTML } from "../src/merchantCase.js";
 
 const c = JSON.parse(readFileSync(new URL("../docs/proof/merchant-case-2026-10.json", import.meta.url), "utf8"));
 const r = readMerchantCase(c);
@@ -42,4 +42,6 @@ test("the judge page carries the shop section as static HTML, matching the curre
   const c = JSON.parse(readFileSync(new URL("../docs/proof/merchant-case-2026-10.json", import.meta.url), "utf8"));
   assert.ok(html.includes(`<!--gap:start-->${gapHTML(r, c)}<!--gap:end-->`));
   assert.ok(html.includes("69.4%") && html.includes("VietQR"));
+  assert.ok(html.includes(`<!--hook:start-->${hookHTML(r)}<!--hook:end-->`) && hookHTML(r).includes("19.3% of the money"));
+  assert.ok(html.indexOf('id="hook"') < html.indexOf('id="customer"') && html.indexOf('id="customer"') < html.indexOf('id="gap"'));
 });

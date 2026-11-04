@@ -160,12 +160,19 @@ export async function syncDisputes(env) {
   return { checked_at: new Date().toISOString(), disputes: list.length, open: list.filter((x) => x.status !== "RESOLVED").length, ledger_payments_marked: marked };
 }
 
-export async function listPayments(env) {
-  return (await cachedList(env, "pay:")).sort((a, b) => String(a.captured_at).localeCompare(String(b.captured_at)));
+// The evidence ledger is frozen: every payment captured before this moment (or marked evidence) is what the judge path,
+// the story and /proof quote, the same for everyone. A payment a visitor makes later belongs to that visitor: it shows
+// on their own dashboard, trail and reconciliation, and never changes what other visitors see.
+export const EVIDENCE_BEFORE = "2026-11-04T19:00:00Z";
+export const isEvidence = (/** @type {any} */ p) => Boolean(p?.evidence) || String(p?.captured_at || "") < EVIDENCE_BEFORE;
+/** @param {any} env @param {string|null} [visitor] the visitor whose own payments join the evidence ledger */
+export async function listPayments(env, visitor = null) {
+  return (await cachedList(env, "pay:")).filter((p) => isEvidence(p) || (visitor && p.visitor === visitor))
+    .sort((a, b) => String(a.captured_at).localeCompare(String(b.captured_at)));
 }
 
 /** Store what the capture proves: amount, status, the click that led to it. The payer email is kept only as a hash. */
-export async function recordCapture(env, order, userAgent) {
+export async function recordCapture(env, order, userAgent, visitor = null) {
   const pu = order.purchase_units?.[0] || {};
   const cap = pu.payments?.captures?.[0];
   if (!cap) return null;
@@ -180,10 +187,11 @@ export async function recordCapture(env, order, userAgent) {
     payer_email_sha256: email ? await sha(email.trim().toLowerCase()) : null,
   };
   if (userAgent) record.user_agent = userAgent.slice(0, 300); // the buyer's browser, for Meta's website events
+  if (visitor) record.visitor = visitor; // whose payment this is, if it falls after the evidence freeze
   // a replayed capture must not wipe refunds already recorded against it
   const prev = await env.LEDGER.get(`pay:${cap.id}`, "json");
   if (prev) { record.user_agent ??= prev.user_agent; record.fee ??= prev.fee ?? null; record.refunded_amount = prev.refunded_amount; record.status = prev.status; if (prev.refunded_at) record.refunded_at = prev.refunded_at;
-    for (const k of ["confirmed_distinct", "refund_id", "refunded_by", "buyer_message"]) if (prev[k]) record[k] = prev[k]; }
+    for (const k of ["confirmed_distinct", "refund_id", "refunded_by", "buyer_message", "visitor", "evidence"]) if (prev[k]) record[k] = prev[k]; }
   await env.LEDGER.put(`pay:${cap.id}`, JSON.stringify(record)); await forget("pay:");
   return record;
 }
@@ -198,7 +206,7 @@ export async function sendToMeta(env, url, record, { recheckHeld = false } = {})
   const sent = await env.LEDGER.get(`meta:${record.capture_id}`, "json");
   // recheckHeld: a person has since confirmed a held payment as a separate order, so the hold is decided again (same event_id)
   if (sent && (sent.ok || (sent.held && !recheckHeld))) return sent; // a send that failed (Meta timed out) is tried again
-  const payments = await listPayments(env);
+  const payments = await listPayments(env, record.visitor || null);
   const { events, held } = await metaEvents([record], { sourceUrl: `${url.origin}/shop.html`, hold: heldDuplicates(payments) });
   let out;
   if (!events.length) out = { capture_id: record.capture_id, held: held[0]?.reason || "held", at: new Date().toISOString() };
@@ -384,6 +392,7 @@ export async function recordInvoicePayment(env, invoice, url = new URL("https://
       refunded_amount: "0.00", payer_email_sha256: kept?.email ? await sha(String(kept.email).trim().toLowerCase()) : null, via: "invoice",
       // what the buyer wrote before paying: the refund agent reads it as evidence if this payment is ever flagged
       ...(kept?.message ? { buyer_message: kept.message } : {}),
+      ...(kept?.approved_visitor ? { visitor: kept.approved_visitor } : {}),
     }));
     // An invoice payment teaches Meta too, the moment PayPal says it is paid.
     await sendToMeta(env, url, await env.LEDGER.get(`pay:${id}`, "json"));

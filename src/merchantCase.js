@@ -54,3 +54,13 @@ export function gapHTML(r, c) {
     + `<p class="gap-src" id="gap-src"><b>How the shop counted.</b> ${esc(c.payment || "")} ${esc(c.attribution || "")} That matching is done by hand today; it is the step Paid Signal does from PayPal's records. The figures are reported by the author from the order book and the ad account; the account's exports are no longer accessible, so only totals are shown. "Money" is revenue after refunds, before product, delivery and fees.</p>`
     + `<p class="gap-src"><b>What Paid Signal would suggest.</b> Its split rule (<code>proposeSplit</code>, the same code as the demo: paid orders kept per dollar of spend, refunds excluded, order value not used) gives ${split}. That is an illustration, not a measured lift or an optimal allocation; which moves the budget agent may make is a separate rule (<code>supportedMoves</code>). A person decides, and Paid Signal does not change a live Meta budget. The shop's payments did not go through Paid Signal or PayPal: the shop is why it exists, not a result of it. Numbers: <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/merchant-case-2026-10.json">merchant-case-2026-10.json</a>.</p>`;
 }
+
+/**
+ * The one line at the top of the judge path; the full shop card sits below "Be the customer".
+ * @param {ReturnType<typeof readMerchantCase>} r
+ */
+export function hookHTML(r) {
+  const a = r.groups.reduce((x, g) => (g.share_conversations > x.share_conversations ? g : x));
+  const pct = (/** @type {number} */ x) => `${(x * 100).toFixed(1)}%`;
+  return `Why it matters: in one real shop's October (figures reported by the author), the ad with <b>${pct(a.share_conversations)} of the chats</b> brought <b>${pct(a.share_net)} of the money</b>. <a href="#gap">See the three ads</a>`;
+}

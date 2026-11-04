@@ -34,7 +34,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
     if (url.pathname === "/api/reconcile" && request.method === "POST") {
       const { csv } = await request.json();
       const parsed = parseAdCsv(csv);
-      const payments = await listPayments(env);
+      const payments = await listPayments(env, visitorId(request));
       const rec = reconcile(parsed.rows, payments);
       // Redact person-level IDs here; Meta gets the original payload, while public pages show its shape.
       const meta = await metaFromLedger(payments, `${url.origin}/shop.html`);
@@ -46,7 +46,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
     // number and evidence id comes from the reconciliation; otherwise the problems go back to it for one repair.
     if (url.pathname === "/api/agent/check" && request.method === "POST") {
       const { csv, recommendation } = await request.json();
-      const payments = await listPayments(env);
+      const payments = await listPayments(env, visitorId(request));
       const rec = reconcile(parseAdCsv(csv).rows, payments);
       const out = { headline: String(recommendation?.headline || ""), caveats: String(recommendation?.caveats || ""), actions: (recommendation?.actions || []).slice(0, 4) };
       const problems = checkRecommendation(rec, payments, out);
@@ -61,7 +61,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       // a synthetic week (src/scenarios.js) has enough paid orders for a real decision; it never touches the PayPal ledger
       const week = body.scenario ? scenario(String(body.scenario)) : null;
       if (body.scenario && !week) return json({ error: "Unknown scenario." }, 400);
-      const payments = week ? week.payments : await listPayments(env);
+      const payments = week ? week.payments : await listPayments(env, visitorId(request));
       const rec = reconcile(week ? week.ads : parseAdCsv(body.csv).rows, payments);
       const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined });
       const started = Date.now();

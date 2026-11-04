@@ -1,6 +1,6 @@
 // Checkout, capture, refunds, PayPal webhooks, the money trail and the ledger.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
-import { utc, PRODUCT, AD_KEYS, CLICK_ID, json, sha, publicLead, cachedList, applyDispute, listPayments, recordCapture, sendToMeta, applyRefund, heldDuplicates, SEEDED_BEFORE, demoLeads, recordInvoicePayment, tryPaid, guard, paypal, packClick, parseAdCsv, reconcile, possibleDuplicates, paybackOdds, disputeState, supportedMoves, adName } from "../core.js";
+import { isEvidence, visitorId, utc, PRODUCT, AD_KEYS, CLICK_ID, json, sha, publicLead, cachedList, applyDispute, listPayments, recordCapture, sendToMeta, applyRefund, heldDuplicates, SEEDED_BEFORE, demoLeads, recordInvoicePayment, tryPaid, guard, paypal, packClick, parseAdCsv, reconcile, possibleDuplicates, paybackOdds, disputeState, supportedMoves, adName } from "../core.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
@@ -26,9 +26,9 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const { order_id } = await request.json();
       if (!/^[A-Z0-9]{10,24}$/.test(String(order_id))) return json({ error: "Bad order id." }, 400);
       let order = await orders.captureOrder(order_id, `cap-${order_id}`);
-      let record = await recordCapture(env, order, request.headers.get("user-agent"));
+      let record = await recordCapture(env, order, request.headers.get("user-agent"), visitorId(request));
       // a 2xx whose body lacked the capture (the SDK's schema check failed on it) is read back from PayPal before recording
-      if (!record) { order = await orders.getOrder(order_id); record = await recordCapture(env, order, request.headers.get("user-agent")); }
+      if (!record) { order = await orders.getOrder(order_id); record = await recordCapture(env, order, request.headers.get("user-agent"), visitorId(request)); }
       const meta = await sendToMeta(env, url, record);
       return json({ status: order.status, payment: record, meta });
     }
@@ -41,6 +41,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       if (amount !== undefined && !(Number(amount) > 0 && Number(amount) <= left)) return json({ error: `Refund between $0.01 and $${left.toFixed(2)}.` }, 400);
       // the seeded demo payments carry the scenarios page and the dashboard story through judging: preview, don't send
       const partial = amount !== undefined && Number(amount) < left;
+      if (isEvidence(cur) && cur.visitor !== visitorId(request)) return json({ preview: true, message: `Capture ${capture_id} is part of the frozen evidence ledger the judge path quotes, so a refund here is only previewed. Pay in the demo shop and refund your own payment to see a real sandbox refund.` });
       if (String(cur.captured_at) < SEEDED_BEFORE) return json({ preview: true, message: `Capture ${capture_id} is one of the demo's seeded sandbox payments, so this refund is only previewed: its ad would lose $${amount ?? left} of paid revenue, and ${partial ? (cur.source === "g" ? "its Google row would become a restatement" : "its paid revenue would drop here; a Meta event already sent keeps its value, as Meta's Conversions API has no retraction") : (cur.source === "g" ? "its Google row would become a retraction" : "its Meta event would be held back if not yet sent; one already sent stays, as Meta's Conversions API has no retraction")}. To run a real sandbox refund, pay in the demo shop and refund that payment.` });
       const stop = await guard(env, request, "refunds", 3, 30); if (stop) return json({ error: stop }, 429);
       // the same refund retried (double click, network retry) carries the same request id, so PayPal applies it once
@@ -88,7 +89,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
     // The money trail of one payment: the ad click, what PayPal itself says about the capture (read now, not from the
     // ledger), what Meta answered, and what the payment changes for its ad. Defaults to the payment Meta got at capture.
     if (url.pathname === "/api/trail") {
-      const [payments, metas] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
+      const [payments, metas] = await Promise.all([listPayments(env, visitorId(request)), cachedList(env, "meta:")]);
       const metaBy = Object.fromEntries(metas.map((m) => [m.capture_id, m]));
       const want = url.searchParams.get("capture");
       if (want && !payments.some((x) => x.capture_id === want)) return json({ error: `No payment ${want.slice(0, 40)} in the ledger.` }, 404);
@@ -136,7 +137,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
     }
 
     if (url.pathname === "/api/ledger") {
-      const [payments, meta] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
+      const [payments, meta] = await Promise.all([listPayments(env, visitorId(request)), cachedList(env, "meta:")]);
       // the payer's email hash stays on the server (duplicate check, Meta match); the public ledger gets a salted key that
       // only says "same payer" and cannot be checked against a guessed email
       const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, user_agent, psid, lead_id, ...p }) => ({ ...p, ...(p.refunded_at ? { refunded_at: utc(p.refunded_at) } : {}), clicked_at: p.clicked_at || null, payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));

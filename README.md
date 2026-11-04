@@ -159,6 +159,8 @@ AG Studio (1.5 MB gzip) is its own chunk, loaded when its section scrolls near o
 the live site (Playwright, 2026-10-29): ready in 1.7 s on desktop and 2.3 s on a throttled phone (4G, 4x CPU), down
 from 5 s and 18 s with one bundle.
 
+**Evidence ledger.** Payments captured before 4 Nov 2026 19:00 UTC are the frozen evidence ledger that the judge path, this README and /proof quote; a payment a visitor makes later shows only in that visitor's own dashboard, trail and reconciliation (`listPayments(env, visitor)` in `src/core.js`), and refunds or duplicate decisions there act only on the visitor's own payments.
+
 **Security.** This is a public demo with no owner login: writes must be JSON, a request from another site is refused (CSRF protection, not authentication), and the routes that move sandbox money or spend Claude turns answer only this site’s pages; there are per-visitor burst limits and daily caps; ad keys and
 click ids are allow-listed; the Claude proxy serves only AG Studio's own tools; PayPal webhooks are signature-verified;
 pages carry a Content Security Policy and `frame-ancestors 'none'`; server errors never return PayPal or Claude details.
@@ -168,7 +170,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 152 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 153 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

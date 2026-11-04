@@ -1,6 +1,6 @@
 // Invoices (draft, approve, send, sync), the judge path's try-it flow, the revenue and chase agents, double-payment refunds.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
-import { sendToMeta, guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "../core.js";
+import { isEvidence, sendToMeta, guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "../core.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
@@ -131,7 +131,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const approvedAt = new Date().toISOString();
       const agent = await runSendAgent({ llm, tools, approved: { id, lead: rec.lead, ad: rec.ad, amount: String(rec.amount || "49.00") } });
       const fresh = await pp.getInvoice(id);
-      Object.assign(rec, { status: fresh.status, approved_at: approvedAt, pay_url: fresh.detail?.metadata?.recipient_view_url || rec.pay_url || null,
+      Object.assign(rec, { approved_visitor: visitorId(request), status: fresh.status, approved_at: approvedAt, pay_url: fresh.detail?.metadata?.recipient_view_url || rec.pay_url || null,
         // "sent by the agent" only when PayPal itself no longer shows a draft
         ...(agent.sent && fresh.status && fresh.status !== "DRAFT" ? { sent_at: new Date().toISOString(), sent_by: "send agent (Claude + PayPal Agent Toolkit)" } : {}) });
       await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); await forget("inv:");
@@ -142,7 +142,8 @@ export async function route({ request, env, url, pp, orders, ip }) {
     // again as a paid order, for the ad, Meta and the commission. Recorded on the payment with the reason and time.
     if (url.pathname === "/api/duplicates/distinct" && request.method === "POST") {
       const { capture_id, reason } = await request.json();
-      const payments = await listPayments(env);
+      const payments = await listPayments(env, visitorId(request));
+      if (isEvidence(payments.find((p) => p.capture_id === capture_id))) return json({ error: "That payment is part of the frozen evidence ledger the judge path quotes; try this on a payment you made in the demo shop." }, 403);
       if (!possibleDuplicates(payments).some((d) => d.capture_id === capture_id)) return json({ error: "That capture is not flagged as a likely double payment." }, 400);
       const stop = await guard(env, request, "duplicate reviews", 5, 50); if (stop) return json({ error: stop }, 429);
       const p = await env.LEDGER.get(`pay:${capture_id}`, "json");
@@ -158,7 +159,8 @@ export async function route({ request, env, url, pp, orders, ip }) {
     // if it is one, refunds the second capture in full with create_refund and reads the refund back with get_refund.
     if (url.pathname === "/api/duplicates/refund" && request.method === "POST") {
       const { capture_id } = await request.json();
-      const payments = await listPayments(env);
+      const payments = await listPayments(env, visitorId(request));
+      if (isEvidence(payments.find((p) => p.capture_id === capture_id))) return json({ error: "That payment is part of the frozen evidence ledger the judge path quotes (its real refund is shown on the judge path); try this on a double payment you made in the demo shop." }, 403);
       const flag = possibleDuplicates(payments).find((d) => d.capture_id === capture_id);
       if (!flag) return json({ error: "That capture is not flagged as a likely double payment (or it is already refunded)." }, 400);
       // one approval at a time per capture, so two clicks cannot refund twice (the toolkit call carries no request id)
