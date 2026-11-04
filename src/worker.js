@@ -11,6 +11,8 @@ const OWNER_ASK = "Raise the free guide's budget: it brings the most leads.";
 const utc = (t) => { const d = new Date(t || Date.now()); return isNaN(d) ? new Date().toISOString() : d.toISOString(); };
 import { runAgent, anthropicLLM, checkRecommendation } from "./agent.js";
 import { runSendAgent, SEND_SYSTEM, SEND_TOOLS } from "./sendAgent.js";
+import { runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS } from "./refundAgent.js";
+import { runPayoutAgent, commissionOrders, PAYOUT_SYSTEM, PAYOUT_TOOLS } from "./payoutAgent.js";
 import { parseCsv, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS } from "./revenue.js";
 import { runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "./chaseAgent.js";
 import { scenario, grade } from "./scenarios.js";
@@ -316,6 +318,17 @@ async function mcpTool(env, url, name, args) {
 const heldDuplicates = (payments) => new Set(possibleDuplicates(payments).map((d) => d.capture_id));
 // payments captured before this are the seeded demo ledger; refunds on them are previewed, not sent
 const SEEDED_BEFORE = "2026-10-29T09:00:00Z";
+// The creator program: the parent in the testimonial carousel is paid per PayPal-confirmed paid order from that ad, not per
+// lead. In the sandbox a PayPal test account (payer id below) stands in for the creator.
+const CREATOR = { ad: "parent_carousel", creator: "the parent who made the testimonial (fictional; a PayPal sandbox account stands in)", rate: "5.00", receiver: "TEBYBGHQP8TSW" };
+async function commissionState(env) {
+  const [payments, paid] = await Promise.all([listPayments(env), cachedList(env, "commission:")]);
+  const paidOut = Object.fromEntries(paid.flatMap((b) => (b.capture_ids || []).map((id) => [id, b.batch_id])));
+  const orders = commissionOrders(payments, CREATOR, heldDuplicates(payments), paidOut, disputeState);
+  // a refund or a lost dispute after the payout: the commission on it is owed back (shown, not clawed back automatically)
+  const owedBack = paid.flatMap((b) => (b.capture_ids || []).filter((id) => { const p = payments.find((x) => x.capture_id === id); return p && (Number(p.refunded_amount || 0) >= Number(p.amount) || disputeState(p) === "lost"); }));
+  return { orders, batches: paid.sort((a, b) => String(b.at).localeCompare(String(a.at))), owed_back: owedBack };
+}
 
 // metaEvents hashes the email itself; here only the stored hash exists, so pass it through as an already-hashed field.
 async function metaFromLedger(payments, sourceUrl) {
@@ -450,7 +463,7 @@ const app = {
       const origin = request.headers.get("origin");
       if (origin && origin !== url.origin && url.pathname !== "/mcp") return json({ error: "Cross-site requests are not accepted." }, 403);
       // the routes that spend Claude turns answer only this site's own pages, which always send their Origin
-      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/judge/try" || url.pathname === "/api/invoices/approve" || url.pathname === "/api/refund" || url.pathname === "/api/decisions") && origin !== url.origin)
+      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/judge/try" || url.pathname === "/api/invoices/approve" || url.pathname === "/api/refund" || url.pathname === "/api/duplicates/refund" || url.pathname === "/api/commissions/pay" || url.pathname === "/api/decisions") && origin !== url.origin)
         return json({ error: "Only the Paid Signal page can call this." }, 403);
       if (env.BURST && !(await env.BURST.limit({ key: ip })).success) return json({ error: "Too many requests. Wait a minute and try again." }, 429);
     }
@@ -567,7 +580,7 @@ const app = {
         const secs = (a, b) => (a && b ? Math.round((b - a) / 100) / 10 : null);
         return json({
           payment: { capture_id: p.capture_id, order_id: p.order_id, amount: p.amount, currency: p.currency, captured_at: p.captured_at, via: p.via || "checkout", channel: p.channel || "web",
-            status: p.status, refunded_amount: p.refunded_amount || "0.00", refunded_at: p.refunded_at ? utc(p.refunded_at) : null, dispute: p.dispute || null, dispute_state: disputeState(p), held_as_duplicate: held },
+            status: p.status, refunded_amount: p.refunded_amount || "0.00", refunded_at: p.refunded_at ? utc(p.refunded_at) : null, refunded_by: p.refunded_by || null, refund_id: p.refund_id || null, dispute: p.dispute || null, dispute_state: disputeState(p), held_as_duplicate: held },
           click: { ad: p.ad || null, ad_name: p.ad ? adName(p.ad) : null, source: p.source || null, click_id: p.click_id || null, clicked_at: p.clicked_at || null },
           paypal,
           meta: m && { ok: Boolean(m.ok), held: m.held || null, event_id: m.event_id || null, value: m.value ?? null, events_received: m.events_received ?? null, fbtrace_id: m.fbtrace_id || null,
@@ -586,7 +599,7 @@ const app = {
         const [payments, meta] = await Promise.all([listPayments(env), cachedList(env, "meta:")]);
         // the payer's email hash stays on the server (duplicate check, Meta match); the public ledger gets a salted key that
         // only says "same payer" and cannot be checked against a guessed email
-        const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, user_agent, psid, lead_id, ...p }) => ({ ...p, ...(p.refunded_at ? { refunded_at: utc(p.refunded_at) } : {}), payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));
+        const keyed = await Promise.all(payments.map(async ({ payer_email_sha256, user_agent, psid, lead_id, ...p }) => ({ ...p, ...(p.refunded_at ? { refunded_at: utc(p.refunded_at) } : {}), clicked_at: p.clicked_at || null, payer_key: payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${payer_email_sha256}`)).slice(0, 12) : null })));
         // a Google-click buyer sent to Meta before Google buyers were routed to Google only: still a fact, no longer counted
         const source = Object.fromEntries(payments.map((p) => [p.capture_id, p.source]));
         const sends = meta.map((m) => (m.ok && source[m.capture_id] === "g" ? { ...m, superseded: "Google click, sent before Google buyers went to Google only" } : m));
@@ -706,6 +719,100 @@ const app = {
         return json({ invoice: publicInvoice(rec), agent });
       }
 
+      // A person approves resolving a likely double payment; the refund agent (Claude + PayPal Agent Toolkit) decides and,
+      // if it is one, refunds the second capture in full with create_refund and reads the refund back with get_refund.
+      if (url.pathname === "/api/duplicates/refund" && request.method === "POST") {
+        const { capture_id } = await request.json();
+        const payments = await listPayments(env);
+        const flag = possibleDuplicates(payments).find((d) => d.capture_id === capture_id);
+        if (!flag) return json({ error: "That capture is not flagged as a likely double payment (or it is already refunded)." }, 400);
+        // one approval at a time per capture, so two clicks cannot refund twice (the toolkit call carries no request id)
+        if (await env.LEDGER.get(`refund-lock:${capture_id}`)) return json({ error: "A refund for this capture is already running or done." }, 409);
+        const stop = await claudeGuard(env, request, "refund agent", 2, 10); if (stop) return json({ error: stop }, 429);
+        await env.LEDGER.put(`refund-lock:${capture_id}`, new Date().toISOString(), { expirationTtl: 3600 });
+        const key = async (p) => (p.payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${p.payer_email_sha256}`)).slice(0, 12) : "unknown");
+        const view = async (p) => ({ capture_id: p.capture_id, payer_key: await key(p), ad: p.ad, amount: p.amount, currency: p.currency || "USD", captured_at: utc(p.captured_at) });
+        const pair = { first: await view(payments.find((p) => p.capture_id === flag.first)), second: await view(payments.find((p) => p.capture_id === capture_id)), seconds: flag.seconds };
+        const tools = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
+          configuration: { actions: { payments: { createRefund: true, getRefunds: true } }, context: { sandbox: true } } }).getTools();
+        const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REFUND_SYSTEM, tools: REFUND_TOOLS });
+        const approvedAt = new Date().toISOString();
+        let agent;
+        try { agent = await runRefundAgent({ llm, tools, pair }); }
+        catch (e) { await env.LEDGER.delete(`refund-lock:${capture_id}`); return json({ error: `The refund agent could not run: ${String(e?.message || e).slice(0, 200)}` }, 502); }
+        let payment = null;
+        if (agent.refund?.id) {
+          // the webhook for this refund must not count it again
+          await env.LEDGER.put(`seen:${agent.refund.id}`, "1");
+          payment = await applyRefund(env, capture_id, agent.refund.amount, agent.refund.read_back?.create_time || new Date().toISOString());
+          if (payment) { payment.refunded_by = "refund agent (Claude + PayPal Agent Toolkit)"; payment.refund_id = agent.refund.id; await env.LEDGER.put(`pay:${capture_id}`, JSON.stringify(payment)); await forget("pay:"); }
+        } else await env.LEDGER.delete(`refund-lock:${capture_id}`);
+        const run = { pair, approved_at: approvedAt, finished_at: new Date().toISOString(), refund: agent.refund, summary: agent.summary, trace: agent.trace };
+        if (agent.refund?.id) await env.LEDGER.put("run:refund", JSON.stringify(run));
+        return json(run);
+      }
+
+      // The last refund the refund agent made, for the judge path: the flagged pair, the approval, the toolkit calls, PayPal's status.
+      if (url.pathname === "/api/judge/refund-loop") {
+        const [run, payments] = await Promise.all([env.LEDGER.get("run:refund", "json"), listPayments(env)]);
+        const open = possibleDuplicates(payments).map((d) => ({ capture_id: d.capture_id, first: d.first, seconds: d.seconds }));
+        return json({ last: run, open, checked_at: new Date().toISOString() });
+      }
+
+      // A person approves the creator's commission; the commission agent (Claude) picks the orders that earn it and pays
+      // with PayPal Payouts. Code pins the recipient, checks each order against the ledger and fixes the amount.
+      if (url.pathname === "/api/commissions/pay" && request.method === "POST") {
+        const st = await commissionState(env);
+        if (!st.orders.some((o) => o.eligible)) return json({ error: "No paid order of this ad is waiting for commission." }, 400);
+        if (await env.LEDGER.get("commission-lock")) return json({ error: "A commission payout is already running." }, 409);
+        const stop = await claudeGuard(env, request, "commission agent", 2, 10); if (stop) return json({ error: stop }, 429);
+        await env.LEDGER.put("commission-lock", "1", { expirationTtl: 120 });
+        const program = { ad: CREATOR.ad, ad_name: adName(CREATOR.ad), creator: CREATOR.creator, rate: CREATOR.rate };
+        const pay = {
+          // the batch id is derived from the orders paid, so a retry of the same payout is refused by PayPal, never paid twice
+          create: async ({ capture_ids, total, note }) => pp.createPayout({ batchId: `commission-${CREATOR.ad}-${(await sha([...capture_ids].sort().join(","))).slice(0, 16)}`,
+            receiver: CREATOR.receiver, value: total, note, subject: "Your Kite Robotics creator commission (demo)", itemId: [...capture_ids].sort().join("+").slice(0, 120) }),
+          get: (id) => pp.getPayout(id),
+        };
+        const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: PAYOUT_SYSTEM, tools: PAYOUT_TOOLS });
+        const approvedAt = new Date().toISOString();
+        let agent;
+        try { agent = await runPayoutAgent({ llm, pay, program, orders: st.orders }); }
+        catch (e) { await env.LEDGER.delete("commission-lock"); return json({ error: `The commission agent could not run: ${String(e?.message || e).slice(0, 200)}` }, 502); }
+        const run = { program: { ...program, rate_basis: "per PayPal-confirmed paid order" }, orders: st.orders, approved_at: approvedAt, finished_at: new Date().toISOString(),
+          payout: agent.payout, summary: agent.summary, trace: agent.trace, paid_by: "commission agent (Claude + PayPal Payouts)" };
+        if (agent.payout?.batch_id) { await env.LEDGER.put(`commission:${agent.payout.batch_id}`, JSON.stringify({ ...agent.payout, at: run.finished_at, approved_at: approvedAt, summary: agent.summary, trace: agent.trace })); await forget("commission:"); }
+        await env.LEDGER.delete("commission-lock");
+        return json(run);
+      }
+
+      // The creator's commission for the judge path: every order of the ad and why it earns or not, the payouts made, what is owed back.
+      if (url.pathname === "/api/judge/commission") {
+        let st = await commissionState(env);
+        // a payout batch starts PENDING; read it again from PayPal until it settles, and keep what PayPal says
+        const done = (b) => ["SUCCESS", "DENIED", "CANCELED", "FAILED", "UNCLAIMED", "RETURNED", "REFUNDED", "BLOCKED"].includes(b.read_back?.item_status || "");
+        let changed = false;
+        for (const b of st.batches.filter((x) => !done(x)).slice(0, 3)) {
+          try {
+            const out = await pp.getPayout(b.batch_id);
+            b.read_back = { status: out?.batch_header?.batch_status || null, item_status: out?.items?.[0]?.transaction_status || null, time_completed: out?.batch_header?.time_completed || null,
+              transaction_id: out?.items?.[0]?.transaction_id || null, read_at: new Date().toISOString() };
+            await env.LEDGER.put(`commission:${b.batch_id}`, JSON.stringify(b)); changed = true;
+          } catch {}
+        }
+        if (changed) { await forget("commission:"); st = await commissionState(env); }
+        // leads as the ad report counts them (the export the owner reads), not the demo's sample of lead messages
+        const adRows = parseAdCsv(await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text()).rows;
+        const leadsOf = (ad) => adRows.find((r) => r.ad === ad)?.leads ?? 0, leads = leadsOf(CREATOR.ad);
+        // the same deal paid per lead on the ad with the most leads: what a lead-based commission would reward
+        const payments = await listPayments(env);
+        const guide = commissionOrders(payments, { ad: "free_guide", rate: CREATOR.rate }, heldDuplicates(payments), {}, disputeState).filter((o) => o.eligible).length;
+        const guideLeads = leadsOf("free_guide");
+        return json({ program: { ad: CREATOR.ad, ad_name: adName(CREATOR.ad), creator: CREATOR.creator, rate: CREATOR.rate, leads, per_lead_would_be: (leads * Number(CREATOR.rate)).toFixed(2),
+          contrast: { ad_name: adName("free_guide"), leads: guideLeads, paid_orders: guide, per_lead: (guideLeads * Number(CREATOR.rate)).toFixed(2), per_paid_order: (guide * Number(CREATOR.rate)).toFixed(2) } },
+          ...st, checked_at: new Date().toISOString() });
+      }
+
       // Cross-check the webhook ledger against PayPal's own transaction history.
       if (url.pathname === "/api/paypal-check") {
         const end = new Date(), start = new Date(end - 30 * 86400000);
@@ -791,7 +898,8 @@ const app = {
             drafted_by: pick.drafted_by, created_at: pick.created_at, sent_by: pick.sent_by || null, sent_at: pick.sent_at || null, approved_at: pick.approved_at || null,
             reminder: pick.reminder ? { note: pick.reminder.note, by: pick.reminder.by } : null, reminded_at: pick.reminded_at || null, status: pick.status, paid_at: pick.paid_at || null, pay_url: pick.pay_url || null },
           lead: lead && { lead: lead.lead, message: lead.message, asked_for: lead.asked_for, source: lead.source === "fb" ? "Meta" : "Google" },
-          payment: pay ? { capture_id: pay.capture_id, amount: pay.amount, captured_at: utc(pay.captured_at), meta: sent ? { at: sent.at, events_received: sent.events_received ?? null } : null } : null,
+          // the Meta send happens the moment the Worker learns the invoice is paid, so "paid" here is the earlier of the two times
+          payment: pay ? { capture_id: pay.capture_id, amount: pay.amount, captured_at: sent && Date.parse(sent.at) < Date.parse(pay.captured_at) ? utc(sent.at) : utc(pay.captured_at), paypal_payment_date: pay.paypal_payment_date || null, meta: sent ? { at: sent.at, events_received: sent.events_received ?? null } : null } : null,
           injection: injection && { lead: injection.lead, message: injection.message, skipped: skip ? { reason: skip.reason, flag: skip.flag || null, at: run.at } : null },
           checked_at: new Date().toISOString() });
       }

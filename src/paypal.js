@@ -80,6 +80,11 @@ export function paypal({ clientId, secret, base = "https://api-m.sandbox.paypal.
     deleteDraftInvoice: (id) => call(`/v2/invoicing/invoices/${encodeURIComponent(id)}`, { method: "DELETE" }),
     /** Transaction Search (needs the feature enabled on the app); at most 31 days per call, new items can lag up to 3 hours. */
     searchTransactions: (start, end) => call(`/v1/reporting/transactions?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}&fields=transaction_info&page_size=500`, { method: "GET" }),
+    /** PayPal Payouts: one item to one PayPal account; sender_batch_id makes a retry of the same batch a no-op at PayPal. */
+    createPayout: ({ batchId, receiver, recipientType = "PAYPAL_ID", value, note, subject, itemId }) => call("/v1/payments/payouts", { body: {
+      sender_batch_header: { sender_batch_id: batchId, email_subject: subject, email_message: note },
+      items: [{ recipient_type: recipientType, receiver, amount: { value, currency: "USD" }, note, sender_item_id: itemId }] } }),
+    getPayout: (batchId) => call(`/v1/payments/payouts/${encodeURIComponent(batchId)}`, { method: "GET" }),
     listWebhooks: () => call("/v1/notifications/webhooks", { method: "GET" }),
     createWebhook: (url, events) => call("/v1/notifications/webhooks", { body: { url, event_types: events.map((name) => ({ name })) } }),
   };

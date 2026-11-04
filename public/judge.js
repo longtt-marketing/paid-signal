@@ -189,3 +189,66 @@ getJSON("/api/judge/invoice-loop").then((d) => {
   sec.append($("p", { className: "note", textContent: `Read live from the ledger ${when(d.checked_at)}; the leads are fictional, every invoice is a real PayPal sandbox invoice.` }));
 }).catch((e) => head("loop").append($("p", { className: "note err", textContent: e.message })));
 
+
+// The refund agent: a likely double payment the ledger holds back; a person approves, Claude refunds it with the Agent Toolkit.
+const showRefund = (d) => {
+  const sec = head("refund"), when = (t) => (t ? new Date(t).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "");
+  const row = (label, text, extra) => $("div", { className: "loop-row" }, [$("b", { textContent: label }), $("span", { textContent: text }), extra]);
+  const r = d.last;
+  if (r?.refund) {
+    const tools = r.trace.filter((t) => t.ok).map((t) => t.tool).join(", then ");
+    sec.append($("div", { className: "loop" }, [
+      row("The ledger flags it", `Capture ${r.pair.second.capture_id} came ${r.pair.seconds} s after ${r.pair.first.capture_id}: same PayPal payer, same ad, ${money(Math.round(Number(r.pair.second.amount) * 100))} each. Code held it out of paid orders and out of Meta.`),
+      row("A person approves", `Approved ${when(r.approved_at)}. Without that click no refund runs.`),
+      row("Claude decides and refunds", `The refund agent called the Agent Toolkit's ${tools}. ${r.summary}`),
+      row("PayPal says refunded", `Refund ${r.refund.id}, ${money(Math.round(Number(r.refund.amount) * 100))}, status ${r.refund.read_back?.status || r.refund.status}.${r.refund.note_to_payer ? ` Note to the buyer: “${r.refund.note_to_payer}”` : ""}`,
+        $("a", { href: `/trail?capture=${encodeURIComponent(r.pair.second.capture_id)}`, textContent: " Open it on the money trail →" })),
+    ]));
+    sec.append($("div", { className: "rule" }, [$("b", { textContent: "Code limits: " }), "only create_refund and get_refund are allowed; only the flagged second capture, only its full amount, only once per approval. Claude may decline when the pair does not look like one order paid twice."]));
+  }
+  for (const o of d.open || []) {
+    const btn = $("button", { className: "btn primary", type: "button", textContent: `Approve: let the agent resolve ${o.capture_id}` });
+    const out = $("div", { className: "try-result", role: "status" });
+    btn.onclick = async () => {
+      btn.disabled = true; out.textContent = "The refund agent is checking the pair with Claude and PayPal…";
+      try {
+        const res = await fetch("/api/duplicates/refund", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ capture_id: o.capture_id }) });
+        const j = await res.json(); if (!res.ok) throw new Error(j.error || res.statusText);
+        if (j.refund) showRefund({ last: j, open: [] }); else out.textContent = `The agent did not refund: ${j.summary}`;
+      } catch (e) { out.textContent = e.message; btn.disabled = false; }
+    };
+    sec.append($("p", { textContent: `Open now: ${o.capture_id}, ${o.seconds} s after ${o.first}, same payer and ad.` }), $("div", { className: "row" }, [btn]), out);
+  }
+  if (!r?.refund && !(d.open || []).length) sec.append($("p", { className: "note", textContent: "No double payment is flagged right now." }));
+  sec.append($("p", { className: "note", textContent: `PayPal sandbox; read live ${when(d.checked_at || new Date().toISOString())}.` }));
+};
+getJSON("/api/judge/refund-loop").then(showRefund).catch((e) => head("refund").append($("p", { className: "note err", textContent: e.message })));
+
+// The commission agent: the testimonial's creator earns per PayPal-confirmed paid order; a person approves, Claude pays with Payouts.
+const showCommission = (d) => {
+  const sec = head("commission"), when = (t) => (t ? new Date(t).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "");
+  const p = d.program, row = (label, text, extra) => $("div", { className: "loop-row" }, [$("b", { textContent: label }), $("span", { textContent: text }), extra]);
+  const earning = d.orders.filter((o) => o.eligible).length;
+  sec.append($("p", { textContent: `The deal: ${p.creator} earns ${money(Math.round(Number(p.rate) * 100))} for each paid order PayPal confirms from ${p.ad_name}. Why per paid order: paid per lead, the creator of ${p.contrast.ad_name} would earn ${money(Math.round(Number(p.contrast.per_lead) * 100))} for ${p.contrast.leads} leads that brought ${p.contrast.paid_orders} paid order${p.contrast.paid_orders === 1 ? "" : "s"}; paid per order, ${money(Math.round(Number(p.contrast.per_paid_order) * 100))}.` }));
+  sec.append($("div", { className: "loop" }, d.orders.map((o) => row(o.eligible ? "Earns" : /already paid/.test(o.why_not || "") ? "Paid" : "Does not earn", `Capture ${o.capture_id}, ${money(Math.round(Number(o.amount) * 100))}${o.via === "invoice" ? " (invoice after a chat)" : ""}${o.why_not ? `: ${o.why_not.replace("commission already paid", "commission paid")}` : ""}`,
+    $("a", { href: `/trail?capture=${encodeURIComponent(o.capture_id)}`, textContent: " trail →" })))));
+  for (const b of d.batches) sec.append($("div", { className: "rule" }, [$("b", { textContent: `Paid by the commission agent, ${when(b.at)}: ` }),
+    `PayPal Payouts batch ${b.batch_id}, ${money(Math.round(Number(b.total) * 100))} for ${(b.capture_ids || []).length} paid order(s), PayPal now says ${b.read_back?.item_status || b.read_back?.status || b.status}${b.read_back?.transaction_id ? ` (transaction ${b.read_back.transaction_id})` : ""}. `, b.summary ? `The agent at the time: “${b.summary}”` : ""]));
+  if (d.owed_back?.length) sec.append($("p", { className: "note", textContent: `Owed back after a refund or lost dispute: ${d.owed_back.join(", ")} (shown, not clawed back automatically).` }));
+  if (earning) {
+    const btn = $("button", { className: "btn primary", type: "button", textContent: `Approve: let the agent pay ${earning} order(s) of commission` });
+    const out = $("div", { className: "try-result", role: "status" });
+    btn.onclick = async () => {
+      btn.disabled = true; out.textContent = "The commission agent is checking the orders and paying through PayPal Payouts…";
+      try {
+        const res = await fetch("/api/commissions/pay", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+        const j = await res.json(); if (!res.ok) throw new Error(j.error || res.statusText);
+        out.textContent = j.summary; getJSON("/api/judge/commission").then(showCommission);
+      } catch (e) { out.textContent = e.message; btn.disabled = false; }
+    };
+    sec.append($("div", { className: "row" }, [btn]), out);
+  }
+  sec.append($("div", { className: "rule" }, [$("b", { textContent: "Code limits: " }), "the recipient is fixed in code; every order id is checked against the ledger (no refunded, disputed, held or already-paid order); the total must be the rate times the orders; one payout per approval, and PayPal refuses a repeat of the same batch."]));
+  sec.append($("p", { className: "note", textContent: `PayPal sandbox: a test account stands in for the creator. Read live ${when(d.checked_at)}.` }));
+};
+getJSON("/api/judge/commission").then(showCommission).catch((e) => head("commission").append($("p", { className: "note err", textContent: e.message })));

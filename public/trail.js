@@ -31,7 +31,7 @@ async function show(id) {
       p.via === "invoice" ? ["Paid on (PayPal invoice date, account time zone)", pp?.paid_at || "–"] : ["Captured (PayPal)", when(pp?.create_time)],
       p.via !== "invoice" && ["custom_id (PayPal)", code(pp?.custom_id)],
       pp?.fee && ["PayPal fee / net", `${money(pp.fee)} / ${money(pp.net)}`],
-      Number(p.refunded_amount) > 0 && ["Refunded", `${money(p.refunded_amount)}${p.refunded_at ? ` · ${when(p.refunded_at)}` : ""}`],
+      Number(p.refunded_amount) > 0 && ["Refunded", `${money(p.refunded_amount)}${p.refunded_at ? ` · ${when(p.refunded_at)}` : ""}${p.refunded_by ? ` · by the ${p.refunded_by}, refund ${p.refund_id}` : ""}`],
       p.dispute && ["Dispute", `${p.dispute.status}${p.dispute.outcome ? ` · ${p.dispute.outcome}` : ""} (${p.dispute_state})`],
       p.held_as_duplicate && ["Held", "possible duplicate: same payer, same ad, minutes apart"]]),
       $("p", { className: "note", textContent: `Read from PayPal ${pp?.read_at ? when(pp.read_at) : ""} with ${pp?.read || "the PayPal API"} (PayPal is asked again at most every 10 minutes). ${inv ? `The ledger recorded it ${when(p.captured_at)}, when PayPal's invoice record showed it paid.` : `The ledger recorded it ${when(p.captured_at)} from the capture response and a signature-verified webhook.`}` })];
@@ -51,7 +51,7 @@ async function show(id) {
     [dl([["Leads (ad report)", String(a.leads)], ["Paid orders (PayPal)", String(a.paid_orders)], ["Spend / paid revenue", `${money(a.spend)} / ${money(a.paid_revenue)}`], ["Paid revenue per $1", a.per_dollar ? money(a.per_dollar) : "–"],
       a.chance_covers_spend != null && ["Chance it covers its spend", `${a.chance_covers_spend}%`], a.cut_after && ["Cut point", `if the next ${money(a.cut_after)} brings no paid order`],
       ["Budget move allowed", a.move ? [a.move.increase && "raise", a.move.reduce && "cut"].filter(Boolean).join(" or ") || "keep only" : "keep only: fewer than 3 paid orders"]]),
-    a.chance_covers_spend == null ? null : $("p", { className: "note", textContent: "The chance is computed in code from this ad's paid orders per dollar, with a prior worth one order, against the shop's average paid order. With only a few orders it stays near 50% even for an ad that looks good: that is the point of waiting for 3." }),
+    a.chance_covers_spend == null ? null : $("p", { className: "note", textContent: "The chance is computed in code from this ad's paid orders per dollar, with a prior worth one order, against the shop's average paid order. With only a few orders it stays near 50% even for an ad that looks good: that is the point of waiting for 3. A raise needs 3 paid orders and paid revenue above spend, not certainty: the chance says how sure it is, and the cut point says when the raise is taken back." }),
     $("p", { className: "note" }, ["The budget agent may only quote these numbers, and code refuses a move they do not support. ", $("a", { href: "/#approvals", textContent: "Ask it on the dashboard" }), "."])]));
   box.replaceChildren(...steps);
   history.replaceState(null, "", `/trail?capture=${encodeURIComponent(p.capture_id)}`);

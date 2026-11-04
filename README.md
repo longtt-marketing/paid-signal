@@ -25,7 +25,11 @@ Paid Signal closes that loop on the PayPal developer platform:
    then a send agent (Claude with **PayPal's Agent Toolkit**) reads that invoice from PayPal, checks it and sends it.
    Code pins the agent to the approved invoice and refuses a send unless that invoice is still a draft for the approved amount in USD.
    For sent invoices still unpaid, a chase agent (Claude with the Agent Toolkit) reads each, chooses whom to remind and writes
-   the note; `send_invoice_reminder` sends it, within code limits. Budget changes and refunds stay clicks a person makes.
+   the note; `send_invoice_reminder` sends it, within code limits. A likely double payment is held; once a person approves, a refund agent (Claude with the Agent Toolkit)
+   decides whether it is one and refunds the second capture with `create_refund`, then reads it back with `get_refund`.
+   A commission agent pays the testimonial's creator per PayPal-confirmed paid order (not per lead) with PayPal Payouts,
+   after a person approves; code fixes the recipient, checks each order against the ledger and the total.
+   Budget changes stay clicks a person makes.
 4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
    by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund becomes a Google retraction or restatement; a Meta event not yet sent is held back, and one already sent stays (Meta's Conversions API has no retraction), so the refund is taken off here;
    a possible duplicate payment is held back from both, and is not counted as a paid order, until it is refunded.
@@ -76,7 +80,7 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
 
 | API | Where |
 | --- | --- |
-| **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): `create_invoice` called by the revenue agent itself (code prices it and sets the recipient inside the call, then returns PayPal's draft id to the agent); `get_invoice`, `send_invoice` for the send agent, pinned to the approved invoice; `get_invoice`, `send_invoice_reminder` called by the chase agent with its own note, limited to eligible unpaid invoices | `src/revenue.js`, `src/sendAgent.js`, `src/chaseAgent.js`, `/api/agent/revenue`, `/api/invoices/approve`, `/api/agent/chase` |
+| **PayPal Agent Toolkit** (`@paypal/agent-toolkit`): `create_invoice` called by the revenue agent itself (code prices it and sets the recipient inside the call, then returns PayPal's draft id to the agent); `get_invoice`, `send_invoice` for the send agent, pinned to the approved invoice; `get_invoice`, `send_invoice_reminder` called by the chase agent with its own note, limited to eligible unpaid invoices; `create_refund`, `get_refund` called by the refund agent after a person approves, pinned to the flagged second capture of a likely double payment, full amount, once | `src/revenue.js`, `src/sendAgent.js`, `src/chaseAgent.js`, `src/refundAgent.js`, `/api/agent/revenue`, `/api/invoices/approve`, `/api/agent/chase`, `/api/duplicates/refund` |
 | Orders v2: create, read and capture through **PayPal's server SDK** (`@paypal/paypal-server-sdk`, generated with APIMatic; reviewed with [APIMatic's PayPal Context Plugin](docs/development-with-ai.md): one safe retry, one reused client, PayPal `debug_id` on errors), with `custom_id`, `invoice_id`, `PayPal-Request-Id` idempotency | `src/paypalSdk.js`, `/api/checkout`, `/api/capture` |
 | Payments v2: refund a capture (full or partial), through the server SDK | `src/paypalSdk.js`, `/api/refund` |
 | Invoicing v2: create draft (the lead's click kept with the invoice in the ledger), send, get; sent invoices are re-checked with PayPal on Refresh, because the sandbox does not always emit `INVOICING.INVOICE.PAID` | `/api/invoices/*`, agent tool `draft_paypal_invoices` |
@@ -160,7 +164,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 134 tests: money rules, gate, the four agents, schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 142 tests: money rules, gate, the six agents, schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy
