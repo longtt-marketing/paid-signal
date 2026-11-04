@@ -61,7 +61,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
 
     // Cross-check the webhook ledger against PayPal's own transaction history.
     if (url.pathname === "/api/paypal-check") {
-      const end = new Date(), start = new Date(end - 30 * 86400000);
+      const end = new Date(), start = new Date(end.getTime() - 30 * 86400000);
       const iso = (d) => d.toISOString().replace(/\.\d+Z$/, "Z");
       let tx;
       try { tx = await pp.searchTransactions(iso(start), iso(end)); }

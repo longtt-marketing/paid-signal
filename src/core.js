@@ -19,7 +19,18 @@ import { adName } from "../web/src/names.js";
 // the owner request the dashboard sends ("Tell it to raise the ad with the most leads"); /judge replays its latest run
 export const RULE_SINCE = "2026-10-31T12:00:00.000Z"; // the budget rule as it stands (3+ paid orders, direction after costs and fees)
 export const OWNER_ASK = "Raise the free guide's budget: it brings the most leads.";
-export const utc = (t) => { const d = new Date(t || Date.now()); return isNaN(d) ? new Date().toISOString() : d.toISOString(); };
+export const utc = (t) => { const d = new Date(t || Date.now()); return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString(); };
+
+/**
+ * PayPal's Agent Toolkit (sandbox) with only the named actions switched on. Each tool is called with one argument object.
+ * @param {any} env
+ * @param {Record<string, Record<string, boolean>>} actions
+ * @returns {Record<string, { execute: (args: any) => Promise<any> }>}
+ */
+export function toolkitTools(env, actions) {
+  return /** @type {any} */ (new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
+    configuration: { actions, context: { sandbox: true } } }).getTools());
+}
 
 // The demo shop sells one thing; the price is fixed server-side so a page cannot choose what it pays.
 export const PRODUCT = { sku: "trial-class", name: "Robotics trial class (demo shop)", amount: "49.00", currency: "USD" };
@@ -71,14 +82,14 @@ export const publicMeta = ({ events, ...meta }) => ({ ...meta, events: events.ma
 // KV list calls are the scarce resource: the ledger is read through a 20-second edge cache, cleared on every write here
 export const cacheKey = (prefix) => new Request(`https://ledger.paid-signal.internal/${prefix}`);
 export async function cachedList(env, prefix) {
-  const cache = globalThis.caches?.default;
+  const cache = /** @type {any} */ (globalThis).caches?.default;
   const hit = cache && (await cache.match(cacheKey(prefix)));
   if (hit) return hit.json();
   const out = await listPrefix(env, prefix);
   if (cache) await cache.put(cacheKey(prefix), new Response(JSON.stringify(out), { headers: { "cache-control": "max-age=120" } }));
   return out;
 }
-export const forget = async (prefix) => { await globalThis.caches?.default?.delete(cacheKey(prefix)); };
+export const forget = async (prefix) => { await /** @type {any} */ (globalThis).caches?.default?.delete(cacheKey(prefix)); };
 
 /** Keep the latest gate-checked budget recommendation; the owner's decisions refer to it by id. */
 export async function saveRecommendation(env, recommendation, source, visitor, shared = false) {
@@ -99,8 +110,7 @@ export async function revenueDrafts(env, url) {
   const invoices = await listPrefix(env, "inv:");
   const leads = (await demoLeads(env, url)).filter((l) => !invoices.some((i) => i.lead === l.lead && i.status === "PAID"));
   const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });
-  const toolkit = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
-    configuration: { actions: { invoices: { create: true } }, context: { sandbox: true } } }).getTools();
+  const toolkit = toolkitTools(env, { invoices: { create: true } });
   const drafts = [];
   // the agent's own create_invoice call runs this once code has priced and checked it: price list, the lead's own email
   const createDraft = async (p) => {
@@ -142,8 +152,7 @@ export async function applyDispute(env, d) {
  * ledger. The webhook does the same the moment a dispute opens; this catches any event the sandbox did not deliver.
  */
 export async function syncDisputes(env) {
-  const tk = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
-    configuration: { actions: { disputes: { list: true, get: true } }, context: { sandbox: true } } }).getTools();
+  const tk = toolkitTools(env, { disputes: { list: true, get: true } });
   const parse = (x) => { try { return typeof x === "string" ? JSON.parse(x) : x || {}; } catch { return {}; } };
   const list = parse(await tk.list_disputes.execute({ page_size: 50 })).items || [];
   const marked = [];
@@ -231,7 +240,7 @@ export async function firstPaint(env, url, page) {
       + `<div class="duo"><div><b class="n claimed">${t.leads}</b><span>leads the ads report</span></div><div><b class="n paid">${t.paid}</b><span>paid ${t.paid === 1 ? "order" : "orders"} PayPal confirms</span></div></div>`
       + `<p class="pitch">Ad platforms learn from the ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}: the ${metaCount} from Meta ads go back to Meta (test events in this demo); the Google ones become an offline-conversion file for Google Ads.</p><div class="hero-actions"><a class="cta" href="/judge">Judge path</a><a class="hero-link" href="/audit">Audit your own ads</a></div></div>`
       + `<div class="hero-bars"><p class="ghost">Loading the ledger…</p></div></section></main></div>`;
-    return new HTMLRewriter().on("#root", { element(e) { e.setInnerContent(html, { html: true }); } }).transform(page);
+    return new (/** @type {any} */ (globalThis).HTMLRewriter)().on("#root", { element(e) { e.setInnerContent(html, { html: true }); } }).transform(page);
   } catch { return page; }
 }
 

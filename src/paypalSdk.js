@@ -46,6 +46,7 @@ export function ordersSdk({ clientId, secret, http }) {
     /** Capture an approved order; the same PayPal-Request-Id on a retry returns the first capture instead of charging twice. */
     captureOrder: (id, requestId) => run(orders.captureOrder({ id, paypalRequestId: requestId, prefer: "return=representation" })),
     /** Full refund without an amount, partial with one. */
+    /** @param {string} captureId @param {{ amount?: string, currency?: string, requestId?: string }} [o] */
     refundCapture: (captureId, { amount, currency = "USD", requestId } = {}) => run(payments.refundCapturedPayment({
       captureId, paypalRequestId: requestId, prefer: "return=representation",
       body: amount ? { amount: { value: amount, currencyCode: currency } } : {},

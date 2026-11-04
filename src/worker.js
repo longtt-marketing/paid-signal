@@ -8,6 +8,19 @@ import { route as judge } from "./routes/judge.js";
 import { route as agents } from "./routes/agents.js";
 export { cleanTurns } from "./core.js";
 
+// routes that spend Claude turns or move sandbox money answer only this site's own pages, which always send their Origin
+const SAME_SITE_ONLY = new Set([
+  "/api/ai/turn",
+  "/api/judge/try",
+  "/api/invoices/approve",
+  "/api/refund",
+  "/api/duplicates/refund",
+  "/api/commissions/pay",
+  "/api/judge/try/send",
+  "/api/judge/refund-try",
+  "/api/decisions",
+]);
+
 const app = {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -21,7 +34,7 @@ const app = {
       const origin = request.headers.get("origin");
       if (origin && origin !== url.origin && url.pathname !== "/mcp") return json({ error: "Cross-site requests are not accepted." }, 403);
       // the routes that spend Claude turns answer only this site's own pages, which always send their Origin
-      if ((url.pathname === "/api/ai/turn" || url.pathname.startsWith("/api/agent") || url.pathname === "/api/judge/try" || url.pathname === "/api/invoices/approve" || url.pathname === "/api/refund" || url.pathname === "/api/duplicates/refund" || url.pathname === "/api/commissions/pay" || url.pathname === "/api/judge/try/send" || url.pathname === "/api/judge/refund-try" || url.pathname === "/api/decisions") && origin !== url.origin)
+      if ((SAME_SITE_ONLY.has(url.pathname) || url.pathname.startsWith("/api/agent")) && origin !== url.origin)
         return json({ error: "Only the Paid Signal page can call this." }, 403);
       if (env.BURST && !(await env.BURST.limit({ key: ip })).success) return json({ error: "Too many requests. Wait a minute and try again." }, 429);
     }
@@ -73,11 +86,11 @@ app.scheduled = async (event, env) => {
   try { await syncDisputes(env); } catch (e) { console.warn("dispute sync failed", e?.message); }
 };
 const worker = {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const current = visitorId(request);
     const id = current || crypto.randomUUID();
     const incoming = current ? request : addVisitorCookie(request, id);
-    const response = await app.fetch(incoming, env, ctx);
+    const response = await app.fetch(incoming, env);
     return withVisitorCookie(request, response, id, !current);
   },
   scheduled: app.scheduled,

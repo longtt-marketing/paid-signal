@@ -17,6 +17,7 @@ export function paypal({ clientId, secret, base = "https://api-m.sandbox.paypal.
     return token;
   }
 
+  /** @param {string} path @param {{ method?: string, body?: any, requestId?: string }} [o] */
   async function call(path, { method = "POST", body, requestId } = {}) {
     const res = await fetchImpl(base + path, {
       method,
@@ -47,6 +48,7 @@ export function paypal({ clientId, secret, base = "https://api-m.sandbox.paypal.
     },
     getOrder: (id) => call(`/v2/checkout/orders/${encodeURIComponent(id)}`, { method: "GET" }),
     captureOrder: (id, requestId) => call(`/v2/checkout/orders/${encodeURIComponent(id)}/capture`, { requestId, body: {} }),
+    /** @param {string} captureId @param {{ amount?: string, currency?: string, requestId?: string }} [o] */
     refundCapture: (captureId, { amount, currency = "USD", requestId } = {}) =>
       call(`/v2/payments/captures/${encodeURIComponent(captureId)}/refund`, { requestId, body: amount ? { amount: { value: amount, currency_code: currency } } : {} }),
     /** Asks PayPal whether a webhook delivery is genuine; never trust the body without this. */
@@ -91,7 +93,7 @@ export function paypal({ clientId, secret, base = "https://api-m.sandbox.paypal.
 }
 
 function fail(status, body) {
-  const e = new Error(`PayPal ${status} ${body?.name || ""}: ${body?.message || body?.error_description || ""}`.trim());
+  const e = /** @type {Error & { status?: number, paypal?: any }} */ (new Error(`PayPal ${status} ${body?.name || ""}: ${body?.message || body?.error_description || ""}`.trim()));
   e.status = status; e.paypal = { name: body?.name, debug_id: body?.debug_id, details: body?.details };
   return e;
 }

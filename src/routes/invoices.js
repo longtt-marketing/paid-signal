@@ -1,6 +1,6 @@
 // Invoices (draft, approve, send, sync), the judge path's try-it flow, the revenue and chase agents, double-payment refunds.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
-import { utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS, PayPalAgentToolkit } from "../core.js";
+import { toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "../core.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
@@ -24,8 +24,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       if (rec.status !== "DRAFT") return json({ invoice: publicTry(rec) });
       if (!(Number(rec.amount) > 0 && Number(rec.amount) <= 200)) return json({ error: "Only small demo invoices are sent." }, 400);
       const stop = await claudeGuard(env, request, "judge sends", 3, 60); if (stop) return json({ error: stop }, 429);
-      const tools = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
-        configuration: { actions: { invoices: { get: true, send: true } }, context: { sandbox: true } } }).getTools();
+      const tools = toolkitTools(env, { invoices: { get: true, send: true } });
       const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: SEND_SYSTEM, tools: SEND_TOOLS });
       let agent;
       try { agent = await runSendAgent({ llm, tools, approved: { id: rec.id, lead: "the judge (as a customer)", ad: rec.ad, amount: String(rec.amount) } }); }
@@ -55,8 +54,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const t0 = Date.now(), lead = { lead: "Judge lead", ad: "parent_carousel", source: "other", click_id: "", channel: "web", email: "judge-lead@example.com", message: body.message.trim() };
       try {
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });
-        const toolkit = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
-          configuration: { actions: { invoices: { create: true } }, context: { sandbox: true } } }).getTools();
+        const toolkit = toolkitTools(env, { invoices: { create: true } });
         const createDraft = async (p) => {
           const params = { currency_code: "USD", reference: "Kite Robotics booking", note: p.note, invoicer_business_name: "Kite Robotics Club (demo)",
             primary_recipients: [{ billing_info: { email_address: lead.email, name: { given_name: lead.lead } } }],
@@ -108,8 +106,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const t0 = Date.now();
       const eligible = eligibleForReminder(await listPrefix(env, "inv:"));
       if (!eligible.length) return json({ reminded: [], summary: "No sent invoice is waiting long enough for a reminder.", trace: [], eligible: 0, ms: 0 });
-      const tools = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
-        configuration: { actions: { invoices: { get: true, sendReminder: true } }, context: { sandbox: true } } }).getTools();
+      const tools = toolkitTools(env, { invoices: { get: true, sendReminder: true } });
       const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: CHASE_SYSTEM, tools: CHASE_TOOLS });
       const run = await runChaseAgent({ llm, tools, eligible, leads: await demoLeads(env, url) });
       const at = new Date().toISOString();
@@ -129,8 +126,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       if (rec.status !== "DRAFT") return json({ error: `Invoice is ${rec.status}, not a draft.` }, 400);
       // per visitor first, then a shared budget, so one visitor cannot send every draft before the judges arrive
       const stop = await claudeGuard(env, request, "invoice sends", 3, 30); if (stop) return json({ error: stop }, 429);
-      const tools = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
-        configuration: { actions: { invoices: { get: true, send: true } }, context: { sandbox: true } } }).getTools();
+      const tools = toolkitTools(env, { invoices: { get: true, send: true } });
       const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: SEND_SYSTEM, tools: SEND_TOOLS });
       const approvedAt = new Date().toISOString();
       const agent = await runSendAgent({ llm, tools, approved: { id, lead: rec.lead, ad: rec.ad, amount: String(rec.amount || "49.00") } });
@@ -156,8 +152,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const key = async (p) => (p.payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${p.payer_email_sha256}`)).slice(0, 12) : "unknown");
       const view = async (p) => ({ capture_id: p.capture_id, payer_key: await key(p), ad: p.ad, amount: p.amount, currency: p.currency || "USD", captured_at: utc(p.captured_at) });
       const pair = { first: await view(payments.find((p) => p.capture_id === flag.first)), second: await view(payments.find((p) => p.capture_id === capture_id)), seconds: flag.seconds };
-      const tools = new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET,
-        configuration: { actions: { payments: { createRefund: true, getRefunds: true } }, context: { sandbox: true } } }).getTools();
+      const tools = toolkitTools(env, { payments: { createRefund: true, getRefunds: true } });
       const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REFUND_SYSTEM, tools: REFUND_TOOLS });
       const approvedAt = new Date().toISOString();
       let agent;

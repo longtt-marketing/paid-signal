@@ -38,7 +38,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 </style>
 </head>
 <body>
-<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav><a href="/">Dashboard</a><a href="/shop.html?ad=trial_video&amp;fbclid=IwARproof">Demo shop</a><a href="/scenarios.html">Scenarios</a><a href="/connect">Use it on your shop</a><a href="/data">Data use</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></nav></header>
+<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav aria-label="Main"><a href="/">Dashboard</a><a href="/judge">Judge path</a><a href="/audit">Audit</a><a href="/proof">Proof</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></nav></header>
 <main>
   <div>
     <h1>Proof</h1>
@@ -84,7 +84,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     <h2 id="weeks">Budget decisions, on weeks with known answers</h2>
     <p class="sub"><strong>The number we quote is the frozen third set below: 11 of 12 runs fully right, run once.</strong> The other sets came first and were rerun after fixes, so they are shown, not quoted. On the live ledger only one ad has enough paid orders to move, so five synthetic weeks (labelled SYNTHETIC wherever they appear; none of their payments is a PayPal capture) test the decision itself: enough orders on two ads, refunds hiding behind captures, a double payment, the ad with the most leads and the least money, and too few orders everywhere. Each week lists the right change per ad. The weeks are written so the right answer follows from paid orders; they test whether the agent finds it and keeps to the evidence rule. Try one on the dashboard: "Or try a synthetic week".</p>
     <div class="grid">
-      <div class="stat"><b>10 / 10</b><span>budget-agent runs with the right decision</span><small>Two runs per week, real Claude, same gate as the dashboard (rerun 31 Oct evening with the stricter direction rule). A run counts as right only if every change is allowed by the week's answer and every expected move is made: all 12 expected moves across the 10 runs were made.</small></div>
+      <div class="stat"><b>10 / 10</b><span>budget-agent runs with the right decision on the first set (rerun after a fix, so not the number we quote)</span><small>Two runs per week, real Claude, same gate as the dashboard (rerun 31 Oct evening with the stricter direction rule). A run counts as right only if every change is allowed by the week's answer and every expected move is made: all 12 expected moves across the 10 runs were made.</small></div>
       <div class="stat"><b>0 / 10</b><span>runs that proposed a wrong budget move</span><small>No cut or raise on an ad without the evidence for it.</small></div>
       <div class="stat"><b class="bad">0 / 5</b><span>weeks the ad platform's view gets right</span><small>Moving budget toward the most leads per dollar. Paid Signal's own split by paid orders: 5 / 5.</small></div>
     </div>
@@ -149,7 +149,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
   <section aria-labelledby="quality">
     <h2 id="quality">Tests and speed</h2>
     <div class="grid">
-      <div class="stat"><b>148</b><span>unit tests on money rules, the gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, the PayPal CSV audit and every AG Studio tool name</span><small>CI on every push. One sends 12 simulated PayPal webhook events through the Worker's real webhook code, with PayPal's sign-in and signature check stubbed (a forged certificate, one PayPal's check calls FAILURE, a partial refund and its replay, a full refund, a re-sent capture, a refunded double payment, disputes opened, won, lost and resolved with no clear outcome, a Google refund) and checks paid orders, revenue, what Meta and Google are told and which budget moves are allowed after each.</small></div>
+      <div class="stat"><b>149</b><span>unit tests on money rules, the gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, the PayPal CSV audit and every AG Studio tool name</span><small>CI on every push. One sends 12 simulated PayPal webhook events through the Worker's real webhook code, with PayPal's sign-in and signature check stubbed (a forged certificate, one PayPal's check calls FAILURE, a partial refund and its replay, a full refund, a re-sent capture, a refunded double payment, disputes opened, won, lost and resolved with no clear outcome, a Google refund) and checks paid orders, revenue, what Meta and Google are told and which budget moves are allowed after each.</small></div>
       <div class="stat"><b>17 + 20</b><span>browser checks and Postman assertions against the live app</span><small>The browser checks run daily, including the money trail of a real capture and a 404 for an unknown one.</small></div>
       <div class="stat"><b>2.3 s</b><span>to a usable dashboard on a throttled phone (4G, 4x CPU)</span><small>From 18 s with one bundle; measured with Playwright on 29 Oct. A cold first visit can take longer.</small></div>
     </div>
