@@ -246,3 +246,4 @@ code{font-family:var(--code);font-size:12px}
   .phone-disclosure-plain>summary{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);box-shadow:var(--shadow)}
   .phone-disclosure-plain[open]>summary{margin-bottom:2px}
 }
+.studio-fallback{padding:16px}.studio-fallback img{display:block;width:100%;height:auto;border:1px solid var(--line, #e3e0d8);border-radius:12px;margin-top:10px}

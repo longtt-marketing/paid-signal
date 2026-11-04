@@ -1,4 +1,16 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Component, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
+// If AG Studio cannot run (its trial key lapses, or the bundle fails to load), the report shows a recent picture of
+// itself and says why, instead of an empty frame. Every number on it is also on the dashboard tab.
+class StudioGuard extends Component {
+  constructor(props) { super(props); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(e) { console.error("AG Studio did not load", e); }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return <div className="studio-fallback"><p className="muted">AG Studio could not load here (its trial key may have lapsed). This is a picture of the report taken on 5 Nov 2026; the same numbers are live on the Dashboard tab.</p><img src="/report-snapshot.jpg" alt="The AG Studio report: leads against PayPal-confirmed paid orders per ad, and the per-ad table" /></div>;
+  }
+}
 import { adName } from "./names.js";
 import FlowChart from "./FlowChart.jsx";
 
@@ -499,7 +511,7 @@ export default function App({ first = null }) {
           </div>
           <div className="studio">
             {studioOn && license !== undefined
-              ? <Suspense fallback={<div className="studio-wait">Loading AG Studio…</div>}><StudioPanel ref={studio} state={state} invoices={invoices} license={license} csvRef={csvRef} onInvoices={onStudioInvoices} onNudge={onNudge} onRecommendation={onRecommendation} /></Suspense>
+              ? <StudioGuard><Suspense fallback={<div className="studio-wait">Loading AG Studio…</div>}><StudioPanel ref={studio} state={state} invoices={invoices} license={license} csvRef={csvRef} onInvoices={onStudioInvoices} onNudge={onNudge} onRecommendation={onRecommendation} /></Suspense></StudioGuard>
               : <a className="studio-wait" href="#report">Open the AG Studio report</a>}
           </div>
         </section>
