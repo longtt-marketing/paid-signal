@@ -19,6 +19,7 @@ const SAME_SITE_ONLY = new Set([
   "/api/judge/try/send",
   "/api/judge/refund-try",
   "/api/decisions",
+  "/api/duplicates/distinct",
 ]);
 
 const app = {

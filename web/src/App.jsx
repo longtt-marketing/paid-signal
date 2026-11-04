@@ -97,6 +97,12 @@ export default function App({ first = null }) {
     } catch (e) { setError(e.message); }
   }, []);
   useEffect(() => { fetch("/data/demo-ads.csv").then((r) => r.text()).then((t) => { setCsv(t); load(t); }); }, [load]);
+  // a person says a flagged pair is two real orders: the second payment counts again (ad, Meta, commission)
+  const markDistinct = useCallback(async (id) => {
+    const reason = window.prompt("Why is this a separate order and not a double payment? (for example: a second child)");
+    if (!reason) return;
+    try { await api("/api/duplicates/distinct", { capture_id: id, reason }); await load(csv); } catch (e) { setError(e.message); }
+  }, [load, csv]);
   // the last checked recommendation and the decisions on it come back after a reload
   useEffect(() => {
     fetch("/api/recommendation").then((r) => r.json()).then(({ latest, mine, shared, decisions: ds = [], decision_count = 0, my_decision_count = 0 }) => {
@@ -348,7 +354,7 @@ export default function App({ first = null }) {
               <div id="captures" className="list">
                 {(state?.payments || []).slice().reverse().map((p) => (
                   <div key={p.capture_id} className="cap">
-                    <span><b>{p.ad && p.ad !== "direct" ? adName(p.ad) : "No ad click"}{metaSent[p.capture_id]?.ok && <i className="meta-ok" title={`Meta received this Purchase (test events) ${clock(metaSent[p.capture_id].at)}`}>Meta ✓</i>}</b>{dup[p.capture_id] && <em className="dup">Possible duplicate of {dup[p.capture_id]}</em>}<small className="mono">{p.capture_id} · {money(p.amount)}{Number(p.refunded_amount) > 0 ? ` · refunded ${money(p.refunded_amount)}` : ""}{p.via === "invoice" ? " · invoice" : ""}</small></span>
+                    <span><b>{p.ad && p.ad !== "direct" ? adName(p.ad) : "No ad click"}{metaSent[p.capture_id]?.ok && <i className="meta-ok" title={`Meta received this Purchase (test events) ${clock(metaSent[p.capture_id].at)}`}>Meta ✓</i>}</b>{dup[p.capture_id] && <em className="dup">Possible duplicate of {dup[p.capture_id]} <button type="button" className="dup-btn" onClick={() => markDistinct(p.capture_id)}>Separate order? Count it</button></em>}<small className="mono">{p.capture_id} · {money(p.amount)}{Number(p.refunded_amount) > 0 ? ` · refunded ${money(p.refunded_amount)}` : ""}{p.via === "invoice" ? " · invoice" : ""}</small></span>
                     {p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED" ? <button className="mini" onClick={() => refund(p)}>Refund</button> : <span className="tag">Refunded</span>}
                   </div>
                 ))}

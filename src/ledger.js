@@ -289,10 +289,11 @@ export function supportedMoves(rec, minPaid = 3, costs = SHOP_COSTS) {
 export function possibleDuplicates(payments, windowMs = 10 * 60 * 1000) {
   const at = (p) => Date.parse(p.captured_at);
   const live = payments.filter((p) => p.payer_email_sha256 && cents(p.refunded_amount || 0) < cents(p.amount)).sort((a, b) => at(a) - at(b));
+  // a second payment a person confirmed as a separate order (e.g. a second child) counts as a paid order again
   const out = [];
   for (const [i, b] of live.entries()) {
     const a = live.slice(0, i).reverse().find((x) => x.payer_email_sha256 === b.payer_email_sha256 && x.ad === b.ad && at(b) - at(x) <= windowMs);
-    if (a) out.push({ capture_id: b.capture_id, first: a.capture_id, seconds: Math.round((at(b) - at(a)) / 1000) });
+    if (a && !b.confirmed_distinct) out.push({ capture_id: b.capture_id, first: a.capture_id, seconds: Math.round((at(b) - at(a)) / 1000) });
   }
   return out;
 }

@@ -1,6 +1,6 @@
 // Invoices (draft, approve, send, sync), the judge path's try-it flow, the revenue and chase agents, double-payment refunds.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
-import { toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "../core.js";
+import { guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "../core.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
@@ -136,6 +136,20 @@ export async function route({ request, env, url, pp, orders, ip }) {
         ...(agent.sent && fresh.status && fresh.status !== "DRAFT" ? { sent_at: new Date().toISOString(), sent_by: "send agent (Claude + PayPal Agent Toolkit)" } : {}) });
       await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); await forget("inv:");
       return json({ invoice: publicInvoice(rec), agent });
+    }
+
+    // A person says a flagged pair is two real orders (say, a parent paying for a second child): the second payment counts
+    // again as a paid order, for the ad, Meta and the commission. Recorded on the payment with the reason and time.
+    if (url.pathname === "/api/duplicates/distinct" && request.method === "POST") {
+      const { capture_id, reason } = await request.json();
+      const payments = await listPayments(env);
+      if (!possibleDuplicates(payments).some((d) => d.capture_id === capture_id)) return json({ error: "That capture is not flagged as a likely double payment." }, 400);
+      const stop = await guard(env, request, "duplicate reviews", 5, 50); if (stop) return json({ error: stop }, 429);
+      const p = await env.LEDGER.get(`pay:${capture_id}`, "json");
+      if (!p) return json({ error: "Payment not found." }, 404);
+      p.confirmed_distinct = { at: new Date().toISOString(), by: "a person, on the dashboard", reason: String(reason || "a separate order").slice(0, 200) };
+      await env.LEDGER.put(`pay:${capture_id}`, JSON.stringify(p)); await forget("pay:");
+      return json({ ok: true, capture_id, confirmed_distinct: p.confirmed_distinct });
     }
 
     // A person approves resolving a likely double payment; the refund agent (Claude + PayPal Agent Toolkit) decides and,

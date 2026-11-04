@@ -101,6 +101,7 @@ td.neg{color:var(--gap);font-weight:700}td.pos{color:var(--paid);font-weight:700
 .cap{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line2)}
 .cap span{display:flex;flex-direction:column;min-width:0;gap:1px}.cap small{color:var(--faint);overflow-wrap:anywhere}
 .dup{font-style:normal;font-size:12px;font-weight:600;color:var(--gap)}
+.dup-btn{margin-left:6px;border:1px solid currentColor;background:none;color:inherit;font:inherit;font-size:11px;border-radius:6px;padding:1px 6px;cursor:pointer}
 .mono{font-family:var(--mono);font-size:12px!important}
 button.mini{min-height:36px;padding:0 14px;font-size:13px;flex:none}
 button.mini.go{background:var(--go);color:var(--go-ink);border-color:var(--go)}button.mini.go:hover:not(:disabled){filter:brightness(1.05)}

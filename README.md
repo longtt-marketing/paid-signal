@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**AI agents run the money side of a sale. Every move is checked against what PayPal records.**
+**AI agents run the money side of a sale. Every PayPal action is checked against PayPal's own records and rules in code.**
 
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
 Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:10): https://www.youtube.com/watch?v=WfoNL22Xv5k · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
 
-**One real shop's October** (a gift shop that sells in chat; the author runs its Meta ads; 260M VND, about $10,000, of spend; figures reported by the author, totals only; paid by bank transfer and matched to orders by the shop's accountant, ad group taken from the chat that started each order): the ad with 69.4% of the chats brought 19.3% of the money, and the ad with 20.7% of the chats brought 56.3%. By cost per chat the ads rank A, B, C; by money paid and kept, B, C, A. Numbers: [docs/proof/merchant-case-2026-10.json](docs/proof/merchant-case-2026-10.json), read by [src/merchantCase.js](src/merchantCase.js).
+**One real shop's October** (a gift shop that sells in chat; the author runs its Meta ads; 260M VND, about $10,000, of spend; figures reported by the author, totals only; paid by bank transfer and matched to orders by the shop's accountant, ad group taken from the chat that started each order): the ad with 69.4% of the chats brought 19.3% of the money, and the ad with 20.7% of the chats brought 56.3%. By cost per chat the ads rank A, B, C; by money kept per ad dollar, B, C, A. Numbers: [docs/proof/merchant-case-2026-10.json](docs/proof/merchant-case-2026-10.json), read by [src/merchantCase.js](src/merchantCase.js).
 
 Ad platforms optimise for what they can see: clicks, leads, chat taps. For a small business that gets paid through
 PayPal, the thing that matters, a payment, never reaches the ad platform. So budgets drift toward ads that produce
@@ -35,7 +35,7 @@ Paid Signal closes that loop on the PayPal developer platform:
    after a person approves; code fixes the recipient, checks each order against the ledger and the total.
    Budget changes stay clicks a person makes.
 4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
-   by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund becomes a Google retraction or restatement; a Meta event not yet sent is held back, and one already sent stays (Meta's Conversions API has no retraction), so the refund is taken off here;
+   by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund generates a Google retraction or restatement row (a file to upload; nothing is sent to Google); a Meta event not yet sent is held back, and one already sent stays (Meta's Conversions API has no retraction), so the refund is taken off here;
    a possible duplicate payment is held back from both, and is not counted as a paid order, until it is refunded.
    Eligible Meta payments use the website click (`fbclid`), Messenger business messaging (the page ID and page-scoped user ID),
    or Conversion Leads CRM path (`lead_id`). A buyer who came from a Google click (`gclid`) goes to Google only, so Meta cannot
@@ -61,7 +61,7 @@ No login is needed for any of this; only paying in the demo shop needs the sandb
 2. Press **Ask the revenue agent**: Claude reads what each unpaid lead wrote and drafts PayPal invoices (Agent Toolkit) for the ones ready to pay; code sets every price; a lead whose message tries to rewrite the price and recipient is flagged, never invoiced.
 3. Under **Invoices**, press **Approve** on a draft: the send agent (Claude + PayPal Agent Toolkit) re-reads it in code and sends it. **Chase unpaid** lets the chase agent decide which sent invoices get a reminder and write it.
 4. **Report · AG Studio** tab: open the assistant, choose **Review ad budgets**; a custom Studio agent on Claude submits through the evidence gate and its change lands in Approvals.
-5. On `/judge`, use **Try it yourself** at the top of the invoice loop to test a booking, a not-ready question or a prompt injection. Any invoice stays a separate sandbox draft and is never sent.
+5. On `/judge`, use **Try it yourself** at the top of the invoice loop to test a booking, a not-ready question or a prompt injection. The invoice is a separate sandbox draft until you approve it; then the send agent sends it and you can pay it.
 6. [Proof](https://paid-signal.thelongmarketing.workers.dev/proof): held-out evals (12 bookings, 10 not-ready leads and 8 prompt injections, each run twice: 24 of 24, 20 of 20, 0 of 16), the evidence gate under attack (11 kinds of planted error, 100 of each: all caught), a budget simulation with its uncertainty ($1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs), live PayPal and Meta checks.
 7. Any MCP client: `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
 

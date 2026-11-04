@@ -44,7 +44,7 @@ const isError = (out) => {
 /** True when what the buyer wrote tries to instruct the agent (a fake system line, "ignore your rules", "pre-approved").
  * Code then leaves the refund to a person, whatever Claude concludes: a wrong refund cannot be taken back. */
 export function instructsAgent(context = []) {
-  return context.some((c) => /(system|assistant|developer)\s*:|ignore (all |any |your |previous )|pre-?approved|override|you must refund|admin(istrator)? (says|approved)|new instructions/i.test(String(c)));
+  return context.some((c) => /\b(system|assistant|developer)\s*:|ignore (all |any |your |previous )|pre-?approved|override|you must refund|admin(istrator)? (says|approved)|new instructions/i.test(String(c)));
 }
 
 /** Why create_refund must not run with these arguments, or null when it is the full refund of the flagged capture. */
