@@ -324,3 +324,26 @@ function twoBuyers() {
     $("p", { className: "note", textContent: "Live Claude with the same prompt and code limits; here the refund tool is simulated, so no money moves. The real refund it made is below. Held-out test of this judgment: 13 of 14 (/proof)." }));
   return wrap;
 }
+
+// One real shop's October (docs/proof/merchant-case-2026-10.json), read by src/merchantCase.js into /data/merchant-case.json
+async function shopGap() {
+  const vnd = (n) => `${(n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 1 })}M VND`;
+  const pct = (x) => `${(x * 100).toFixed(1)}%`;
+  try {
+    const { read: r } = await getJSON("/data/merchant-case.json");
+    box("gap-sub").textContent = `A gift shop that sells in chat; the author runs its Meta ads. October 2026: ${vnd(r.totals.spend)} (about $${Math.round(r.totals.spend_usd).toLocaleString("en-US")}) on three ad groups, ${r.totals.conversations.toLocaleString("en-US")} chats, ${r.totals.paid} orders paid and kept after refunds.`;
+    const bar = (label, x, cls) => $("div", { className: `gap-bar ${cls || ""}` }, [$("span", { textContent: label }), $("div", {}, $("i", { style: `width:${(x * 100).toFixed(1)}%` })), $("span", { textContent: pct(x) })]);
+    box("gap-grid").replaceChildren(...r.groups.map((g) => $("div", { className: "gap-card" }, [
+      $("span", { className: "k", textContent: `${g.id} · ${g.name}` }),
+      $("div", { className: "nums" }, [$("b", { textContent: g.conversations.toLocaleString("en-US") }), $("i", { textContent: "chats →" }), $("b", { className: "paid", textContent: String(g.paid) }), $("i", { textContent: "paid orders" })]),
+      bar("of chats", g.share_conversations), bar("of money", g.share_net, "money"),
+      $("small", { textContent: `${g.cost_per_conversation.toLocaleString("en-US")} VND a chat · ${g.roas.toFixed(2)}x ad spend back in paid money` }),
+    ])));
+    box("gap-rank").replaceChildren("Ranked by cost per chat, the ad report's view: ", r.rank_by_cost_per_conversation.join(", "), ". Ranked by money paid and kept: ",
+      $("span", { className: "go", textContent: r.rank_by_money_kept.join(", ") }), ". The cheapest chats came from the ad that brought the least money.");
+    const split = r.paid_signal_split.map((s) => `${s.id} ${Math.round(s.share_now * 100)}% → ${Math.round(s.share_proposed * 100)}%`).join(", ");
+    box("gap-src").replaceChildren(`Paid Signal's budget rule (the same code as the demo) points the money ${split}; a person approves each step. These payments did not go through Paid Signal: the shop is why it exists, not a result of it. Numbers: `,
+      $("a", { href: "https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/merchant-case-2026-10.json", textContent: "merchant-case-2026-10.json" }), ".");
+  } catch (e) { box("gap-sub").textContent = `The shop's numbers could not load (${e.message}).`; }
+}
+shopGap();

@@ -1,0 +1,16 @@
+{
+  "what": "A Vietnamese personalised-gift shop that sells in chat; the author runs its Meta ads. October 2026, three ad groups, numbers supplied by the author from the ad account and the shop's order book, reconciled on 3 Nov 2026 (late payments and refunds included). Its payments did not go through Paid Signal: it shows the gap Paid Signal closes, not a result of using it.",
+  "source": "the author (performance marketer running the shop's Meta ads); shared with the shop's agreement, anonymised",
+  "period": "2026-10-01 to 2026-10-30",
+  "reconciled_on": "2026-11-03",
+  "currency": "VND",
+  "usd_rate": 26000,
+  "groups": [
+    { "id": "A", "name": "Attention video", "spend": 140000000, "conversations": 8400, "first_paid": 151, "full_refunds": 6, "gross": 264600000, "refunded": 10600000 },
+    { "id": "B", "name": "Customer reviews", "spend": 75000000, "conversations": 2500, "first_paid": 400, "full_refunds": 10, "gross": 760000000, "refunded": 19000000 },
+    { "id": "C", "name": "Personalised for an occasion", "spend": 45000000, "conversations": 1200, "first_paid": 177, "full_refunds": 7, "gross": 335000000, "refunded": 13000000 }
+  ],
+  "invoices": { "issued": 1214, "paid": 728, "unpaid_at_reconciliation": 423, "cancelled_unpaid": 63 },
+  "duplicate_payments": { "count": 7, "refunded": 12100000, "note": "refunded in full; never counted as orders or revenue" },
+  "time_to_pay": { "mean_hours": 14.33, "median_hours": 9.67, "p90_hours": 42 }
+}

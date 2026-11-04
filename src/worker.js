@@ -806,8 +806,8 @@ const app = {
       if (url.pathname === "/api/judge/refund-try" && request.method === "POST") {
         let body; try { body = await request.json(); } catch { body = {}; }
         const SAID = {
-          siblings: ["Booked the trial for my daughter Mia.", "And her brother Sam too, I paid for him separately."],
-          twice: ["Booked one trial for Mia.", "The page froze after I pressed Pay, so I pressed it again. I think I paid twice."],
+          siblings: ["Booked the trial for my daughter Mai.", "And her brother Sam too, I paid for him separately."],
+          twice: ["Booked one trial for Mai.", "The page froze after I pressed Pay, so I pressed it again. I think I paid twice."],
         };
         const context = SAID[body.variant];
         if (!context) return json({ error: "Pick one of the two buyers." }, 400);
