@@ -1,6 +1,6 @@
 // Invoices (draft, approve, send, sync), the judge path's try-it flow, the revenue and chase agents, double-payment refunds.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
-import { guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "../core.js";
+import { sendToMeta, guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "../core.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
@@ -149,7 +149,9 @@ export async function route({ request, env, url, pp, orders, ip }) {
       if (!p) return json({ error: "Payment not found." }, 404);
       p.confirmed_distinct = { at: new Date().toISOString(), by: "a person, on the dashboard", reason: String(reason || "a separate order").slice(0, 200) };
       await env.LEDGER.put(`pay:${capture_id}`, JSON.stringify(p)); await forget("pay:");
-      return json({ ok: true, capture_id, confirmed_distinct: p.confirmed_distinct });
+      // the payment now counts, so Meta hears about it once (still inside Meta's window; same event_id, so never twice)
+      const meta = await sendToMeta(env, url, p, { recheckHeld: true });
+      return json({ ok: true, capture_id, confirmed_distinct: p.confirmed_distinct, meta });
     }
 
     // A person approves resolving a likely double payment; the refund agent (Claude + PayPal Agent Toolkit) decides and,
@@ -165,7 +167,10 @@ export async function route({ request, env, url, pp, orders, ip }) {
       await env.LEDGER.put(`refund-lock:${capture_id}`, new Date().toISOString(), { expirationTtl: 3600 });
       const key = async (p) => (p.payer_email_sha256 ? (await sha(`${env.PAYPAL_CLIENT_SECRET}:${p.payer_email_sha256}`)).slice(0, 12) : "unknown");
       const view = async (p) => ({ capture_id: p.capture_id, payer_key: await key(p), ad: p.ad, amount: p.amount, currency: p.currency || "USD", captured_at: utc(p.captured_at) });
-      const pair = { first: await view(payments.find((p) => p.capture_id === flag.first)), second: await view(payments.find((p) => p.capture_id === capture_id)), seconds: flag.seconds };
+      const p1 = payments.find((p) => p.capture_id === flag.first), p2 = payments.find((p) => p.capture_id === capture_id);
+      // what the buyer wrote before paying (kept with invoice payments); none stored means the agent is told so and decides on the pair
+      const context = [p1?.buyer_message, p2?.buyer_message].filter(Boolean).map(String);
+      const pair = { first: await view(p1), second: await view(p2), seconds: flag.seconds, context };
       const tools = toolkitTools(env, { payments: { createRefund: true, getRefunds: true } });
       const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REFUND_SYSTEM, tools: REFUND_TOOLS });
       const approvedAt = new Date().toISOString();

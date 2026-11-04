@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**AI agents run the money side of a sale. Every PayPal action is checked against PayPal's own records and rules in code.**
+**AI agents run the money side of a sale. Every money movement is pinned to PayPal's records and checked in code.**
 
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
@@ -36,7 +36,7 @@ Paid Signal closes that loop on the PayPal developer platform:
    Budget changes stay clicks a person makes.
 4. **Decision → ad platform.** Confirmed payments are prepared as Meta Conversions API `Purchase` events (deduplicated
    by `event_id = paypal:<capture>`) and Google Ads offline conversion rows. A refund generates a Google retraction or restatement row (a file to upload; nothing is sent to Google); a Meta event not yet sent is held back, and one already sent stays (Meta's Conversions API has no retraction), so the refund is taken off here;
-   a possible duplicate payment is held back from both, and is not counted as a paid order, until it is refunded.
+   a possible duplicate payment is held back from both, and is not counted as a paid order, until it is refunded or a person confirms it is a separate order (then it counts, and Meta gets it once).
    Eligible Meta payments use the website click (`fbclid`), Messenger business messaging (the page ID and page-scoped user ID),
    or Conversion Leads CRM path (`lead_id`). A buyer who came from a Google click (`gclid`) goes to Google only, so Meta cannot
    take credit for it. The demo shows and downloads these payload shapes, with personal IDs redacted. Website-click Purchase
@@ -159,7 +159,7 @@ AG Studio (1.5 MB gzip) is its own chunk, loaded when its section scrolls near o
 the live site (Playwright, 2026-10-29): ready in 1.7 s on desktop and 2.3 s on a throttled phone (4G, 4x CPU), down
 from 5 s and 18 s with one bundle.
 
-**Security.** Every write must be JSON from this origin, with a per-visitor burst limit and daily caps; ad keys and
+**Security.** This is a public demo with no owner login: writes must be JSON, a request from another site is refused (CSRF protection, not authentication), and the routes that move sandbox money or spend Claude turns answer only this site’s pages; there are per-visitor burst limits and daily caps; ad keys and
 click ids are allow-listed; the Claude proxy serves only AG Studio's own tools; PayPal webhooks are signature-verified;
 pages carry a Content Security Policy and `frame-ancestors 'none'`; server errors never return PayPal or Claude details.
 
@@ -168,7 +168,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 150 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 152 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

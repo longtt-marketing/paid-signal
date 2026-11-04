@@ -122,7 +122,7 @@ export async function revenueDrafts(env, url) {
     const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
     if (!/^INV2-[A-Z0-9-]+$/.test(id)) return { error: "PayPal returned no invoice id" };
     const rec = { id, lead: lead.lead, ad: lead.ad, email: lead.email, channel: lead.channel || "web", psid: lead.psid || null, page_id: lead.page_id || null, lead_id: lead.lead_id || null,
-      amount: p.total, lines: p.lines, status: "DRAFT",
+      amount: p.total, lines: p.lines, status: "DRAFT", message: String(lead.message || "").slice(0, 500) || null,
       reference: packClick({ ad: lead.ad, source: lead.source, clickId: lead.click_id, clickedAt: 0 }), note: p.note, reason: p.reason,
       drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() };
     await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); drafts.push(rec);
@@ -182,7 +182,8 @@ export async function recordCapture(env, order, userAgent) {
   if (userAgent) record.user_agent = userAgent.slice(0, 300); // the buyer's browser, for Meta's website events
   // a replayed capture must not wipe refunds already recorded against it
   const prev = await env.LEDGER.get(`pay:${cap.id}`, "json");
-  if (prev) { record.user_agent ??= prev.user_agent; record.fee ??= prev.fee ?? null; record.refunded_amount = prev.refunded_amount; record.status = prev.status; if (prev.refunded_at) record.refunded_at = prev.refunded_at; }
+  if (prev) { record.user_agent ??= prev.user_agent; record.fee ??= prev.fee ?? null; record.refunded_amount = prev.refunded_amount; record.status = prev.status; if (prev.refunded_at) record.refunded_at = prev.refunded_at;
+    for (const k of ["confirmed_distinct", "refund_id", "refunded_by", "buyer_message"]) if (prev[k]) record[k] = prev[k]; }
   await env.LEDGER.put(`pay:${cap.id}`, JSON.stringify(record)); await forget("pay:");
   return record;
 }
@@ -192,10 +193,11 @@ export async function recordCapture(env, order, userAgent) {
  * test one (test_event_code), so Events Manager shows the event live and it never counts toward real ads. Meta's answer
  * is kept with the payment so the dashboard and the receipt can show it. A held capture (duplicate, no click) is not sent.
  */
-export async function sendToMeta(env, url, record) {
+export async function sendToMeta(env, url, record, { recheckHeld = false } = {}) {
   if (!record || !env.META_CAPI_TOKEN || !env.META_DATASET_ID) return null;
   const sent = await env.LEDGER.get(`meta:${record.capture_id}`, "json");
-  if (sent && (sent.ok || sent.held)) return sent; // a send that failed (Meta timed out) is tried again
+  // recheckHeld: a person has since confirmed a held payment as a separate order, so the hold is decided again (same event_id)
+  if (sent && (sent.ok || (sent.held && !recheckHeld))) return sent; // a send that failed (Meta timed out) is tried again
   const payments = await listPayments(env);
   const { events, held } = await metaEvents([record], { sourceUrl: `${url.origin}/shop.html`, hold: heldDuplicates(payments) });
   let out;
@@ -380,6 +382,8 @@ export async function recordInvoicePayment(env, invoice, url = new URL("https://
       captured_at: invoiceUpdateAt || learnedAt, payment_seen_at: learnedAt, paypal_payment_date: t.payment_date_time || t.payment_date || null,
       ...(invoiceUpdateAt ? { paypal_invoice_update_time: invoiceUpdateAt } : {}),
       refunded_amount: "0.00", payer_email_sha256: kept?.email ? await sha(String(kept.email).trim().toLowerCase()) : null, via: "invoice",
+      // what the buyer wrote before paying: the refund agent reads it as evidence if this payment is ever flagged
+      ...(kept?.message ? { buyer_message: kept.message } : {}),
     }));
     // An invoice payment teaches Meta too, the moment PayPal says it is paid.
     await sendToMeta(env, url, await env.LEDGER.get(`pay:${id}`, "json"));

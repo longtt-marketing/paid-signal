@@ -44,13 +44,20 @@ const isError = (out) => {
 /** True when what the buyer wrote tries to instruct the agent (a fake system line, "ignore your rules", "pre-approved").
  * Code then leaves the refund to a person, whatever Claude concludes: a wrong refund cannot be taken back. */
 export function instructsAgent(context = []) {
-  return context.some((c) => /\b(system|assistant|developer)\s*:|ignore (all |any |your |previous )|pre-?approved|override|you must refund|admin(istrator)? (says|approved)|new instructions/i.test(String(c)));
+  // a heuristic, not a guarantee: a role marker opening a line or sentence ("SYSTEM:", "[system]", "Developer -"), or
+  // phrases that try to change the agent's rules. The real safeguard is that a person approves every refund run.
+  const role = /(^|[.!?]\s+|\n)\s*[[(]?\s*(system|assistant|developer|admin)\s*[\])]?\s*[:\-–\]]/i;
+  const rules = /ignore (the |all |any |your |previous )*(rules|instructions|policy|above)|pre-?\s?approved|you must refund|(admin|administrator|owner) (says|approved|has approved)|new instructions|refund (is |was )?approved by/i;
+  return context.some((c) => role.test(String(c)) || rules.test(String(c)));
 }
 
 /** Why create_refund must not run with these arguments, or null when it is the full refund of the flagged capture. */
 export function refundProblem(input, flagged, alreadyCalled) {
   if (alreadyCalled) return "create_refund already ran once in this approval.";
   if (input.capture_id !== flagged.capture_id) return `Only the flagged second capture ${flagged.capture_id} may be refunded.`;
+  const note = String(input.note_to_payer || "");
+  if (note && ([flagged.ad, flagged.capture_id].some((x) => x && note.includes(x)) || /\b[A-Z0-9]{17}\b/.test(note) || /\b[a-z]+_[a-z_]+\b/.test(note)))
+    return "The note to the buyer must be plain words: no ad key, capture id or other internal id.";
   if (input.amount && (input.amount.currency_code !== (flagged.currency || "USD") || Number(input.amount.value) !== Number(flagged.amount)))
     return `A double payment is refunded in full: ${flagged.amount} ${flagged.currency || "USD"}.`;
   return null;

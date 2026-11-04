@@ -15,3 +15,14 @@ test("duplicates: a second payment a person confirmed as a separate order is no 
   assert.equal(held.paid, 1);
   assert.equal(counted.paid, 2);
 });
+
+test("duplicates: a replayed capture keeps a person's confirmation", async () => {
+  const { recordCapture } = await import("../src/core.js");
+  const kv = new Map();
+  const env = { LEDGER: { get: async (k, t) => (kv.has(k) ? (t === "json" ? JSON.parse(kv.get(k)) : kv.get(k)) : null), put: async (k, v) => { kv.set(k, v); } } };
+  const order = { id: "O1", payer: { email_address: "a@example.com" }, purchase_units: [{ payments: { captures: [{ id: "B", status: "COMPLETED", amount: { value: "49.00", currency_code: "USD" }, custom_id: "a=trial_video;s=fb;c=x;t=0", create_time: "2026-11-01T10:03:00Z" }] } }] };
+  await recordCapture(env, order);
+  const p = JSON.parse(kv.get("pay:B")); p.confirmed_distinct = { at: "2026-11-05T00:00:00Z", reason: "second child" }; kv.set("pay:B", JSON.stringify(p));
+  await recordCapture(env, order);
+  assert.equal(JSON.parse(kv.get("pay:B")).confirmed_distinct.reason, "second child");
+});
