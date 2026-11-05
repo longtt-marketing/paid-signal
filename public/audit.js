@@ -130,7 +130,7 @@ function parseShopCsv(text) {
 const moneyVnd = (n) => (Math.abs(n) >= 1e6 ? `${(n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 1 })}M VND` : `${Math.round(n).toLocaleString("en-US")} VND`);
 const shopReady = () => { $("shop-run").disabled = !(shopFiles.orders && shopFiles.payments && shopFiles.refunds); };
 for (const [key, id] of Object.entries(shopInputs)) {
-  const input = $(id), zone = input.closest(".drop");
+  const input = $(id), zone = (input.closest(".drop") || input.closest(".row"));
   const take = async (file) => {
     if (!file) return;
     if (file.size > 20 * 1024 * 1024) { $("shop-msg").textContent = `${file.name} is larger than 20 MB.`; return; }

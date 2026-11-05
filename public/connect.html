@@ -14,26 +14,35 @@
 </head>
 <body>
 <header class="ps-top"><nav aria-label="Main"><a class="ps-brand" href="/"><span class="ps-mark"><i></i></span>Paid Signal</a><div class="ps-links"><a href="/">Dashboard</a><a href="/judge" >Judge path</a><a href="/audit" >Audit</a><a href="/proof" >Proof</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></div><span class="ps-live">PayPal sandbox live</span></nav></header>
-<main class="ps-main">
-  <div>
+<main class="ps-main pg">
+  <section class="intro">
     <h1>Connect a shop.</h1>
-    <p class="ps-lead">Four inputs connect ad spend to PayPal-confirmed sales.</p>
-  </div>
-  <ol class="connect-grid">
-    <li class="ps-card"><span class="ps-tag">Setup</span><li><h2>Keep the ad click on the landing page</h2><details class="ps-more-box"><summary>Setup details</summary><p>Meta and Google add <code>fbclid</code> or <code>gclid</code> to the link. Keep it for the visit and send it with the checkout; it goes into the PayPal order's <code>custom_id</code>. This is what the demo shop does.</p>
-      <pre>const q = new URLSearchParams(location.search);
+    <p class="ps-lead">Four steps link ad spend to PayPal-confirmed sales.</p>
+  </section>
+  <div class="card" style="margin-top:-40px">
+    <div class="rows">
+      <div class="row"><span class="l">1 · Landing page</span><span class="v">Keep the ad click for the visit and send it with the checkout</span><span class="chip neu">custom_id</span></div>
+      <div class="row"><span class="l">2 · PayPal</span><span class="v">Register a webhook so PayPal reports payments and refunds</span><span class="chip neu">Webhooks</span></div>
+      <div class="row"><span class="l">3 · Meta and Google</span><span class="v">Add the Meta dataset and token; Google rows come out to upload</span><span class="chip neu">Secrets</span></div>
+      <div class="row"><span class="l">4 · Ad export</span><span class="v">Paste ad, spend and leads from Ads Manager on the dashboard</span><span class="chip neu">CSV</span></div>
+    </div>
+    <details class="det"><summary>Step 1 code: keep the ad click</summary>
+      <p>Meta and Google add <code>fbclid</code> or <code>gclid</code> to the link. Keep it for the visit and send it with the checkout; it goes into the PayPal order's <code>custom_id</code>. This is what the demo shop does.</p>
+      <pre style="margin-top:10px">const q = new URLSearchParams(location.search);
 const id = q.get("fbclid") || q.get("gclid");
 if (id) sessionStorage.setItem("ps-click", JSON.stringify({
   source: q.get("fbclid") ? "fb" : "g", click_id: id, ad: q.get("ad"), clicked_at: Date.now() }));
 // at checkout: POST /api/checkout with the saved click; the order's custom_id becomes
-// a=&lt;ad&gt;;s=&lt;fb|g&gt;;c=&lt;click id&gt;;t=&lt;click time&gt;</pre></details></li>
-    <li class="ps-card"><span class="ps-tag">Setup</span><li><h2>Let PayPal report payments</h2><details class="ps-more-box"><summary>Setup details</summary><p>Register a PayPal webhook pointing at <code>/api/webhook</code> for <code>PAYMENT.CAPTURE.COMPLETED</code>, <code>PAYMENT.CAPTURE.REFUNDED</code> and <code>INVOICING.INVOICE.PAID</code>. Every delivery is checked with <code>verify-webhook-signature</code>, and Transaction Search cross-checks the ledger against PayPal's own history.</p></details></li>
-    <li class="ps-card"><span class="ps-tag">Setup</span><li><h2>Connect Meta and Google</h2><details class="ps-more-box"><summary>Setup details</summary><p>Add the shop's Meta dataset id and a Conversions API token as Worker secrets (<code>META_DATASET_ID</code>, <code>META_CAPI_TOKEN</code>). Each confirmed payment from a Meta click is sent the moment PayPal captures it; a payment refunded before it is sent is held back, and a buyer from a Google click goes to Google, not Meta. Google offline conversions come out as rows to upload, with retractions and restatements for refunds.</p></details></li>
-    <li class="ps-card"><span class="ps-tag">Setup</span><li><h2>Paste the ad export</h2><details class="ps-more-box"><summary>Setup details</summary><p>On the dashboard, paste a CSV with three columns (ad, spend, leads) from Ads Manager. The reconciliation, the budget agent and the MCP tools read it next to what PayPal confirms. Invoices for leads who came through a chat keep the lead's ad in the ledger.</p></details></li>
-  </ol>
-  <p>Start with <a href="/audit">a local ad and payment audit</a>.</p>
-  <details class="ps-more-box"><summary>Limits</summary><p>Not built yet: a sign-in for the owner (in this public demo anyone can approve and send, in the sandbox), and a one-click PayPal and Meta connection in place of secrets.</p></details>
-
+// a=&lt;ad&gt;;s=&lt;fb|g&gt;;c=&lt;click id&gt;;t=&lt;click time&gt;</pre>
+    </details>
+    <details class="det"><summary>Steps 2 to 4 in detail</summary>
+      <p>PayPal: a webhook pointing at <code>/api/webhook</code> for <code>PAYMENT.CAPTURE.COMPLETED</code>, <code>PAYMENT.CAPTURE.REFUNDED</code> and <code>INVOICING.INVOICE.PAID</code>. Every delivery is checked with <code>verify-webhook-signature</code>, and Transaction Search cross-checks the ledger against PayPal's own history.</p>
+      <p>Meta and Google: the shop's Meta dataset id and a Conversions API token as Worker secrets (<code>META_DATASET_ID</code>, <code>META_CAPI_TOKEN</code>). Each confirmed payment from a Meta click is sent the moment PayPal captures it; a payment refunded before it is sent is held back, and a buyer from a Google click goes to Google, not Meta. Google offline conversions come out as rows to upload, with retractions and restatements for refunds.</p>
+      <p>Ad export: a CSV with three columns (ad, spend, leads). The reconciliation, the budget agent and the MCP tools read it next to what PayPal confirms. Invoices for leads who came through a chat keep the lead's ad in the ledger.</p>
+    </details>
+    <details class="det"><summary>Not built yet</summary><p>A sign-in for the owner (in this public demo anyone can approve and send, in the sandbox), and a one-click PayPal and Meta connection in place of secrets.</p></details>
+    <div class="foot"><span class="ps-note">No setup needed to check your numbers first.</span><a class="btn" href="/audit">Audit your files</a></div>
+  </div>
 </main>
 <footer class="ps-foot">Fictional demo shop &#183; real PayPal sandbox calls &#183; Meta test events <span class="foot-links"><a href="/trail">Money trail</a><a href="/scenarios.html">Scenarios</a><a href="/connect.html">Connect a shop</a><a href="/data">Data use</a></span></footer>
 </body>

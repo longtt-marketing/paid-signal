@@ -12,62 +12,85 @@
 
 
 <style>
-.files,.shop-files{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px}.drop{padding:16px;gap:8px;background:#fff}.drop small{display:block;color:var(--mute);font-size:13px}.drop input{max-width:100%;font:14px var(--sans);min-height:44px}.drop .ok,.ok{color:var(--paid);font-weight:600;font-size:13px}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.cost{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--mute);font-size:14px}.cost input{width:76px;min-height:44px;padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px}.stat{padding:16px}.stat b{display:block;font-size:30px}.stat span{font-size:13px;color:var(--mute)}.stat.bad b,.bad{color:var(--bad)}.stat.good b{color:var(--paid)}.tbl{overflow-x:auto}.tbl table{min-width:900px;width:100%;border-collapse:collapse}.tbl th,.tbl td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top;font-size:13px}.tbl th{white-space:nowrap;color:var(--mute)}.tbl td small{display:block;color:var(--mute)}.pill,.tag{display:inline-flex;padding:4px 9px;border-radius:99px;background:var(--soft);font-size:12px}.pill.up{background:var(--paid-bg);color:var(--paid-ink)}.pill.down{background:var(--bad-bg);color:var(--bad)}.head{font-size:22px;font-weight:700}.todo{padding-left:20px;display:grid;gap:8px}.err{color:var(--bad)}.shop-result{display:grid;gap:12px}.ps-main>.card{gap:16px}
+.slot input[type=file]{max-width:100%;font:14px var(--sans)}
+.slot small{display:block;font-size:12px;color:var(--paid);font-weight:600;margin-top:4px}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.cost{display:inline-flex;align-items:center;gap:8px;color:var(--mute);font-size:14px}
+.cost input{width:72px;height:40px;padding:0 10px;border:1px solid #D6D6D2;border-radius:10px;font:inherit}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stats .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.stats .stat b{font-size:28px;font-weight:700;letter-spacing:-.02em}.stats .stat span{font-size:13px;color:var(--mute);display:block;margin:0}
+.stat.bad b{color:var(--bad)}.stat.good b{color:var(--paid)}
+.tbl table{min-width:860px;width:100%;border-collapse:collapse}.tbl th,.tbl td{text-align:left;padding:12px;border-bottom:1px solid var(--line2);vertical-align:top;font-size:13px}
+.tbl th{white-space:nowrap;color:var(--mute);font-weight:600}.tbl td small{display:block;color:var(--mute)}
+.pill,.tag{display:inline-flex;padding:5px 10px;border-radius:99px;background:var(--soft);font-size:12px;font-weight:600}
+.pill.up{background:var(--paid-bg);color:var(--paid-ink)}.pill.down{background:var(--bad-bg);color:var(--bad)}
+.head{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.todo{padding-left:20px;display:grid;gap:8px;font-size:14px}
+.err{color:var(--bad);font-size:14px}.err:empty{display:none}
+.result{display:flex;flex-direction:column;gap:16px}
+@media(max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
-<header class="ps-top"><nav aria-label="Main"><a class="ps-brand" href="/"><span class="ps-mark"><i></i></span>Paid Signal</a><div class="ps-links"><a href="/">Dashboard</a><a href="/judge" >Judge path</a><a href="/audit" aria-current="page">Audit</a><a href="/proof" >Proof</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></div><span class="ps-live">PayPal sandbox live</span></nav></header>
-<main class="ps-main">
-  <div>
-    <h1>Audit ads against paid orders.</h1>
-    <p class="ps-lead">Your files stay in this browser.</p><details class="ps-more-box"><summary>How matching works</summary><p>A payment can match through an ad tag or name in the PayPal order, a Meta lead export with the same customer email, or an ad name in the invoice. Email matching stays in this browser.</p></details>
-  </div>
-
-  <section class="card ps-card">
-    <h2>Ad and PayPal files</h2>
-    <div class="files">
-      <div class="drop ps-card"><b>1. Ads Manager export (CSV)</b><details class="ps-more-box"><summary>Export help</summary><small>Meta: Ads Manager → Reports → Export table data → CSV, at ad level. Google Ads works too. Needs the ad name, amount spent and results (or leads, conversions).</small></details><input type="file" id="ads" accept=".csv,text/csv"><span class="ok" id="ads-ok"></span></div>
-      <div class="drop ps-card"><b>2. PayPal activity download (CSV)</b><details class="ps-more-box"><summary>Export help</summary><small>PayPal: Activity → Statements and reports → Activity download → All transactions, CSV, same dates. The ad comes from the order's custom field (Custom Number), a utm_content tag, or an item title equal to the ad name.</small></details><input type="file" id="pp" accept=".csv,text/csv"><span class="ok" id="pp-ok"></span></div>
-      <div class="drop ps-card"><b>3. Meta lead form export (CSV, optional)</b><details class="ps-more-box"><summary>File details</summary><small>Include created_time, ad_id, ad_name and email. UTF-8 CSV and UTF-16 tab-separated downloads are supported. Emails are matched locally and never shown.</small></details><input type="file" id="leads" accept=".csv,text/csv"><span class="ok" id="leads-ok"></span></div>
-    </div>
-    <div class="row">
-      <button class="btn ps-btn primary" id="run" disabled>Audit</button>
-      <button class="btn ps-btn" id="sample">Try with sample files (invoice shop)</button>
-      <label class="cost">Product and delivery cost <input type="number" id="cost" min="0" max="95" step="1" value="30">% of each order</label>
-    </div>
-    <details class="ps-more-box"><summary>Privacy and method</summary><p>Everything runs in this page with the same money code the Worker uses (<a href="/lib/ledger.js">ledger.js</a>); nothing is uploaded, and no AI reads your files.</p></details>
-    <p class="note err" id="msg" role="alert"></p>
+<header class="ps-top"><nav aria-label="Main"><a class="ps-brand" href="/"><span class="ps-mark"><i></i></span>Paid Signal</a><div class="ps-links"><a href="/">Dashboard</a><a href="/judge">Judge path</a><a href="/audit" aria-current="page">Audit</a><a href="/proof">Proof</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></div><span class="ps-live">PayPal sandbox live</span></nav></header>
+<main class="ps-main pg">
+  <section class="intro">
+    <h1>Audit your ads against paid orders.</h1>
+    <p class="ps-lead">Drop your own files. Nothing leaves this browser.</p>
   </section>
 
-  <section class="card ps-card" aria-labelledby="shop-title">
-    <h2 id="shop-title">Check a shop ledger</h2>
-    <p class="shop-note">Order book, payments, refunds.</p><details class="ps-more-box"><summary>Limits</summary><p>Files stay in this browser. This checks the book's arithmetic and double payments, not whether ads caused a sale.</p></details>
-    <div class="shop-files">
-      <div class="drop shop-drop ps-card"><b>Order book (CSV)</b><input type="file" id="shop-orders" accept=".csv,text/csv"><small id="shop-orders-ok"></small></div>
-      <div class="drop shop-drop ps-card"><b>Payments (CSV)</b><input type="file" id="shop-payments" accept=".csv,text/csv"><small id="shop-payments-ok"></small></div>
-      <div class="drop shop-drop ps-card"><b>Refunds (CSV)</b><input type="file" id="shop-refunds" accept=".csv,text/csv"><small id="shop-refunds-ok"></small></div>
-      <div class="drop shop-drop ps-card"><b>Ad report (optional CSV)</b><input type="file" id="shop-ads" accept=".csv,text/csv"><small id="shop-ads-ok">Without it, results show money only.</small></div>
+  <section class="sec">
+    <div class="hd"><span class="no">1</span><h2>A shop paid by PayPal</h2></div>
+    <p class="sub">Your ad report and your PayPal download, matched in the browser.</p>
+    <div class="card">
+      <div class="rows">
+        <div class="row slot"><span class="l">Ads Manager export</span><span class="v"><input type="file" id="ads" accept=".csv,text/csv" aria-label="Ads Manager export (CSV)"><small id="ads-ok"></small></span><span class="chip neu">CSV</span></div>
+        <div class="row slot"><span class="l">PayPal activity download</span><span class="v"><input type="file" id="pp" accept=".csv,text/csv" aria-label="PayPal activity download (CSV)"><small id="pp-ok"></small></span><span class="chip neu">CSV</span></div>
+        <div class="row slot"><span class="l">Meta lead export</span><span class="v"><input type="file" id="leads" accept=".csv,text/csv" aria-label="Meta lead form export (CSV, optional)"><small id="leads-ok"></small></span><span class="chip neu">Optional</span></div>
+      </div>
+      <details class="det"><summary>Where to get these files, and how matching works</summary>
+        <p>Meta: Ads Manager → Reports → Export table data → CSV, at ad level (Google Ads works too): the ad name, amount spent and results or leads. PayPal: Activity → Statements and reports → Activity download → All transactions, CSV, same dates. Meta lead form export: created_time, ad_id, ad_name and email; UTF-8 CSV or UTF-16 tab-separated.</p>
+        <p>A payment is matched to an ad by the tag in the PayPal order (custom field, a utm_content tag, or an item title equal to the ad name), then by the customer's email in the Meta lead export, then by the ad name in the invoice. Emails are matched locally and never shown. Everything runs in this page with the same money code the Worker uses (<a href="/lib/ledger.js">ledger.js</a>); nothing is uploaded, and no AI reads your files.</p>
+      </details>
+      <div class="foot">
+        <label class="cost">Product and delivery cost <input type="number" id="cost" min="0" max="95" step="1" value="30">%</label>
+        <span class="actions"><button class="btn sec2" id="sample" type="button">Try sample files</button><button class="btn" id="run" type="button" disabled>Audit</button></span>
+      </div>
+      <p class="err" id="msg" role="alert"></p>
     </div>
-    <div class="row"><button class="btn ps-btn primary" id="shop-run" disabled>Run the book</button><button class="btn ps-btn" id="shop-sample">Load the gift shop's book</button></div>
-    <p class="note err" id="shop-msg" role="alert"></p>
-    <div class="shop-result" id="shop-out" hidden aria-live="polite"><span class="tag" id="shop-tag"></span><p class="head" id="shop-head"></p><p class="shop-note" id="shop-rank"></p>
+    <div class="card result" id="out" hidden aria-live="polite">
+      <div class="foot" style="border:0;padding:0"><p class="head" id="headline"></p><span class="tag" id="out-tag"></span></div>
+      <div class="stats" id="stats"></div>
+      <div class="tbl ps-table"><table><thead><tr><th>Ad</th><th>Spend</th><th>Leads (ad report)</th><th>Paid orders (PayPal)</th><th>Refunded</th><th>Paid revenue</th><th>Per $1 of ads</th><th>After costs and fees, per $1</th><th>What the budget rule allows</th></tr></thead><tbody id="rows"></tbody></table></div>
+      <details class="det"><summary>Match detail and what to do next</summary><p id="match-rate"></p><ul class="todo" id="todo"></ul></details>
+      <div class="foot"><span class="ps-note">Checks your files' arithmetic and matching, not whether ads caused a sale.</span><button class="btn sec2 sm" id="dl" type="button">Download (text)</button></div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="shop-title">
+    <div class="hd"><span class="no">2</span><h2 id="shop-title">A shop paid by bank transfer</h2></div>
+    <p class="sub">Your own order book, payments and refunds, through the same ledger code.</p>
+    <div class="card">
+      <div class="rows">
+        <div class="row slot"><span class="l">Order book</span><span class="v"><input type="file" id="shop-orders" accept=".csv,text/csv" aria-label="Order book (CSV)"><small id="shop-orders-ok"></small></span><span class="chip neu">CSV</span></div>
+        <div class="row slot"><span class="l">Payments</span><span class="v"><input type="file" id="shop-payments" accept=".csv,text/csv" aria-label="Payments (CSV)"><small id="shop-payments-ok"></small></span><span class="chip neu">CSV</span></div>
+        <div class="row slot"><span class="l">Refunds</span><span class="v"><input type="file" id="shop-refunds" accept=".csv,text/csv" aria-label="Refunds (CSV)"><small id="shop-refunds-ok"></small></span><span class="chip neu">CSV</span></div>
+        <div class="row slot"><span class="l">Ad report</span><span class="v"><input type="file" id="shop-ads" accept=".csv,text/csv" aria-label="Ad report (optional CSV)"><small id="shop-ads-ok"></small></span><span class="chip neu">Optional</span></div>
+      </div>
+      <div class="foot"><span class="ps-note">Without an ad report, results show money only.</span><span class="actions"><button class="btn sec2" id="shop-sample" type="button">Load the gift shop's book</button><button class="btn" id="shop-run" type="button" disabled>Run the book</button></span></div>
+      <p class="err" id="shop-msg" role="alert"></p>
+    </div>
+    <div class="card result" id="shop-out" hidden aria-live="polite">
+      <div class="foot" style="border:0;padding:0"><p class="head" id="shop-head"></p><span class="tag" id="shop-tag"></span></div>
+      <p class="ps-note" id="shop-rank"></p>
       <div class="tbl ps-table"><table class="shop-table"><thead><tr><th>Ad group</th><th>Paid orders kept</th><th>Money kept</th><th>Refunds</th><th>Double payments held</th><th>No matching order</th><th>Cost / chat</th><th>Kept per ad spend</th></tr></thead><tbody id="shop-rows"></tbody></table></div>
-      <p class="note" id="shop-unmatched"></p>
+      <p class="ps-note" id="shop-unmatched"></p>
+      <details class="det"><summary>Limits</summary><p>This checks the book's arithmetic and double payments, not whether ads caused a sale.</p></details>
     </div>
-  </section>
-
-  <section class="card ps-card" id="out" hidden aria-live="polite">
-    <span class="tag" id="out-tag"></span>
-    <p class="head" id="headline"></p>
-    <details class="ps-more-box"><summary>Match detail</summary><p class="shop-note" id="match-rate"></p></details>
-    <div class="stats" id="stats"></div>
-    <div class="tbl ps-table"><table><thead><tr><th>Ad</th><th>Spend</th><th>Leads (ad report)</th><th>Paid orders (PayPal)</th><th>Refunded</th><th>Paid revenue</th><th>Per $1 of ads</th><th>After your costs and PayPal fees, per $1</th><th>What the budget rule allows</th></tr></thead><tbody id="rows"></tbody></table></div>
-    <h2 style="margin-top:18px">What to do next</h2>
-    <details class="ps-more-box"><summary>How to read this result</summary><ul class="todo" id="todo"></ul></details>
-    <div class="row"><button class="btn ps-btn" id="dl">Download this audit (text)</button></div>
   </section>
 </main>
-<footer class="ps-foot">Fictional demo shop &#183; real PayPal sandbox calls &#183; Meta test events <span class="foot-links"><a href="/trail">Money trail</a><a href="/scenarios.html">Scenarios</a><a href="/connect.html">Connect a shop</a><a href="/data">Data use</a></span></footer>
+<footer class="ps-foot">Fictional demo shop · real PayPal sandbox calls · Meta test events <span class="foot-links"><a href="/trail">Money trail</a><a href="/scenarios.html">Scenarios</a><a href="/connect.html">Connect a shop</a><a href="/data">Data use</a></span></footer>
 <script type="module" src="/audit.js"></script>
 </body>
 </html>

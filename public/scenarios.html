@@ -12,28 +12,34 @@
 </head>
 <body>
 <header class="ps-top"><nav aria-label="Main"><a class="ps-brand" href="/"><span class="ps-mark"><i></i></span>Paid Signal</a><div class="ps-links"><a href="/">Dashboard</a><a href="/judge" >Judge path</a><a href="/audit" >Audit</a><a href="/proof" >Proof</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></div><span class="ps-live">PayPal sandbox live</span></nav></header>
-<main class="ps-main">
-  <div>
-    <h1>Money, checked before action.</h1>
-    <p class="ps-lead">Live PayPal records and automated tests.</p>
-  </div>
-  <div class="key"><span class="badge live"><i></i>Live in PayPal sandbox</span><span class="badge test"><i></i>Automated test</span></div>
-  <ol class="scenario-list">
-    <li class="scenario"><span class="n">1</span><div><h2>Meta ad sale</h2><p class="ev">Capture 59A98014DG653005N · Trial class</p></div><span class="ps-chip paid">Live</span><details class="ps-more-box does"><summary>Details and limits</summary><p>The fbclid rides in the order's custom_id. The capture counts as a paid order for that ad and becomes a Meta Purchase event, deduplicated by capture.</p></details></li>
-    <li class="scenario"><span class="n">2</span><div><h2>Google ad sale</h2><p class="ev">Capture 7Y943188M77480212 · Holiday camp</p></div><span class="ps-chip paid">Live</span><details class="ps-more-box does"><summary>Details and limits</summary><p>The gclid is kept the same way and becomes a Google offline conversion row.</p></details></li>
-    <li class="scenario"><span class="n">3</span><div><h2>Invoice paid by lead</h2><p class="ev">Invoice INV2-XSMX-ELUG-QLVV-PMMM · payment 81X20615X87083050 · Free guide · agent-sent INV2-6ZMD-T3MY-9YPX-MJEW</p></div><span class="ps-chip paid">Live</span><details class="ps-more-box does"><summary>Details and limits</summary><p>Claude creates the draft with PayPal's Agent Toolkit; the ad click stays with the invoice in the shop's ledger (the Toolkit's create_invoice has no merchant-only memo, and the click should not show on the customer's invoice). A person approves; the send agent (Claude with PayPal's Agent Toolkit) reads it from PayPal, checks it and sends it, pinned in code to that invoice. The payment counts for the lead's ad. The sandbox sent no INVOICING.INVOICE.PAID event, so sent invoices are re-checked with PayPal.</p></details></li>
-    <li class="scenario"><span class="n">4</span><div><h2>Buyer presses Pay twice</h2><p class="ev">One visit, Pay pressed twice: PayPal returned the same order 2UD41406J29438706 both times · two separate payments, same payer and ad: 71264306943252202 flagged 17 s after 7Y943188M77480212, then refunded · 7A791792B60079253, 216 s after 59A98014DG653005N, refunded on 4 Nov by the refund agent (Claude with the Agent Toolkit's create_refund) after a person approved</p></div><span class="ps-chip paid">Live</span><details class="ps-more-box does"><summary>Details and limits</summary><p>One checkout intent per visit, so a second click gets the same PayPal order. Two payments from the same payer for the same ad within minutes are flagged as a possible duplicate and held back from Meta and Google until refunded.</p></details></li>
-    <li class="scenario"><span class="n">5</span><div><h2>Full refund</h2><p class="ev">71264306943252202 refunded $49.00</p></div><span class="ps-chip paid">Live</span><details class="ps-more-box does"><summary>Details and limits</summary><p>The order stops counting. Google gets a RETRACTION; the Meta event is held back.</p></details></li>
-    <li class="scenario"><span class="n">6</span><div><h2>Partial refund</h2><p class="ev">7Y943188M77480212 refunded $9.00</p></div><span class="ps-chip paid">Live</span><details class="ps-more-box does"><summary>Details and limits</summary><p>The order still counts, revenue drops to $40. Google gets a RESTATEMENT to the new value.</p></details></li>
-    <li class="scenario"><span class="n">7</span><div><h2>Payment with no ad click</h2><p class="ev">test/ledger.test.js · reconcile</p></div><span class="ps-chip ">Test</span><details class="ps-more-box does"><summary>Details and limits</summary><p>PayPal still confirms the money, but it is listed as unmatched, never credited to an ad, and held back from Meta and Google.</p></details></li>
-    <li class="scenario"><span class="n">8</span><div><h2>Paid long after the click</h2><p class="ev">test/ledger.test.js · attribution windows</p></div><span class="ps-chip ">Test</span><details class="ps-more-box does"><summary>Details and limits</summary><p>The revenue stays in the ledger, but no Meta event after 7 days (Meta takes events at most 7 days old) and no Google row after 90 days.</p></details></li>
-    <li class="scenario"><span class="n">9</span><div><h2>Agent invents a number</h2><p class="ev">test/agent.test.js</p></div><span class="ps-chip ">Test</span><details class="ps-more-box does"><summary>Details and limits</summary><p>The code gate rejects it, allows one repair, then flags the recommendation. Approve and Dismiss are logged on the server with their evidence.</p></details></li>
-    <li class="scenario"><span class="n">10</span><div><h2>Payment dispute</h2><p class="ev">test/rules.test.js · disputes · webhook CUSTOMER.DISPUTE.* · Toolkit list_disputes, get_dispute</p></div><span class="ps-chip ">Test</span><details class="ps-more-box does"><summary>Details and limits</summary><p>While the dispute is open the payment is not a paid order and not revenue, and it is not sent to Meta or Google. If the buyer wins (or the shop accepts the claim) it counts as refunded and a Google row becomes a retraction; if the shop wins it counts again. The signed webhook marks it the moment it opens; every PayPal check and the nightly run ask PayPal for disputes through the Agent Toolkit. No sandbox payment here has been disputed yet: opening one needs the buyer's account.</p></details></li>
-  </ol>
-  <section class="proof" aria-labelledby="proof">
-    <h2 id="proof">Proof, measured</h2><a class="ps-btn" href="/proof">Open proof</a>
+<main class="ps-main pg">
+  <section class="intro">
+    <h1>Ten ways money goes wrong.</h1>
+    <p class="ps-lead">Six run live in the PayPal sandbox, four in automated tests.</p>
   </section>
-  <details class="ps-more-box"><summary>Limits</summary><p>The ad export and leads are fictional demo data. PayPal calls are real sandbox calls. Meta Purchase events were sent to a real Meta test dataset (processed, resends deduplicated by event_id); Google rows are previews.</p></details>
+  <div class="card" style="margin-top:-40px">
+    <div class="rows">
+      <div class="row"><span class="l">1 · Meta ad sale</span><span class="v">The click rides in the order; the capture counts for that ad and goes to Meta once</span><span class="chip ok">Live</span></div>
+      <div class="row"><span class="l">2 · Google ad sale</span><span class="v">The gclid is kept the same way and becomes a Google offline conversion row</span><span class="chip ok">Live</span></div>
+      <div class="row"><span class="l">3 · Invoice paid by a lead</span><span class="v">Claude drafts it, a person approves, the send agent sends it; the payment counts for the lead's ad</span><span class="chip ok">Live</span></div>
+      <div class="row"><span class="l">4 · Pay pressed twice</span><span class="v">A second payment from the same payer and ad is held, then refunded by the refund agent</span><span class="chip ok">Live</span></div>
+      <div class="row"><span class="l">5 · Full refund</span><span class="v">The order stops counting; Google gets a retraction, the Meta event is held back</span><span class="chip ok">Live</span></div>
+      <div class="row"><span class="l">6 · Partial refund</span><span class="v">The order still counts at $40; Google gets a restatement</span><span class="chip ok">Live</span></div>
+      <div class="row"><span class="l">7 · No ad click</span><span class="v">PayPal confirms it, but no ad gets the credit and no platform is told</span><span class="chip neu">Test</span></div>
+      <div class="row"><span class="l">8 · Paid long after</span><span class="v">Revenue stays; no Meta event after 7 days, no Google row after 90</span><span class="chip neu">Test</span></div>
+      <div class="row"><span class="l">9 · Invented number</span><span class="v">The code gate rejects it, allows one repair, then flags it</span><span class="chip neu">Test</span></div>
+      <div class="row"><span class="l">10 · Dispute</span><span class="v">While open it is not a paid order; lost counts as refunded, won counts again</span><span class="chip neu">Test</span></div>
+    </div>
+    <details class="det"><summary>Evidence ids and details</summary>
+      <p>1: capture 59A98014DG653005N, Trial class; deduplicated by capture. 2: capture 7Y943188M77480212, Holiday camp.</p>
+      <p>3: invoice INV2-XSMX-ELUG-QLVV-PMMM, payment 81X20615X87083050, Free guide; agent-sent INV2-6ZMD-T3MY-9YPX-MJEW. Claude creates the draft with PayPal's Agent Toolkit; the ad click stays with the invoice in the shop's ledger. The send agent reads it from PayPal, checks it and sends it, pinned in code to that invoice. The sandbox sent no INVOICING.INVOICE.PAID event, so sent invoices are re-checked with PayPal.</p>
+      <p>4: one visit, Pay pressed twice: PayPal returned the same order 2UD41406J29438706 both times. Two separate payments, same payer and ad: 71264306943252202 flagged 17 s after 7Y943188M77480212, then refunded; 7A791792B60079253, 216 s after 59A98014DG653005N, refunded on 4 Nov by the refund agent after a person approved.</p>
+      <p>5: 71264306943252202 refunded $49.00. 6: 7Y943188M77480212 refunded $9.00.</p>
+      <p>7 and 8: <code>test/ledger.test.js</code>. 9: <code>test/agent.test.js</code>; Approve and Dismiss are logged on the server with their evidence. 10: <code>test/rules.test.js</code>, webhook CUSTOMER.DISPUTE.*, Toolkit list_disputes and get_dispute. No sandbox payment here has been disputed yet: opening one needs the buyer's account.</p>
+      <p>The ad export and leads are fictional demo data. PayPal calls are real sandbox calls. Meta Purchase events go to a real Meta test dataset; Google rows are previews.</p>
+    </details>
+    <div class="foot"><span class="ps-note">Every number behind these is on the proof page.</span><a class="btn sec2" href="/proof">Open proof</a></div>
+  </div>
 </main>
 <footer class="ps-foot">Fictional demo shop &#183; real PayPal sandbox calls &#183; Meta test events <span class="foot-links"><a href="/trail">Money trail</a><a href="/scenarios.html">Scenarios</a><a href="/connect.html">Connect a shop</a><a href="/data">Data use</a></span></footer>
 </body>

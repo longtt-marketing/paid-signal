@@ -14,14 +14,18 @@
 </head>
 <body>
 <header class="ps-top"><nav aria-label="Main"><a class="ps-brand" href="/"><span class="ps-mark"><i></i></span>Paid Signal</a><div class="ps-links"><a href="/">Dashboard</a><a href="/judge" >Judge path</a><a href="/audit" >Audit</a><a href="/proof" >Proof</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></div><span class="ps-live">PayPal sandbox live</span></nav></header>
-<main class="ps-main">
-  <div>
+<main class="ps-main pg">
+  <section class="intro">
     <h1>Follow one payment.</h1>
-    <p class="ps-lead">PayPal, Meta, then the budget decision.</p>
+    <p class="ps-lead">From the ad, through PayPal and Meta, to the budget.</p>
+  </section>
+  <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:-40px">
+    <label for="picker" class="k" style="flex:0 0 auto">Payment</label>
+    <select id="picker" class="ps-input" style="flex:1 1 260px;max-width:520px"><option>Loading payments…</option></select>
+    <a class="btn sec2 sm" href="/shop.html?ad=trial_video&amp;fbclid=IwARtrail">Pay your own</a>
   </div>
-  <section aria-label="Pick a payment"><div class="picker" id="picker"><span class="skel">Loading payments…</span></div></section>
-  <ol class="trail" id="trail" aria-live="polite"></ol>
-  <details class="ps-more-box"><summary>Limits and source</summary><p class="foot">Sandbox payments in a fictional shop; eligible events are sent to Meta as test events, so this shows delivery, not a change in Meta's ad delivery. Meta's <code>events_received</code> count proves receipt only, not that Meta matched the event to an ad or changed ad delivery. Pay in the <a href="/shop.html?ad=trial_video&amp;fbclid=IwARtrail">demo shop</a> and your own payment appears here within seconds. Endpoint: <code>GET /api/trail?capture=&lt;id&gt;</code>.</p></details>
+  <div id="trail" aria-live="polite" style="display:flex;flex-direction:column;gap:56px"></div>
+  <details class="card det-card"><summary>Limits and source</summary><p>Sandbox payments in a fictional shop; eligible events go to Meta as test events, so this shows delivery, not a change in Meta's ad delivery. Pay in the demo shop and your own payment appears here within seconds. Endpoint: <code>GET /api/trail?capture=&lt;id&gt;</code>.</p></details>
 </main>
 <footer class="ps-foot">Fictional demo shop &#183; real PayPal sandbox calls &#183; Meta test events <span class="foot-links"><a href="/trail">Money trail</a><a href="/scenarios.html">Scenarios</a><a href="/connect.html">Connect a shop</a><a href="/data">Data use</a></span></footer>
 <script src="/trail.js"></script>
