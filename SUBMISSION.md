@@ -3,7 +3,7 @@
 Project name: Paid Signal
 
 Tagline (200 characters max):
-AI agents run the money side of a chat sale, checked against PayPal's records. In a shop the author runs ads for, the ad with 69% of chats brought 19% of the money. Claude invoices, refunds, says no.
+The ad report says 31 leads. PayPal says 1 paid order. Claude agents invoice, refund and recommend ad budget only on what PayPal confirms.
 
 Built with: paypal-agent-toolkit, paypal-server-sdk, apimatic, mcp, paypal-orders-v2, paypal-invoicing, paypal-webhooks, paypal-transaction-search, paypal-js-sdk, meta-conversions-api, claude, anthropic, ag-studio, ag-grid, react, vite, cloudflare-workers, workers-kv, javascript
 
@@ -13,19 +13,17 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 
 ## Paid Signal in brief
 
-**The ad report credits the free guide with 31 leads. PayPal confirms one paid order for it.**
+**The ad report credits the free guide with 31 leads. PayPal confirms one paid order for it. Paid Signal makes AI agents act on the second number.**
 
-Paid Signal is for shops that close a sale in a chat or a lead form and bill by PayPal invoice: classes, tutors, coaches, small studios. Claude agents invoice the customer through PayPal's Agent Toolkit, chase the payment, refund a double payment, pay the ad's creator per paid order, and tell Meta and the budget agent only what PayPal confirms. Code holds every price, recipient, amount and limit; a person approves every invoice, refund, payout and budget change, and reminders go out within code limits.
+For shops that close a sale in a chat or a lead form and bill by PayPal invoice (classes, tutors, coaches, small studios), Claude agents invoice the customer through PayPal's Agent Toolkit, refund a double payment, pay the ad's creator per paid order, and recommend ad budget moves only on what PayPal confirms. Code holds every price, recipient, amount and limit; a person approves every invoice, refund, payout and budget recommendation, and reminders stay within code limits.
 
-**Follow your own payment (judge path, a few minutes with the sandbox buyer from the testing instructions, no real money):** write as a customer and Claude drafts a real PayPal sandbox invoice. Approve it; the send agent sends it; pay it on PayPal. Then see what your payment changed: the testimonial ad gains your order (its count goes 4 → 5) and its paid revenue rises by $49 on the same ad spend, the budget rule is re-run (the testimonial ad's raise stays supported, the free guide stays blocked), and the ad's creator can be paid $5 through PayPal Payouts, once per browser (up to 15 judges a day). Meta is not told: your payment came with no ad click, so the page shows it held. Undo refunds that payment through PayPal (a live run on 5 Nov: REFUNDED, docs/proof/judge-undo-2026-11-05.json); then its count goes back to 4 and a payout already made shows as $5 owed back. Only your view changes; other judges see the frozen ledger.
+**Try it in a few minutes ([judge path](https://paid-signal.thelongmarketing.workers.dev/judge), sandbox, no real money):** ask to book and Claude drafts a real PayPal invoice; approve it and pay it as the sandbox buyer. Then see what your payment changed: the testimonial ad gains your order (its count goes 4 → 5), the budget rule re-runs, and the ad's creator can be paid $5 through PayPal Payouts. Undo refunds it through PayPal and the count goes back to 4.
 
-**Claude says no:** in a recorded live run, the owner asks to raise the free guide. PayPal shows 1 paid order, so Claude refuses and recommends the testimonial ad instead (4 paid orders, $2.73 of paid revenue per $1 of ads). The same raise sent straight to the evidence gate in code is refused live. A judge can also type their own request on /judge and get a live Claude answer on the same ledger and gate.
+**Claude says no:** the owner asks to raise the free guide. With 1 paid order, Claude refuses and recommends the testimonial ad (4 paid orders, $2.73 of paid revenue per $1 of ads); the same raise sent straight to the rule in code is refused too. Type your own request on /judge for a live answer.
 
-**A real problem:** in a Vietnamese gift shop the author runs Meta ads for, the attention video brought 69% of the chats (reported from the ad account) and 19% of the money kept after refunds; the customer-review ad brought 21% of the chats and 56% of the money. Run through Paid Signal's own ledger code, the shop's published book gives the same 705 kept orders as its accountant's workbook, and its 7 double payments (same amount, same order code) are held. **What it is worth:** split the same October spend by Paid Signal's rule and the shop's own numbers imply about 9% to 18% more revenue after refunds, before costs (about $4,625 to $8,960 in one month), if returns flatten as an ad gets more spend; 48% is the upper bound if they did not. An estimate from one month and three ad groups, with spend moved beyond what October tested, not a measured lift (`whatIf`, src/merchantCase.js). The shop was paid by bank transfer, not PayPal: it is why Paid Signal exists, not a result of it. The same gap applies wherever sales start in a chat: Meta said in 2022 that about 1 billion people message businesses on WhatsApp, Messenger and Instagram each week, and an ad report only sees the chat.
+**Why it matters:** in a Vietnamese gift shop the author runs Meta ads for, the attention video brought 69% of the chats and 19% of the money kept after refunds. The shop's published book, run through Paid Signal's ledger code, gives the same 705 kept orders as its accountant's workbook and holds its 7 double payments. Split the same October spend by Paid Signal's rule and the shop's own numbers imply about 9% to 18% more revenue after refunds in one month: an estimate, see Limits.
 
-**Check your own shop:** [/audit](https://paid-signal.thelongmarketing.workers.dev/audit) reads an Ads Manager export and a PayPal activity download in the browser, nothing uploaded. It links each payment to an ad by the tag in the order, by the customer's email in a Meta lead-form export, or by the ad name in the invoice, and says how many payments it could not link. A shop paid by bank transfer can drop its own order book instead.
-
-**Try it, no login:** [Judge path](https://paid-signal.thelongmarketing.workers.dev/judge) · [Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit) · [Dashboard](https://paid-signal.thelongmarketing.workers.dev) · [Proof](https://paid-signal.thelongmarketing.workers.dev/proof) · [Code](https://github.com/longtt-marketing/paid-signal)
+**Links, no login:** [Judge path](https://paid-signal.thelongmarketing.workers.dev/judge) · [Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit) · [Dashboard](https://paid-signal.thelongmarketing.workers.dev) · [Proof](https://paid-signal.thelongmarketing.workers.dev/proof) · [Code](https://github.com/longtt-marketing/paid-signal)
 
 ## What it does
 
@@ -35,6 +33,7 @@ Paid Signal is for shops that close a sale in a chat or a lead form and bill by 
 4. **Creator paid per paid order.** The parent who made the testimonial earns $5 per PayPal-confirmed paid order, not per lead (per lead, the free guide would pay $155 for 1 paid order). The commission agent pays through PayPal Payouts; code fixes the recipient and checks every order. A refund after a payout shows as owed back.
 5. **Budget by money.** An evidence gate in code checks every number, capture id and the direction of every move; below 3 paid orders an ad's budget does not move.
 6. **Back to Meta.** A PayPal-confirmed payment from a Meta ad is built as a Purchase in the form Meta documents for a website click, a Messenger chat or a lead form.
+7. **Check your own shop.** [/audit](https://paid-signal.thelongmarketing.workers.dev/audit) matches an Ads Manager export to a PayPal activity download in the browser, nothing uploaded; a shop paid by bank transfer can drop its order book instead.
 
 ## Built with PayPal
 
@@ -56,7 +55,9 @@ Three data sources (captures joined to ads on the ad key, plus sent invoices), f
 
 - A demo shop: its ads and leads are fictional; PayPal is sandbox; Meta gets test events. Results are on 13 sandbox payments; the 3-order floor is a safety rule, not a significance test.
 - Meta accepted a lead-form Purchase for one Meta test lead; a Messenger Purchase has not been accepted with a real chat id yet.
-- Gift shop: chat counts reported from the ad account, whose exports are no longer available; its order, payment and refund book is published.
+- Gift shop: paid by bank transfer, not PayPal; it is why Paid Signal exists, not a result of it. Chat counts are reported from the ad account, whose exports are no longer available; its order, payment and refund book is published. "Money" is revenue after refunds, before costs.
+- The 9% to 18% (about $4,625 to $8,960) assumes returns flatten as an ad gets more spend; if they did not, 48% is the upper bound (`whatIf`, src/merchantCase.js). One month, three ad groups, spend moved beyond what October tested: not a measured lift.
+- Judge path: your payment has no ad click, so Meta is not told; only your view changes; the creator payout runs once per browser, up to 15 judges a day. A live Undo on 5 Nov ended REFUNDED (docs/proof/judge-undo-2026-11-05.json).
 - Approve records a decision; it does not change a live Meta budget. Whether a live campaign then spends better is not measured.
 - Approve buttons are open in the demo; a real shop puts them behind its own login.
 - Meta has no retraction: a refund after the send is subtracted here, not at Meta.
