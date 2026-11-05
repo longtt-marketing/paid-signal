@@ -53,30 +53,19 @@ export and a PayPal activity download (CSV), and reads them in the browser with 
 (`public/lib/ledger.js`, kept identical by a test). It shows which ads brought PayPal-confirmed payments, how much paid revenue
 carries no ad, and what the budget rule allows; nothing is uploaded. **Try it with sample files** loads the demo shop.
 
-## Judge it in a few minutes
+## Judge it
 
-No login is needed for any of this; only paying in the demo shop needs the sandbox buyer from the testing notes.
+No login is needed to look around; paying needs the sandbox buyer from the Devpost testing notes.
 
-1. Open the [dashboard](https://paid-signal.thelongmarketing.workers.dev): the ads report 62 leads and PayPal confirms 9 paid orders. Eligible Meta payments are prepared for Meta; Google click payments go to Google.
-2. Press **Ask the revenue agent**: Claude reads what each unpaid lead wrote and drafts PayPal invoices (Agent Toolkit) for the ones ready to pay; code sets every price; a lead whose message tries to rewrite the price and recipient is flagged, never invoiced.
-3. Under **Invoices**, press **Approve** on a draft: the send agent (Claude + PayPal Agent Toolkit) re-reads it in code and sends it. **Chase unpaid** lets the chase agent decide which sent invoices get a reminder and write it.
-4. **Report · AG Studio** tab: open the assistant, choose **Review ad budgets**; a custom Studio agent on Claude submits through the evidence gate and its change lands in Approvals.
-5. On `/judge`, use **Try it yourself** at the top of the invoice loop to test a booking, a not-ready question or a prompt injection. The invoice is a separate sandbox draft until you approve it; then the send agent sends it and you can pay it.
-6. [Proof](https://paid-signal.thelongmarketing.workers.dev/proof): held-out evals (12 bookings, 10 not-ready leads and 8 prompt injections, each run twice: 24 of 24, 20 of 20, 0 of 16), the evidence gate under attack (11 kinds of planted error, 100 of each: all caught), a budget simulation with its uncertainty (run on the 30 Oct ledger of 6 paid orders: $1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs), live PayPal and Meta checks.
-7. Any MCP client: `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
-
-## Try it in three minutes
-
-1. Open the demo. The dashboard reconciles a demo ad export (fictional shop, labelled) against **real PayPal sandbox
-   captures**.
-2. In **Ad links**, open an ad link. The shop page keeps the click id. Pay with the PayPal sandbox buyer (login in the
-   Devpost testing notes). Back on the dashboard, the capture appears under the ad it came from.
-3. Press **Ask the agent**: Claude reads the reconciliation and captures and proposes changes, each with evidence ids
-   and an Approve / Dismiss.
-4. Press **Open the Studio assistant** and choose **Invoice warm leads**. Claude, running inside AG Studio's agent
-   framework, lists leads who never paid and drafts PayPal invoices for those who showed intent. **Approve** one under
-   **Invoices**; the send agent sends it through the Agent Toolkit, and when it is paid the payment is attributed to the lead's ad.
-5. Refund a capture under **Payments** (a smaller amount makes it partial): the ad's numbers drop, and its Google row becomes a retraction or a restatement. The seeded demo payments only preview a refund, so the demo stays intact through judging; pay in the demo shop first to refund a payment of your own for real.
+1. **[Judge path](https://paid-signal.thelongmarketing.workers.dev/judge)**, three cards at the top:
+   - **Be the customer**: write as a customer; the revenue agent drafts a real PayPal sandbox invoice (Agent Toolkit `create_invoice`, price and recipient set by code); approve it and the send agent sends it; pay it on PayPal; the page shows PayPal's PAID. Payments you make show only in your own view.
+   - **Claude says no**: the owner asks to raise the free guide (31 leads, 1 paid order); Claude refuses and recommends the ad PayPal says is paying; the same raise sent straight to the gate is refused too.
+   - **A real shop's book**: the gift shop's published book run through the same ledger code (`node scripts/eval-shop-replay.mjs`).
+   Below them: the refund agent and the two-buyer test, the commission agent paying the creator through Payouts, the money trail of one payment.
+2. **[Dashboard](https://paid-signal.thelongmarketing.workers.dev)**: 62 leads against 9 PayPal-confirmed paid orders; **Ask the revenue agent**, **Approve** a draft (send agent), **Chase unpaid** (chase agent).
+3. **Report · AG Studio** tab (`/#report`): four custom widgets with cross-filters; open the Studio assistant and choose **Review ad budgets** (a custom Studio agent on Claude submits through the evidence gate) or **Nudge who still owes**.
+4. **[Proof](https://paid-signal.thelongmarketing.workers.dev/proof)**: held-out evals (revenue agent 24 of 24 bookings, 20 of 20 not-ready leads, 0 of 16 injections invoiced), the evidence gate under attack (11 kinds of planted error, 100 of each: all caught), the refund-agent eval, the shop replay, live PayPal and Meta checks, and a budget simulation (run on the 30 Oct ledger of 6 paid orders: $1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs).
+5. **[Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit)** in the browser, and any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
 
 API checks without the UI: import [`postman/paid-signal.postman_collection.json`](postman/paid-signal.postman_collection.json) into Postman (read-only requests, 20 tests, including the MCP server). To add Paid Signal to a real shop: [docs/INTEGRATE.md](docs/INTEGRATE.md).
 
@@ -88,12 +77,24 @@ API checks without the UI: import [`postman/paid-signal.postman_collection.json`
 | Orders v2: create, read and capture through **PayPal's server SDK** (`@paypal/paypal-server-sdk`, generated with APIMatic; reviewed with [APIMatic's PayPal Context Plugin](docs/development-with-ai.md): one safe retry, one reused client, PayPal `debug_id` on errors), with `custom_id`, `invoice_id`, `PayPal-Request-Id` idempotency | `src/paypalSdk.js`, `/api/checkout`, `/api/capture` |
 | Payments v2: refund a capture (full or partial), through the server SDK | `src/paypalSdk.js`, `/api/refund` |
 | Invoicing v2: create draft (the lead's click kept with the invoice in the ledger), send, get; sent invoices are re-checked with PayPal on Refresh, because the sandbox does not always emit `INVOICING.INVOICE.PAID` | `/api/invoices/*`, agent tool `draft_paypal_invoices` |
+| Payouts v1: the commission agent pays the creator per PayPal-confirmed paid order, recipient fixed in code, every order checked against the ledger and the total; the batch and its item read back until PayPal settles them | `src/payoutAgent.js`, `/api/commissions/pay`, `/api/judge/commission` |
 | Webhooks: registered by `scripts/register-webhook.py`, **verify-webhook-signature** for every delivery | `/api/webhook` |
 | Disputes: `CUSTOMER.DISPUTE.*` webhooks, plus the Agent Toolkit's `list_disputes` and `get_dispute` on every PayPal check and every night. An open dispute takes the payment out of paid orders and out of what Meta and Google are told; a dispute the buyer wins counts as refunded (Google gets a retraction) | `src/ledger.js` (`disputeState`), `/api/webhook`, `/api/paypal-check` |
 | Reporting: Transaction Search, to cross-check the webhook ledger against PayPal's own history (payments only) | `/api/paypal-check`, agent tool `check_paypal_ledger` |
 | JavaScript SDK buttons, plus a full-page approval fallback | `public/shop.html` |
 
 ## AI
+
+Six Claude agents, each with its own tools checked against a JSON Schema; code owns prices, recipients, arithmetic and every money movement, and a person approves each send, refund, payout and budget change:
+
+| Agent | What it decides | PayPal tools | Code |
+| --- | --- | --- | --- |
+| Revenue | which leads are ready to pay, and what they asked for | Agent Toolkit `create_invoice` | `src/revenue.js` |
+| Send | whether the approved draft is still the right one, then sends it | `get_invoice`, `send_invoice` | `src/sendAgent.js` |
+| Chase | which sent, unpaid invoices get a reminder, and its words | `get_invoice`, `send_invoice_reminder` | `src/chaseAgent.js` |
+| Refund | whether a flagged pair is one order paid twice | `create_refund`, `get_refund` | `src/refundAgent.js` |
+| Commission | which paid orders earn the creator's commission | Payouts | `src/payoutAgent.js` |
+| Budget | which ads to raise, keep or cut, through the evidence gate | reads the ledger only | `src/agent.js` |
 
 - **Budget agent** (`src/agent.js`): Claude with tool use (`read_reconciliation`, `read_captures`,
   `submit_recommendation`). A code gate rejects any number that is not in the reconciliation and any evidence id that

@@ -1,6 +1,6 @@
 // Invoices (draft, approve, send, sync), the judge path's try-it flow, the revenue and chase agents, double-payment refunds.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
-import { isEvidence, sendToMeta, guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "../core.js";
+import { createDraftInvoice, isEvidence, sendToMeta, guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "../core.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
@@ -62,12 +62,8 @@ export async function route({ request, env, url, pp, orders, ip }) {
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });
         const toolkit = toolkitTools(tryEnv, { invoices: { create: true } });
         const createDraft = async (p) => {
-          const params = { currency_code: "USD", reference: "Kite Robotics booking", note: p.note, invoicer_business_name: "Kite Robotics Club (demo)",
-            primary_recipients: [{ billing_info: { email_address: lead.email, name: { given_name: lead.lead } } }],
-            items: p.lines.map((l) => ({ name: l.name, quantity: "1", unit_amount: { currency_code: "USD", value: l.unit } })) };
-          let out = {}; try { out = JSON.parse(String(await toolkit.create_invoice.execute(params))); } catch {}
-          const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
-          if (!/^INV2-[A-Z0-9-]+$/.test(id)) return { error: "PayPal returned no invoice id" };
+          const id = await createDraftInvoice(toolkit, lead, p);
+          if (!id) return { error: "PayPal returned no invoice id" };
           await env.LEDGER.put(`try:${id}`, JSON.stringify({ id, vid: visitorId(request), lead: lead.lead, ad: lead.ad, email: lead.email, channel: lead.channel,
             amount: p.total, lines: p.lines, note: p.note, reason: p.reason, status: "DRAFT", drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() }));
           return { id };

@@ -105,6 +105,23 @@ export async function saveRecommendation(env, recommendation, source, visitor, s
  * waits in Approvals. Used by the dashboard and by
  * the nightly refill, so every draft a judge finds was decided by the agent and priced by code.
  */
+/**
+ * A PayPal sandbox invoice draft, made through the Agent Toolkit's create_invoice from a proposal code has already priced
+ * (price list, the lead's own email as the recipient). Returns PayPal's invoice id, or null if PayPal returned none.
+ * @param {Record<string, { execute: (args: any) => Promise<any> }>} toolkit
+ * @param {any} lead the lead: its name and email
+ * @param {{ note?: string, lines: { name: string, unit: string }[] }} p
+ */
+export async function createDraftInvoice(toolkit, lead, p) {
+  const params = { currency_code: "USD", reference: "Kite Robotics booking", note: p.note, invoicer_business_name: "Kite Robotics Club (demo)",
+    primary_recipients: [{ billing_info: { email_address: lead.email, name: { given_name: String(lead.lead).replace(/ \(.*\)$/, "") } } }],
+    items: p.lines.map((l) => ({ name: l.name, quantity: "1", unit_amount: { currency_code: "USD", value: l.unit } })) };
+  /** @type {any} */ let out = {};
+  try { out = JSON.parse(String(await toolkit.create_invoice.execute(params))); } catch {}
+  const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
+  return /^INV2-[A-Z0-9-]+$/.test(id) ? id : null;
+}
+
 export async function revenueDrafts(env, url) {
   const t0 = Date.now();
   const invoices = await listPrefix(env, "inv:");
@@ -115,12 +132,8 @@ export async function revenueDrafts(env, url) {
   // the agent's own create_invoice call runs this once code has priced and checked it: price list, the lead's own email
   const createDraft = async (p) => {
     const lead = leads.find((l) => l.lead === p.lead);
-    const params = { currency_code: "USD", reference: "Kite Robotics booking", note: p.note, invoicer_business_name: "Kite Robotics Club (demo)",
-      primary_recipients: [{ billing_info: { email_address: lead.email, name: { given_name: lead.lead.replace(/ \(.*\)$/, "") } } }],
-      items: p.lines.map((l) => ({ name: l.name, quantity: "1", unit_amount: { currency_code: "USD", value: l.unit } })) };
-    let out = {}; try { out = JSON.parse(String(await toolkit.create_invoice.execute(params))); } catch {}
-    const id = out.id || String(out.href || out.links?.[0]?.href || "").split("/").pop();
-    if (!/^INV2-[A-Z0-9-]+$/.test(id)) return { error: "PayPal returned no invoice id" };
+    const id = await createDraftInvoice(toolkit, lead, p);
+    if (!id) return { error: "PayPal returned no invoice id" };
     const rec = { id, lead: lead.lead, ad: lead.ad, email: lead.email, channel: lead.channel || "web", psid: lead.psid || null, page_id: lead.page_id || null, lead_id: lead.lead_id || null,
       amount: p.total, lines: p.lines, status: "DRAFT", message: String(lead.message || "").slice(0, 500) || null,
       reference: packClick({ ad: lead.ad, source: lead.source, clickId: lead.click_id, clickedAt: 0 }), note: p.note, reason: p.reason,
