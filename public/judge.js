@@ -134,30 +134,37 @@ function render(run) {
   const raise = (run.recommendation.actions || []).find((a) => a.ad !== target.ad && a.change === "increase");
   const paidOf = (ad) => (run.ads || []).find((r) => r.ad === ad)?.paid;
   const raised = action?.change === "increase";
-  const said = raised ? `Raise the ${SHORT[target.ad]}.` : `No raise for the ${SHORT[target.ad]}.${raise ? ` Raise the ${SHORT[raise.ad]} instead: ${paidOf(raise.ad)} paid orders.` : ""}`;
+  const said = run.custom ? String(run.recommendation.headline || "No change.").slice(0, 220) : raised ? `Raise the ${SHORT[target.ad]}.` : `No raise for the ${SHORT[target.ad]}.${raise ? ` Raise the ${SHORT[raise.ad]} instead: ${paidOf(raise.ad)} paid orders.` : ""}`;
   const gate = row("Code check", "The same raise sent straight to the rule", chip("Checking…"));
-  const live = btn("Run it live", "sec2");
+  const live = btn("Ask Claude live", "go");
+  // the judge may send the owner's request as written or type their own: a live Claude turn on the same ledger and gate
+  const said0 = $("textarea", { maxLength: 300, value: run.instruction, ariaLabel: "The owner's request to the budget agent" });
+  said0.value = run.instruction;
   const more = details("Full answer and tool trace", [
     p(action?.reason || run.recommendation.headline || ""),
     p(run.moves?.[target.ad] ? `The rule in code: raise ${run.moves[target.ad].increase ? "allowed" : "not allowed"}, cut ${run.moves[target.ad].reduce ? "allowed" : "not allowed"}: ${run.moves[target.ad].why}.` : `The rule in code: no budget moves on fewer than 3 PayPal-confirmed paid orders. This ad has ${target.paid}, from ${target.leads} leads.`),
     p(`Recorded live run, ${when(run.at)}, ${(run.ms / 1000).toFixed(1)} s; replaying it spends no Claude turn. Tools: ${(run.trace || []).map((s) => s.tool + (s.ad ? `(${s.ad})` : "")).join(" → ")}.`),
   ]);
   ask.replaceChildren($("div", { className: "rows" }, [
-    row("Owner", `“${run.instruction}”`, chip("Recorded run")),
+    row("Owner", `“${run.instruction}”`, chip(run.live ? "Live, just now" : "Recorded run", run.live ? "ok" : "neu")),
     row("Claude", said, chip(raised ? "Raised" : "Declined", raised ? "ok" : "no2")),
-    gate]), more, $("div", { className: "foot" }, [$("span", { className: "ps-note", textContent: "Every number and capture id is checked in code before you see it." }), live]));
+    gate]), more, $("div", { className: "panel ask-live" }, [said0,
+    $("div", { className: "foot" }, [$("span", { className: "ps-note", textContent: "Edit the request or keep it. Code checks every number." }), live])]));
   getJSON("/api/judge/counterfactual").then((c) => {
     gate.replaceChildren(gate.children[0], $("span", { className: "v", textContent: "The same raise sent straight to the rule" }), chip(c.refused.length ? "Refused" : "Accepted", c.refused.length ? "no2" : "ok"));
     if (c.refused.length) more.append(p(`Gate, just now (no Claude turn): ${c.refused.join(" ")}`));
   }).catch((e) => gate.replaceChildren(gate.children[0], $("span", { className: "v", textContent: e.message }), $("span")));
   live.onclick = async () => {
     live.disabled = true; live.textContent = "Claude is reading…";
+    const text = said0.value.trim() || run.instruction;
     try {
       const csv = await (await fetch("/data/demo-ads.csv")).text();
-      const out = await post("/api/agent", { csv, instruction: run.instruction });
+      const out = await post("/api/agent", { csv, instruction: text });
       if (out.error) throw new Error(out.error);
-      render((await getJSON("/api/runs/owner")).run);
-    } catch (e) { live.disabled = false; live.textContent = "Run it live"; more.append(p(`Live run unavailable: ${e.message}. Showing the recorded run.`)); }
+      if (!out.recommendation) throw new Error((out.problems || []).join(" ") || "Claude gave no checked answer");
+      render({ ...run, live: true, custom: text !== run.instruction || run.custom, instruction: text, at: new Date().toISOString(), recommendation: out.recommendation, trace: out.trace, ms: out.ms,
+        ...(out.grounded ? {} : { recommendation: { ...out.recommendation, actions: [] } }) });
+    } catch (e) { live.disabled = false; live.textContent = "Ask Claude live"; more.open = true; more.append(p(`Live run unavailable: ${e.message}. Showing the recorded run.`)); }
   };
   // the PayPal record behind the answer, in the More fold
   const ids = (action?.evidence || []).filter((e) => !e.startsWith("row:"));

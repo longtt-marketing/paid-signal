@@ -59,7 +59,7 @@ No login is needed to look around; paying needs the sandbox buyer from the Devpo
 
 1. **[Judge path](https://paid-signal.thelongmarketing.workers.dev/judge)**, three cards at the top:
    - **Be the customer**: write as a customer; the revenue agent drafts a real PayPal sandbox invoice (Agent Toolkit `create_invoice`, price and recipient set by code); approve it and the send agent sends it; pay it on PayPal; the page shows PayPal's PAID. Payments you make show only in your own view.
-   - **Claude says no**: the owner asks to raise the free guide (31 leads, 1 paid order); Claude refuses and recommends the ad PayPal says is paying; the same raise sent straight to the gate is refused too.
+   - **Claude says no**: the owner asks to raise the free guide (31 leads, 1 paid order); Claude refuses and recommends the ad PayPal says is paying; the same raise sent straight to the gate is refused too. Type your own request to get a live answer.
    - **A real shop's book**: the gift shop's published book run through the same ledger code (`node scripts/eval-shop-replay.mjs`).
    Below them: the refund agent and the two-buyer test, the commission agent paying the creator through Payouts, the money trail of one payment.
 2. **[Dashboard](https://paid-signal.thelongmarketing.workers.dev)**: 62 leads against 9 PayPal-confirmed paid orders; **Ask the revenue agent**, **Approve** a draft (send agent), **Chase unpaid** (chase agent).
