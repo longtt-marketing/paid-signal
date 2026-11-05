@@ -39,16 +39,70 @@ function showTryResult(out) {
 function journey(out) {
   const wrap = $("div", { className: "journey" }), status = $("p", { className: "note", role: "status" });
   const when = (t) => (t ? new Date(t).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "");
-  const send = $("button", { className: "btn primary", type: "button", textContent: "Approve: send this invoice to me" });
+  const send = $("button", { className: "ps-btn primary", type: "button", textContent: "Approve: send this invoice to me" });
   const step = (n, text) => $("p", { className: "jstep", innerHTML: "" }, [$("b", { textContent: `${n} ` }), text]);
   let timer = null;
   const showPaid = (inv) => {
     clearInterval(timer);
-    wrap.replaceChildren($("div", { className: "receipt" }, [
+    const paymentId = inv.paid?.payment_id;
+    const receipt = $("div", { className: "ps-card receipt" }, [
       $("p", { className: "verdict ok", textContent: "PayPal says PAID." }),
-      $("p", { textContent: `Invoice ${inv.invoice_number || inv.id}, ${money(Math.round(Number(inv.paid?.amount || inv.amount) * 100))}. PayPal payment ${inv.paid?.payment_id || "id pending"}${inv.paid?.paypal_payment_date ? `, PayPal date ${inv.paid.paypal_payment_date}` : ""}; seen here ${when(inv.paid?.seen_at)}.` }),
-      $("p", { className: "note", textContent: "Claude drafted it, you approved it, the send agent sent it, you paid it, and PayPal confirmed it. This payment stays in your session: the shop's ledger and the numbers in the story do not move." }),
-      $("a", { href: "#refund", textContent: "Next: what an agent does with money it should give back →" })]));
+      $("p", { textContent: `Invoice ${inv.invoice_number || inv.id}, ${money(Math.round(Number(inv.paid?.amount || inv.amount) * 100))}. PayPal payment ${paymentId || "id pending"}${inv.paid?.paypal_payment_date ? `, PayPal date ${inv.paid.paypal_payment_date}` : ""}; seen here ${when(inv.paid?.seen_at)}.` }),
+    ]);
+    const impact = $("div", { className: "loop" });
+    const note = $("p", { className: "ps-note", textContent: "Only your view changes. Other judges see the frozen ledger." });
+    const state = { data: null, timer: null };
+    const row = (label, text, extra) => $("div", { className: "loop-row" }, [$("b", { textContent: label }), $("span", { textContent: text }), extra]);
+    const refresh = async () => {
+      if (!paymentId) { impact.replaceChildren(row("Ledger", "Waiting for PayPal's payment id.")); return; }
+      try {
+        const d = await getJSON(`/api/judge/try/impact?id=${encodeURIComponent(inv.id)}`);
+        state.data = d;
+        const a = d.ads.parent_carousel, before = a.before, after = a.after;
+        const budget = d.budget;
+        const metaText = d.meta.sent
+          ? `Purchase test event sent, event_id ${d.meta.event_id || paymentId}, events_received ${d.meta.events_received ?? "not reported"}${d.meta.refund_note ? `. ${d.meta.refund_note}` : ""}.`
+          : `Not sent: ${d.meta.reason || "no receipt from Meta"}.`;
+        const payoutText = d.creator.paid_out ? `Paid out; PayPal Payouts batch ${d.creator.batch_id}: ${d.creator.payout_status || "status pending"}${d.creator.owed_back ? "; $5 owed back" : ""}.`
+          : ["running", "unknown"].includes(d.creator.payout_status) ? `Payout ${d.creator.payout_status}; ask the page to check again before trying another payout.`
+          : d.creator.owed_back ? "$5 owed back after the refund." : "No creator payout yet.";
+        const ledgerText = `Testimonial · carousel: ${before.paid_orders} → ${after.paid_orders} paid orders; ${money(Math.round(before.back_per_ad_dollar * 100))} → ${money(Math.round(after.back_per_ad_dollar * 100))} back per $1. PayPal payment ${paymentId}.`;
+        const budgetText = `Before and after: raise Testimonial · carousel ${budget.parent_carousel.after_raise_supported ? "still supported" : "not supported"}; raise Free guide ${budget.free_guide.after_raise_blocked ? "still blocked" : "now supported"}. PayPal payment ${paymentId}.`;
+        const creatorText = `${d.creator.earns ? "Earns $5" : "Does not earn $5"}. ${payoutText} PayPal payment ${paymentId}.`;
+        const refundText = d.refund.refunded ? `Refunded ${money(Math.round(Number(d.refund.amount) * 100))}${d.refund.refund_id ? `, refund ${d.refund.refund_id}` : ""}. PayPal payment ${paymentId}.`
+          : `Not refunded. PayPal payment ${paymentId}.`;
+        const earnButton = $("button", { className: "ps-btn primary", type: "button", textContent: "Pay the creator (PayPal Payouts)", disabled: Boolean(d.creator.batch_id || d.refund.refunded || ["running", "unknown"].includes(d.creator.payout_status)) });
+        const refundButton = $("button", { className: "ps-btn", type: "button", textContent: "Undo: refund my payment", disabled: Boolean(d.refund.refunded) });
+        earnButton.onclick = async () => {
+          earnButton.disabled = true;
+          try {
+            await getJSON("/api/judge/try/commission", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ invoice_id: inv.id }) });
+            await refresh();
+          } catch (e) { status.textContent = e.message; earnButton.disabled = false; }
+        };
+        refundButton.onclick = async () => {
+          refundButton.disabled = true;
+          try {
+            await getJSON("/api/refund", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ capture_id: paymentId }) });
+            await refresh();
+          } catch (e) { status.textContent = e.message; refundButton.disabled = false; }
+        };
+        impact.replaceChildren(
+          row("Ledger", ledgerText),
+          row("Budget rule, re-run", budgetText),
+          row("Meta", `${metaText} PayPal payment ${paymentId}.`),
+          row("Creator", creatorText, earnButton),
+          row("Refund", refundText, refundButton),
+        );
+        if (d.creator.batch_id && ["PENDING", "PROCESSING"].includes(d.creator.payout_status)) {
+          clearTimeout(state.timer); state.timer = setTimeout(refresh, 5000);
+        }
+      } catch (e) { impact.replaceChildren(row("Receipt", `Could not load the payment impact: ${e.message}`)); }
+    };
+    receipt.append($("h3", { textContent: "What your payment changed" }), impact, note,
+      $("a", { href: "#refund", textContent: "Next: what an agent does with money it should give back →" }));
+    wrap.replaceChildren(receipt);
+    refresh();
   };
   const poll = (id) => {
     const check = async () => {
@@ -66,7 +120,7 @@ function journey(out) {
       wrap.replaceChildren(
         step("2", `Sent by the send agent (get_invoice, then send_invoice) ${when(inv.sent_at)}. PayPal status: ${inv.status}.`),
         step("3", "Pay it as the customer on PayPal's own invoice page: log in as the sandbox buyer from the testing instructions, or pay by card under Other ways to pay with a PayPal sandbox test card. No real money moves."),
-        inv.pay_url ? $("a", { className: "btn primary", href: inv.pay_url, target: "_blank", rel: "noopener noreferrer", textContent: `Pay ${money(Math.round(Number(inv.amount) * 100))} on PayPal ↗` }) : $("p", { className: "note", textContent: "PayPal gave no payment link." }),
+        inv.pay_url ? $("a", { className: "ps-btn primary", href: inv.pay_url, target: "_blank", rel: "noopener noreferrer", textContent: `Pay ${money(Math.round(Number(inv.amount) * 100))} on PayPal ↗` }) : $("p", { className: "note", textContent: "PayPal gave no payment link." }),
         step("4", "This page asks PayPal every few seconds and shows the receipt when it is paid."), status);
       poll(inv.id);
     } catch (e) { status.textContent = e.message; send.disabled = false; }
@@ -130,7 +184,7 @@ function render(run) {
   box("c-live-why").textContent = liveRaise
     ? `Too few PayPal-confirmed orders to raise it; Claude declined (step 2). In the same run, ${name(liveRaise.ad)} has ${paidOf(liveRaise.ad)} paid orders and covers its spend after costs, so Claude raised that one instead.`
     : "Too few PayPal-confirmed orders for any move; Claude declined the owner's raise and the gate refuses it (step 2).";
-  const live = $("button", { className: "btn", type: "button", textContent: "Run it live again (one Claude run)" });
+  const live = $("button", { className: "ps-btn", type: "button", textContent: "Run it live again (one Claude run)" });
   live.onclick = async () => {
     live.disabled = true; live.textContent = "Claude is reading the payments…";
     try {
@@ -181,7 +235,7 @@ function render(run) {
         $("dt", { textContent: "PayPal says" }), $("dd", { textContent: pp.error ? `could not read: ${pp.error}` : `${pp.status}, $${pp.amount}${pp.fee ? `, fee $${pp.fee}, net $${pp.net}` : ""}${pp.refunded ? `, refunded $${pp.refunded}` : ""}` }),
         $("dt", { textContent: "Ad click inside it" }), $("dd", {}, pp.custom_id ? [$("code", { textContent: pp.custom_id })] : [t.click?.ad_name || "–"]),
         $("dt", { textContent: "Meta's reply" }), $("dd", { textContent: m?.ok ? `events_received: ${m.events_received}, fbtrace_id ${m.fbtrace_id}${m.test_event ? " (test event)" : ""}` : m?.held ? `not sent: ${m.held}` : "not sent" }),
-      ]), $("div", { className: "row" }, [$("a", { className: "btn primary", href: `/trail?capture=${encodeURIComponent(id)}`, textContent: "Follow this payment on the money trail" })]));
+      ]), $("div", { className: "row" }, [$("a", { className: "ps-btn primary", href: `/trail?capture=${encodeURIComponent(id)}`, textContent: "Follow this payment on the money trail" })]));
     }).catch((e) => card.replaceChildren($("p", { className: "note err", textContent: e.message })));
   }
 }
@@ -248,7 +302,7 @@ const showRefund = (d) => {
     sec.append($("div", { className: "rule" }, [$("b", { textContent: "Code limits: " }), "only create_refund and get_refund are allowed; only the flagged second capture, only its full amount, only once per approval. Claude may decline when the pair does not look like one order paid twice."]));
   }
   for (const o of d.open || []) {
-    const btn = $("button", { className: "btn primary", type: "button", textContent: `Approve: let the agent resolve ${o.capture_id}` });
+    const btn = $("button", { className: "ps-btn primary", type: "button", textContent: `Approve: let the agent resolve ${o.capture_id}` });
     const out = $("div", { className: "try-result", role: "status" });
     btn.onclick = async () => {
       btn.disabled = true; out.textContent = "The refund agent is checking the pair with Claude and PayPal…";
@@ -278,7 +332,7 @@ const showCommission = (d) => {
     `PayPal Payouts batch ${b.batch_id}, ${money(Math.round(Number(b.total) * 100))} for ${(b.capture_ids || []).length} paid order(s), the payment to the creator (the batch's item) is ${b.read_back?.item_status || "not read yet"} and the batch is ${b.read_back?.status || b.status}, read from PayPal${b.read_back?.transaction_id ? `, transaction ${b.read_back.transaction_id}` : ""}. `, ""]));
   if (d.owed_back?.length) sec.append($("p", { className: "note", textContent: `Owed back after a refund or lost dispute: ${d.owed_back.join(", ")} (shown, not clawed back automatically).` }));
   if (earning) {
-    const btn = $("button", { className: "btn primary", type: "button", textContent: `Approve: let the agent pay ${earning} order(s) of commission` });
+    const btn = $("button", { className: "ps-btn primary", type: "button", textContent: `Approve: let the agent pay ${earning} order(s) of commission` });
     const out = $("div", { className: "try-result", role: "status" });
     btn.onclick = async () => {
       btn.disabled = true; out.textContent = "The commission agent is checking the orders and paying through PayPal Payouts…";
@@ -308,7 +362,7 @@ function twoBuyers() {
   const wrap = $("div", { className: "ab" });
   const card = (variant, label, quote) => {
     const out = $("div", { className: "ab-out", role: "status" });
-    const btn = $("button", { className: "btn", type: "button", textContent: `Ask Claude: ${label}` });
+    const btn = $("button", { className: "ps-btn", type: "button", textContent: `Ask Claude: ${label}` });
     btn.onclick = async () => {
       btn.disabled = true; out.textContent = "Claude is weighing the pair and what the buyer wrote…";
       try {

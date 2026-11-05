@@ -42,12 +42,12 @@ export function gapHTML(r, c) {
   const vnd = (/** @type {number} */ n) => `${(n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 1 })}M VND`;
   const bar = (/** @type {string} */ label, /** @type {number} */ x, cls = "") =>
     `<div class="gap-bar${cls ? " " + cls : ""}"><span>${label}</span><div><i style="width:${(x * 100).toFixed(1)}%"></i></div><span>${pct(x)}</span></div>`;
-  const cards = r.groups.map((g) => `<div class="gap-card"><span class="k">${esc(g.id)} · ${esc(g.name)}</span>`
-    + `<div class="nums"><b>${g.conversations.toLocaleString("en-US")}</b><i>chats →</i><b class="paid">${g.paid}</b><i>paid orders</i></div>`
+  const cards = r.groups.map((g) => `<div class="ps-card gap-card"><span class="k">${esc(g.id)} · ${esc(g.name)}</span>`
+    + `<div class="nums ps-big"><b>${g.conversations.toLocaleString("en-US")}</b><i>chats →</i><b class="paid">${g.paid}</b><i>paid orders</i></div>`
     + bar("of chats", g.share_conversations) + bar("of money", g.share_net, "money")
     + `<small>${g.cost_per_conversation.toLocaleString("en-US")} VND a chat · ${g.roas.toFixed(2)}x ad spend back in paid money</small></div>`).join("");
   const split = r.paid_signal_split.map((s) => `${s.id} ${(s.share_now * 100).toFixed(1)}% → ${(s.share_proposed * 100).toFixed(1)}%`).join(", ");
-  return `<h2 id="gap-h">Why it matters: one real shop's October, as reported by the author</h2>`
+  return `<h2 id="gap-h">One shop, October</h2>`
     + `<p class="gap-sub" id="gap-sub">A gift shop that sells in chat; the author runs its Meta ads. October 2026: ${vnd(r.totals.spend)} (about $${Math.round(r.totals.spend_usd).toLocaleString("en-US")}) on three ad groups, ${r.totals.conversations.toLocaleString("en-US")} chats, ${r.totals.paid} orders paid and kept after refunds.</p>`
     + `<div class="gap-grid" id="gap-grid">${cards}</div>`
     + `<p class="gap-rank" id="gap-rank">Ranked by cost per chat, the ad report's view: ${r.rank_by_cost_per_conversation.join(", ")}. Ranked by money kept per ad dollar (revenue after refunds ÷ spend): <span class="go">${r.rank_by_money_kept.join(", ")}</span>. The cheapest chats came from the ad that brought the least money.</p>`
@@ -62,5 +62,5 @@ export function gapHTML(r, c) {
 export function hookHTML(r) {
   const a = r.groups.reduce((x, g) => (g.share_conversations > x.share_conversations ? g : x));
   const pct = (/** @type {number} */ x) => `${(x * 100).toFixed(1)}%`;
-  return `In one real shop's October (figures reported by the author), the ad with <b>${pct(a.share_conversations)} of the chats</b> brought <b>${pct(a.share_net)} of the money</b>. Its book, run through our ledger, matches the shop's workbook, and its 7 double transfers are held.`;
+  return `A real gift shop's October: the ad with <b>${pct(a.share_conversations)} of the chats</b> brought <b>${pct(a.share_net)} of the money</b>.`;
 }

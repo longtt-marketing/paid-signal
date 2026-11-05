@@ -416,8 +416,8 @@ export async function recordInvoicePayment(env, invoice, url = new URL("https://
   await forget("pay:"); await forget("inv:");
 }
 
-/** A judge's try invoice that PayPal reports paid: kept on the try record (the judge's session), not in the shop's ledger. */
-export async function tryPaid(env, invoice) {
+/** A judge's try invoice that PayPal reports paid: stored in the judge's visitor-scoped ledger, outside the evidence ledger. */
+export async function tryPaid(env, invoice, url = new URL("https://paid-signal.thelongmarketing.workers.dev/")) {
   const rec = await env.LEDGER.get(`try:${invoice.id}`, "json");
   if (!rec) return null;
   const t = (invoice.payments?.transactions || [])[0];
@@ -425,6 +425,23 @@ export async function tryPaid(env, invoice) {
   if (t && !rec.paid) rec.paid = { payment_id: t.payment_id || null, amount: t.amount?.value || rec.amount, currency: t.amount?.currency_code || "USD",
     paypal_payment_date: t.payment_date_time || t.payment_date || null, method: t.method || null, seen_at: new Date().toISOString() };
   await env.LEDGER.put(`try:${invoice.id}`, JSON.stringify(rec), { expirationTtl: 60 * 86400 });
+  if (invoice.status === "PAID" && t?.payment_id && rec.vid) {
+    const key = `pay:${t.payment_id}`;
+    let payment = await env.LEDGER.get(key, "json");
+    if (!payment) {
+      const now = new Date().toISOString();
+      payment = { capture_id: t.payment_id, order_id: invoice.id, status: "COMPLETED", amount: t.amount?.value || rec.amount,
+        currency: t.amount?.currency_code || "USD", ad: rec.ad || "parent_carousel", source: "other", click_id: "", clicked_at: 0,
+        channel: rec.channel || "web", captured_at: now, payment_seen_at: now, paypal_payment_date: t.payment_date_time || t.payment_date || null,
+        refunded_amount: "0.00", payer_email_sha256: rec.email ? await sha(String(rec.email).trim().toLowerCase()) : null,
+        via: "invoice", ...(rec.message ? { buyer_message: rec.message } : {}), visitor: rec.vid, try_invoice: invoice.id };
+      await env.LEDGER.put(key, JSON.stringify(payment));
+      await forget("pay:");
+    }
+    // Do not let an unrelated pre-existing payment id be attributed to this visitor; a matching retry is safe.
+    if (payment.try_invoice === invoice.id && payment.visitor === rec.vid) await sendToMeta(env, url, payment);
+  }
+  await forget("try:");
   return rec;
 }
 export const publicTry = (r) => r && { id: r.id, status: r.status, amount: r.amount, lines: r.lines, sent_at: r.sent_at || null, sent_by: r.sent_by || null, pay_url: r.pay_url || null,

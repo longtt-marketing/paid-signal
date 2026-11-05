@@ -4,9 +4,10 @@ const when = (v) => (v ? new Date(typeof v === "number" ? v : Date.parse(v)).toL
 const money = (v, c = "USD") => (v == null ? "–" : `$${Number(v).toFixed(2)}${c && c !== "USD" ? ` ${c}` : ""}`);
 const code = (v) => (v ? $("code", { textContent: String(v) }) : "–");
 const dl = (rows) => $("dl", {}, rows.filter(Boolean).flatMap(([k, v]) => [$("dt", { textContent: k }), $("dd", {}, v ?? "–")]));
-const gap = (text, cls = "") => $("span", { className: `gap ${cls}`, textContent: text });
-const step = (n, cls, title, who, body, tag) => $("li", { className: `step ${cls}` }, [$("div", { className: "dot", textContent: n }),
-  $("div", { className: "card" }, [$("h2", {}, [title, tag]), $("p", { className: "who", textContent: who }), ...[].concat(body)])]);
+const gap = (text, cls = "") => $("span", { className: `ps-chip gap ${cls}`, textContent: text });
+const step = (n, cls, title, who, body, tag) => $("li", { className: `step ps-step ${cls}` }, [$("div", { className: "dot", textContent: n }),
+  $("div", { className: "card ps-card" }, [$("h2", {}, [title, tag]), $("p", { className: "who", textContent: who }), ...[].concat(body).map((item) => item instanceof HTMLElement && item.classList.contains("note")
+    ? $("details", { className: "ps-more-box" }, [$("summary", { textContent: "Details and limits" }), item]) : item)])]);
 
 async function show(id) {
   const box = document.getElementById("trail");

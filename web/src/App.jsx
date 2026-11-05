@@ -287,9 +287,7 @@ export default function App({ first = null }) {
             <a href="/proof">Proof</a>
           </nav>
           <div className="top-end">
-            <span className="live"><i />PayPal sandbox · live</span>
-            <a className="cta" href="/judge">Judge path</a>
-            <a className="hero-link" href="/audit">Audit your own ads</a>
+            <span className="live"><i />PayPal sandbox live</span>
           </div>
         </div>
       </header>
@@ -297,38 +295,49 @@ export default function App({ first = null }) {
       <main id="main" className="desk">
         <section id="overview" className="hero" aria-label="Claimed vs paid">
           <div className="hero-copy">
-            {t && <h1 className="sr">Ads report {t.leads} leads. PayPal confirms {t.paid} paid {t.paid === 1 ? "order" : "orders"}.</h1>}
-            <p className="kicker">Kite Robotics Club · demo ad export · PayPal sandbox</p>
-            <div className="duo">
-              <div><b className="n claimed">{(t || first)?.leads ?? "…"}</b><span>leads the ads report</span></div>
-              <svg width="56" height="40" viewBox="0 0 56 40" aria-hidden="true"><path d="M2 20h46M38 8l12 12-12 12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              <div><b className="n paid">{(t || first)?.paid ?? "…"}</b><span>paid {(t || first)?.paid === 1 ? "order" : "orders"} PayPal confirms</span></div>
-            </div>
-            <p className="pitch">{t ? `Ad platforms learn from the ${t.leads} leads. PayPal confirms ${t.paid} paid ${t.paid === 1 ? "order" : "orders"}: the ${state?.meta?.events?.length ?? 0} from Meta ads go back to Meta (test events in this demo); the Google ones become an offline-conversion file for Google Ads.` : "Ad platforms learn from leads. PayPal knows who paid."}</p>
-            <div className="hero-actions"><a className="cta" href="/judge">Judge path</a><a className="hero-link" href="/audit">Audit your own ads</a></div>
-            {t && <div className="chips-row">
-              <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
-              {t.held > 0 && <span title="Same payer, same ad, minutes apart: not counted as a paid order, and kept from the ad platforms"><b>{t.held}</b> possible duplicate held</span>}
-              <span><b>{usd(t.spend_cents)}</b> ad spend</span>
-              <span><b>{costPerPaid}</b> ad spend per paid order</span>
-            </div>}
+            <p className="kicker">Kite Robotics Club · demo shop</p>
+            <h1 className="duo"><span className="n claimed">{(t || first)?.leads ?? "…"} leads.</span><span className="n paid">{(t || first)?.paid ?? "…"} paid.</span></h1>
+            <p className="pitch">Ads learn from leads. PayPal knows who paid. Paid Signal lets AI agents act only on what PayPal confirms.</p>
+            <div className="hero-actions"><a className="cta" href="/judge#customer">Follow a payment</a><a className="hero-link" href="/audit">Audit your own ads →</a></div>
           </div>
-          <div className="hero-bars">
-            <div className="hb-head"><b>From the ad report, through PayPal, back to Meta</b></div>
-            {state ? <FlowChart ads={ads} payments={state.payments} sends={state.metaSends} held={(state.duplicates || []).map((d) => d.capture_id)} worst={worst} /> : <p className="ghost">Loading the ledger…</p>}
-            <div className="legend"><span><i className="l" />what the ads report</span><span><i className="p" />what PayPal confirms</span><span><i className="m" />what Meta learns</span></div>
+          <div className="hero-bars" aria-label="Leads and paid orders by ad">
+            <div className="hb-head"><b>By ad</b><span><i className="l" />leads <i className="p" />paid on PayPal</span></div>
+            {byCost.length ? [...ads].sort((a, b) => b.leads - a.leads).map((a) => {
+              const top = Math.max(...ads.map((x) => x.leads), 1), back = a.spend_cents ? a.revenue_cents / a.spend_cents : 0;
+              return <div key={a.ad} className="hb-row">
+                <div className="hb-main"><span>{adName(a.ad)}</span>
+                  <div className="hb-bars"><i className="l" style={{ width: `${(a.leads / top) * 100}%` }} /><i className="p" style={{ width: `${Math.max((a.paid / top) * 100, 2)}%` }} /></div>
+                  <small>{a.leads} leads · {a.paid} paid</small></div>
+                <b className={a.ad === best ? "good" : back < 1 ? "warn" : ""}>{"$" + back.toFixed(2)}<small>back per $1</small></b>
+              </div>;
+            }) : <p className="ghost">Loading the ledger…</p>}
           </div>
         </section>
+        {t && <div className="chips-row" aria-label="Totals">
+          <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
+          <span><b>{usd(t.spend_cents)}</b> ad spend</span>
+          <span><b>{costPerPaid}</b> per paid order</span>
+          {t.held > 0 && <span title="Same payer, same ad, minutes apart: not counted until a person decides"><b>{t.held}</b> double payment held</span>}
+        </div>}
         {error && <p className="err" role="alert">{error}</p>}
 
-        <PhoneDisclosure title="How the demo works" className="phone-disclosure-plain">
-          <section className="loop" aria-label="Try the loop">
-          <article><span className="step">1</span><b>Pay from an ad click</b><p>Open an ad link and pay in the PayPal sandbox. The click rides in the order.</p><a className="btn" href={adLink("trial_video", "fb")}>Open an ad link</a></article>
-          <article><span className="step">2</span><b>Invoice the warm leads</b><p>Claude reads what each lead wrote and drafts PayPal invoices; code sets the price. You approve, the agent sends.</p><button className="btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Ask the revenue agent"}</button></article>
-          <article><span className="step">3</span><b>Ask the budget agent</b><p>Claude proposes changes. Every number is checked in code before you see it.</p><button className="btn dark" disabled={agent.status === "running"} onClick={() => ask()}>{agent.status === "running" ? "Reading the ledger…" : "Ask the agent"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => askWeek("week4")}>Or try a synthetic week with more orders</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => ask("Raise the free guide's budget: it brings the most leads.")}>Or tell it to raise the ad with the most leads</button></article>
-          <article><span className="step">4</span><b>Tell the ad platform</b><p>Paid orders from Meta ads go to Meta's Conversions API; Google ones are previews here. A refund before the send holds the event back.</p><button className="btn" onClick={() => scrollToId("signal")}>See the ad signal</button></article>
-          </section>
-        </PhoneDisclosure>
+        <section className="agents" aria-label="Six agents">
+          <div className="sec-head"><h2>Six agents. Code holds the money.</h2><p className="muted">You approve every send, refund and payout.</p></div>
+          <div className="agent-grid">
+            <article><span className="step">1</span><div><b>Revenue</b><p>Reads the chat, drafts the invoice.</p><button className="link-btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Run it"}</button></div></article>
+            <article><span className="step">2</span><div><b>Send</b><p>Sends it once you approve.</p><button className="link-btn" onClick={() => scrollToId("approvals")}>See approvals</button></div></article>
+            <article><span className="step">3</span><div><b>Chase</b><p>Reminds who still owes.</p><button className="link-btn" disabled={chase.status === "running"} onClick={askChase}>{chase.status === "running" ? "Chasing…" : "Chase unpaid"}</button></div></article>
+            <article><span className="step">4</span><div><b>Refund</b><p>Returns a double payment.</p><a className="link-btn" href="/judge#refund">Watch it decide</a></div></article>
+            <article><span className="step">5</span><div><b>Commission</b><p>Pays the creator per paid order.</p><a className="link-btn" href="/judge#commission">See the payout</a></div></article>
+            <article><span className="step">6</span><div><b>Budget</b><p>Moves money only on PayPal proof.</p><span className="row"><button className="link-btn" disabled={agent.status === "running"} onClick={() => ask()}>{agent.status === "running" ? "Reading the ledger…" : "Ask it"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => ask("Raise the free guide's budget: it brings the most leads.")}>Ask it to raise the free guide</button></span></div></article>
+          </div>
+        </section>
+
+        <section className="flow-card" aria-label="From the ad report, through PayPal, back to Meta">
+          <div className="hb-head"><b>Ad report → PayPal → Meta</b><a className="link-btn" href={adLink("trial_video", "fb")}>Pay from an ad link</a></div>
+          {state ? <FlowChart ads={ads} payments={state.payments} sends={state.metaSends} held={(state.duplicates || []).map((d) => d.capture_id)} worst={worst} /> : <p className="ghost">Loading the ledger…</p>}
+          <div className="legend"><span><i className="l" />what the ads report</span><span><i className="p" />what PayPal confirms</span><span><i className="m" />what Meta learns</span></div>
+        </section>
 
         <div className="cols">
           <div className="col-main">
@@ -357,12 +366,12 @@ export default function App({ first = null }) {
                   </div>
                 </article>)}
               </div>
-              <p className="muted small legend">Covers its spend? is the chance, computed in code, that the ad's paid revenue covers its ad spend going forward. With one or two paid orders it stays close to 50% whatever the ad made so far, because so few orders say little; that is why no budget moves on fewer than 3. The cut point below it is what would settle the question.</p>
+              <p className="muted small">No budget moves on fewer than 3 paid orders.</p>
             </section>
 
             <PhoneDisclosure id="payments" title="Payments" className="card" summaryText={state ? `${state.payments.length} in the ledger` : ""}>
               <div className="card-head phone-section-head"><h2>Payments</h2>{state && <span className="ok">{state.payments.length} in the ledger · checked against PayPal</span>}</div>
-              <p className="muted">Refund one and its ad drops: a Google click becomes a retraction; a Meta event not yet sent is held back (one already sent stays: Meta's Conversions API has no retraction). The seeded demo payments preview a refund; pay in the shop to refund one of your own.</p>
+              <p className="muted">Refund one and its ad drops. Demo payments only preview a refund; your own payments refund for real.</p>
               <div id="captures" className="list">
                 {(state?.payments || []).slice().reverse().map((p) => (
                   <div key={p.capture_id} className="cap">
@@ -375,11 +384,11 @@ export default function App({ first = null }) {
 
             <PhoneDisclosure id="signal" title="Ad platform signal" className="card" summaryText={state ? `${state.meta.events.length} Meta events` : ""}>
               <div className="card-head phone-section-head"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Meta Purchase events · {state.google.conversions.length} Google rows</span>}</div>
-              <p className="muted">Eligible payments from Meta-attributed website clicks, Messenger, and Instant Forms become Meta Conversions API events; Google click payments go to Google only. Events are deduplicated by capture. In an earlier test, Meta received these events and dropped a resent copy by event id.</p>
+              <p className="muted">PayPal-confirmed payments from Meta ads become Purchase events, one per capture.</p>
               {state?.metaLive && <div className="live-meta" role="status">
                 <span className="pulse" aria-hidden="true" />
-                {lastMeta ? <span><b>Live to Meta:</b> the last eligible Purchase (${lastMeta.value}) reached the shop's Meta dataset as a test event {clock(lastMeta.at)}; Meta answered events_received {lastMeta.events_received}. Receipt does not confirm ad matching or delivery changes.</span>
-                  : <span><b>Live to Meta:</b> an eligible payment from a Meta-attributed source is sent to the shop's Meta dataset as a test event when PayPal confirms it. Receipt does not confirm ad matching or delivery changes.</span>}
+                {lastMeta ? <span><b>Live to Meta:</b> last Purchase (${lastMeta.value}) received {clock(lastMeta.at)}, events_received {lastMeta.events_received}.</span>
+                  : <span><b>Live to Meta:</b> a PayPal-confirmed payment is sent as a test event.</span>}
               </div>}
               <div className="sig">
                 {state && (() => {
@@ -409,7 +418,7 @@ export default function App({ first = null }) {
             <section id="approvals" className="card">
               <div className="card-head"><h2>Approvals</h2><div className="approval-meta"><span>{myDecisionCount} by you · {decisionCount} across visitors</span>{agent.status === "done" && <span className={agent.grounded ? "ok" : "warn"}>{agent.grounded ? "Numbers checked in code" : "Number check flagged"}</span>}</div></div>
               <div id="actions">
-                {agent.status === "idle" && <p className="muted">Ask the agent for budget changes. The agent never changes a budget: you approve, and the decision is logged.</p>}
+                {agent.status === "idle" && <p className="muted">Budget changes wait here for you.</p>}
                 {/SYNTHETIC/.test(agent.source || "") && <p className="synthetic"><b>Synthetic week</b> {agent.synthetic?.story || agent.source.split("SYNTHETIC: ")[1]} Not PayPal payments: made up to show a real budget decision.{agent.grade ? (agent.grade.ok ? " Matches the known right answer." : " Differs from the known right answer.") : ""}</p>}
                 {agent.mine && sharedRecommendation && <p className="run-notice" role="status">You changed the inputs; this is your run. <button type="button" onClick={() => showSavedRecommendation(sharedRecommendation, false)}>Show the live ledger's run</button></p>}
                 {!agent.mine && visitorRecommendation && agent.rec_id === sharedRecommendation?.id && <p className="run-notice" role="status">Your run is saved for this browser. <button type="button" onClick={() => showSavedRecommendation(visitorRecommendation, true)}>Show your run</button></p>}
@@ -453,7 +462,7 @@ export default function App({ first = null }) {
               </PhoneDisclosure>}
               <PhoneDisclosure id="invoices" title="Invoice history" className="phone-disclosure-inner" summaryText={`${invoices.length} invoices`}>
                 <div className="sub-head"><b>Invoices</b><span className="row">{invoices.some((i) => i.status === "SENT" || i.status === "UNPAID") && <button className="mini" disabled={chase.status === "running"} onClick={askChase}>{chase.status === "running" ? "Chasing…" : "Chase unpaid"}</button>}<button className="mini" onClick={syncInvoices}>Refresh</button></span></div>
-                {invoices.some((i) => i.status === "SENT" || i.status === "UNPAID") && <p className="muted small">Demo clock: a reminder may go an hour after an invoice is sent (three days in a real shop), at most once a day.</p>}
+                {invoices.some((i) => i.status === "SENT" || i.status === "UNPAID") && <p className="muted small">Demo clock: reminders after 1 hour (3 days in a real shop).</p>}
                 {chase.status === "error" && <p className="err">{chase.error}</p>}
                 {chase.status === "done" && <div className="dec ok"><b>Chase agent: {chase.reminded.length} reminded{chase.eligible != null ? ` of ${chase.eligible} waiting` : ""}</b><small>{chase.summary}</small>
                   <small className="trace">{chase.trace.map((s) => s.refused ? `${s.tool} refused` : s.tool).join(" → ")}{chase.ms ? ` · ${(chase.ms / 1000).toFixed(1)} s` : ""} · reminders sent with PayPal's Agent Toolkit</small></div>}
@@ -482,7 +491,7 @@ export default function App({ first = null }) {
 
             <PhoneDisclosure id="links" title="Ad links & data" className="card">
               <div className="card-head phone-section-head"><h2>Ad links</h2></div>
-              <p className="muted">Each opens the demo shop with an ad click attached.</p>
+              <p className="muted">Each opens the shop with an ad click.</p>
               <div className="links">
                 {AD_LINKS.map(([k, s]) => <a key={k} className="adlink" href={adLink(k, s)}>{adName(k)}<small>{s === "fb" ? "Meta" : "Google"} click</small></a>)}
               </div>
@@ -498,7 +507,7 @@ export default function App({ first = null }) {
 
         <section id="studio" className="card studio-card" ref={studioBox} aria-label="AG Studio">
           <div className="card-head">
-            <div><h2>{view === "report" ? "Report · AG Studio" : "The full report, in AG Studio"}</h2><p className="muted">Four custom widgets, a custom budget agent and Studio's own agents, running on Claude.</p></div>
+            <div><h2>{view === "report" ? "Report · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2><p className="muted">Four custom widgets, cross-filters, Claude in the assistant.</p></div>
             <div className="row">
               {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {myDecisionCount > 0 && <span className="count">{myDecisionCount}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
               <button className="btn dark" onClick={openAssistant}>Open the Studio assistant</button>
@@ -516,7 +525,7 @@ export default function App({ first = null }) {
           </div>
         </section>
 
-        <footer className="foot">Fictional shop and ad data · real PayPal sandbox calls · Claude agents
+        <footer className="foot">Fictional demo shop · real PayPal sandbox calls · Meta test events
           <div className="more-links" aria-label="More pages"><b>More</b><a href="/trail">Money trail</a><a href="/scenarios.html">Scenarios</a><a href="/connect.html">Connect a shop</a><a href="/data">Data use</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></div>
         </footer>
       </main>

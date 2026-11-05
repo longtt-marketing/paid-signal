@@ -8,134 +8,119 @@
 <meta name="description" content="Be the customer: Claude invoices you through PayPal, you pay in the sandbox, PayPal confirms. Then the same double charge with two buyers, an ad PayPal cannot back, and a creator paid per paid order.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/ds.css">
+
+
 <style>
-:root{--paper:#f4f3ee;--card:#fff;--ink:#0e1116;--mute:#474c57;--faint:#666b78;--line:#e2dfd6;--chip:#f1efe8;--paid:#137a45;--paid-bg:#e6f4ec;--bad:#8c1d18;--bad-bg:#fdecea;--blue:#1d4f91;--blue-bg:#e5edf8;--grey:#5b606b;--grey-bg:#eceae4;--go:#2fbf71}
-*{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 "Inter Tight",system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
-a{color:var(--ink)}a:hover{color:var(--paid)}:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 28px;border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--ink);text-decoration:none}
-.mark{width:28px;height:28px;border-radius:8px;background:var(--ink);display:grid;place-items:center}.mark i{width:10px;height:10px;border-radius:50%;background:var(--go)}
-.top nav{display:flex;gap:18px;flex-wrap:wrap}.top nav a{text-decoration:none;font-size:15px;color:var(--mute)}.top nav a:hover{color:var(--ink)}
-main{max-width:980px;margin:0 auto;padding:44px 24px 96px;display:flex;flex-direction:column;gap:22px}
-h1{margin:0;font-size:clamp(30px,4.5vw,44px);line-height:1.08;font-weight:700;letter-spacing:-.03em;max-width:22ch}
-.lede{margin:12px 0 0;font-size:18px;color:var(--mute);max-width:62ch}
-.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;background:var(--ink);color:#fff;border-radius:20px;padding:22px 26px}
-.vs b{display:block;font-size:clamp(40px,7vw,64px);line-height:1;letter-spacing:-.04em}.vs span{color:#c9ccd3;font-size:14px}.vs .paid b{color:var(--go)}.vs i{font-style:normal;color:#8a8f99;font-size:28px}
-.step{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px}
-.step h2{margin:0 0 4px;font-size:20px;letter-spacing:-.01em;display:flex;gap:10px;align-items:baseline}
-.step h2 em{font-style:normal;font:700 13px "Inter Tight",sans-serif;color:var(--faint)}
-.quote{margin:10px 0 0;font-size:20px;font-weight:600}
-.verdict{margin:12px 0 0;padding:14px 16px;border-radius:14px;background:var(--bad-bg);color:var(--bad);font-weight:600}
-.verdict.ok{background:var(--paid-bg);color:var(--paid)}
-.reason{margin:10px 0 0;color:var(--mute)}
-.rule{margin:12px 0 0;padding:12px 14px;border-radius:12px;background:var(--chip);font-size:14px}
-.chain{margin:12px 0 0;font:500 13px ui-monospace,Consolas,monospace;color:var(--faint);overflow-wrap:anywhere}
-.tag{display:inline-block;font:600 12px "Inter Tight",sans-serif;padding:3px 9px;border-radius:999px;background:var(--grey-bg);color:var(--grey)}
-dl{display:grid;grid-template-columns:minmax(130px,190px) 1fr;gap:6px 16px;margin:12px 0 0;font-size:14px}dt{color:var(--faint)}dd{margin:0;overflow-wrap:anywhere}
-code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(--chip);padding:1px 6px;border-radius:6px}
-.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-.btn{font:600 14px "Inter Tight",sans-serif;border:1px solid var(--ink);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;min-height:40px}
-.btn.primary{background:var(--ink);color:#fff}.btn:disabled{opacity:.5;cursor:wait}
-.note{margin:10px 0 0;font-size:13px;color:var(--faint)}.err{color:var(--bad)}
-.contrast{display:grid;grid-template-columns:1fr 1fr;gap:12px}.contrast .side{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
-.contrast b{font-size:22px;letter-spacing:-.01em}.contrast small{font-size:13px;color:var(--faint)}.contrast .side.syn{border-style:dashed}.contrast .tag{align-self:flex-start}
-@media (max-width:640px){.contrast{grid-template-columns:1fr}}
-.loop{display:flex;flex-direction:column;gap:0;margin-top:12px;border-left:2px solid var(--line);padding-left:16px}
-.loop-row{display:grid;grid-template-columns:minmax(150px,200px) 1fr;gap:4px 16px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}.loop-row:last-child{border-bottom:0}
-.loop-row b{font-weight:600}.loop-row span{color:var(--mute);overflow-wrap:anywhere}.loop-row a{grid-column:2;font-size:14px}
-@media (max-width:640px){.loop-row{grid-template-columns:1fr}.loop-row a{grid-column:1}}
-.try{margin-top:14px;padding:16px;background:var(--chip);border-radius:14px}
-.try h3{margin:0;font-size:18px}.try textarea{display:block;width:100%;min-height:88px;margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;resize:vertical}
-.try-examples{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.try-examples button{font:500 13px "Inter Tight",sans-serif;border:1px solid var(--line);border-radius:999px;background:var(--card);padding:7px 11px;cursor:pointer}
-.try-result{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
-.substep{margin:16px 0 4px;font-size:16px}
-.more{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-.more a{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none}
-.more a b{display:block}.more a span{font-size:13px;color:var(--faint)}
-.wins{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.win{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;text-decoration:none;color:var(--ink)}
-.win:hover{border-color:var(--paid);color:var(--ink)}.win .k{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}.win b{font-size:20px;line-height:1.2;letter-spacing:-.01em}.win .pp{align-self:flex-start;font:600 12px "Inter Tight",sans-serif;background:var(--paid-bg);color:var(--paid);border-radius:999px;padding:3px 9px}.win small{color:var(--mute);font-size:13px}
-@media (max-width:760px){.wins{grid-template-columns:1fr}}
-.journey{margin-top:14px;padding:14px 16px;border:1px solid var(--paid);border-radius:14px;background:var(--paid-bg)}.journey .jstep{margin:6px 0}.journey .btn{margin:6px 0}.receipt a{font-weight:600}
-.ab{margin:10px 0 14px}.ab-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}.ab-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}.ab-card .quote{margin:0;font-size:16px}
-@media (max-width:640px){.ab-grid{grid-template-columns:1fr}}
-.hero-step{border:2px solid var(--ink)}.hero-step h2 em{background:var(--ink);color:#fff;padding:3px 8px;border-radius:6px;font-size:11px}
-.more-detail{border:1px solid var(--line);border-radius:16px;padding:12px 16px;background:var(--card)}.more-detail summary{cursor:pointer;font-weight:600}.more-detail .step{margin-top:12px}
-.gap{background:var(--ink);color:#fff;border-radius:20px;padding:22px 24px}.gap h2{margin:0;font-size:20px;letter-spacing:-.01em}
-.gap-sub{margin:6px 0 0;color:#c9ccd3;font-size:15px;max-width:70ch}.gap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
-.gap-card{border:1px solid #3a3e47;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}.gap-card .k{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8a8f99}
-.gap-card .nums{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.gap-card .nums b{font-size:28px;letter-spacing:-.03em;line-height:1}.gap-card .nums .paid{color:var(--go)}.gap-card .nums i{font-style:normal;color:#8a8f99}
-.gap-bar{display:grid;grid-template-columns:72px 1fr 44px;gap:8px;align-items:center;font-size:12px;color:#c9ccd3}.gap-bar span:last-child{text-align:right}.gap-bar div{height:8px;border-radius:4px;background:#2a2d34;overflow:hidden}.gap-bar div i{display:block;height:100%;background:#8a8f99}.gap-bar.money div i{background:var(--go)}
-.gap-card small{color:#c9ccd3;font-size:13px}.gap-rank{margin:14px 0 0;font-size:16px;font-weight:600}.gap-rank .go{color:var(--go)}.gap-src{margin:8px 0 0;font-size:12px;color:#8a8f99}.gap-src a{color:#c9ccd3}.gap-more{margin-top:10px;color:#c9ccd3}.gap-more summary{cursor:pointer;font-size:13px;font-weight:600;color:#fff}.gap-more[open] summary{margin-bottom:6px}.replay{margin-top:16px;padding-top:14px;border-top:1px solid #3a3e47}.replay-h{margin:0;font-size:16px}.replay-p{margin:6px 0 0;font-size:14px;color:#c9ccd3;max-width:80ch}.replay-p b{color:#fff}#replay a,#gap .gap-src a{color:#fff;text-decoration:underline}.replay code{background:#2a2d34;color:#c9ccd3;border-radius:4px;padding:0 4px;font-size:12px}.gap-src code{background:#2a2d34;color:#c9ccd3;border-radius:4px;padding:0 4px;font-size:11px}
-@media (max-width:760px){.gap-grid{grid-template-columns:1fr}}
-.intro{max-width:900px}.moves{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:18px 0 14px}
-.move{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:18px;padding:20px;background:var(--card)}.move.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
-.move .k{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#2fbf71}.move .k.amber{color:#8a4b00}.move .k.green{color:#1a7a48}
-.move>b{font-size:19px;line-height:1.25}.move .sm{font-size:14px;color:#c9ccd3}.move .big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.move .big b{font-size:46px;line-height:1;letter-spacing:-.04em}.move .big .claimed{color:#9aa0ab}.move .big .paid{color:#1a7a48}.move .big i{font-style:normal;color:#4a4f5a}
-.move .hook{margin:0;font-size:15px;font-weight:500}.move .hook b{color:#8a4b00}
-.go-btn,.ghost-btn{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;min-height:46px;border-radius:12px;font-weight:700;text-decoration:none}.go-btn{background:#2fbf71;color:#0c2a18}.ghost-btn{border:1px solid #c9c5ba;color:var(--ink)}
-@media (max-width:860px){.moves{grid-template-columns:1fr}}
-.hook-old{margin:0 0 12px;font-size:17px;font-weight:600;max-width:70ch}.hook b{color:var(--gap,#8a4b00)}.hook a{font-weight:600}.gap{margin-top:18px}
-.jump-list{margin:0 0 18px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:14px}
-.jump-list a{font-weight:600;text-decoration-thickness:1px;text-underline-offset:3px}
-@media (max-width:640px){.top{padding:14px 16px}main{padding:28px 16px 64px}.vs{grid-template-columns:1fr;text-align:left}.vs i{display:none}dl{grid-template-columns:1fr;gap:2px}dt{margin-top:6px}}
+.receipt{display:flex;flex-direction:column;gap:14px}.receipt h3{font-size:22px}.receipt .loop{padding:0;border:0;background:transparent;display:grid;gap:0}.loop-row{display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}.loop-row b{font-size:13px;color:var(--mute)}.loop-row span{overflow-wrap:anywhere}.loop-row button{grid-column:3;min-height:44px}.receipt .verdict{font-size:12px;color:var(--paid);font-weight:600}.receipt>a{font-weight:600}.receipt .note{margin:0}.ps-main{gap:48px}.trail{list-style:none;margin:0;padding:0;display:grid;gap:12px}.trail .step{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px}.trail .dot{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--soft);color:var(--ink);font-weight:700}.trail .card{margin:0}.trail .who{font-size:12px;color:var(--mute)}.picker{display:flex;overflow:auto}.picker button{flex:0 0 auto}.gap:not(section){display:inline-flex;padding:4px 9px;border-radius:99px;background:var(--soft);font-size:12px}.gap.blue{background:#e7eefc;color:#1d4f91}.gap.bad{background:var(--bad-bg);color:var(--bad)}.gap.grey{color:var(--mute)}.ps-foot{background:var(--bg)}
+.journey,.try-result,.ab{display:grid;gap:12px;min-width:0}.jstep,.reason,.chain,.quote,.rule{margin:0;padding:12px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}.verdict{display:inline-flex;align-items:center;width:max-content;max-width:100%;padding:6px 10px;border-radius:999px;background:var(--soft);font-weight:600}.verdict.ok{background:var(--paid-bg);color:var(--paid-ink)}.ab-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px}.ab-card{display:grid;gap:10px;padding:18px;border:1px solid var(--line);border-radius:var(--r)}.ab-card button{min-height:44px}@media(max-width:640px){.loop-row{grid-template-columns:1fr;gap:6px}.loop-row button{grid-column:auto;justify-self:start}}
+/* first screen */
+.intro{display:flex;flex-direction:column;gap:14px;max-width:760px}
+.moves{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:-24px}
+.move{display:flex;flex-direction:column;gap:14px;min-height:240px}
+.move .k{font-size:12px;font-weight:600;color:var(--mute)}.move .k.amber{color:var(--bad)}.move .k.green{color:var(--paid)}
+.move.dark .k{color:var(--go)}.move.dark b{font-size:24px;line-height:1.15;letter-spacing:-.01em}.move.dark .sm{font-size:14px;color:#CFCFCB}
+.move .ps-note,.move .hook{font-size:15px;color:var(--ink2);margin:0}.move .hook b{font-size:inherit;font-weight:600;color:var(--ink)}
+.go-btn,.ghost-btn{margin-top:auto;align-self:flex-start;display:inline-flex;align-items:center;min-height:46px;padding:0 20px;border-radius:12px;font-weight:600;font-size:15px;text-decoration:none}
+.go-btn{background:var(--go);color:var(--go-ink)}.go-btn:hover{color:var(--go-ink);filter:brightness(.96)}
+.ghost-btn{padding:0;min-height:auto;color:var(--ink)}.ghost-btn::after{content:" →"}
+.jump-list{margin:-28px 0 0;font-size:14px;color:var(--mute)}.jump-list a{color:var(--ink)}
+/* big numbers with small words between them */
+.ps-big i{font-style:normal;font-size:.36em;font-weight:500;letter-spacing:0;color:var(--mute);margin:0 .35em}.ps-big b{font-weight:700}.ps-big .paid{color:var(--paid)}.ps-big .was,.ps-big .claimed{color:var(--faint)}
+/* numbered steps */
+.step>h2,#customer>h2{display:flex;align-items:center;gap:12px}
+.step>h2 em,#customer>h2 em{flex:0 0 36px;height:36px;border-radius:50%;display:grid;place-items:center;font:700 15px var(--sans);font-style:normal;background:var(--ink);color:#fff}
+#customer>h2 em{background:var(--go);color:var(--go-ink);font-size:13px}
+.step{display:flex;flex-direction:column;gap:14px}
+.hero-step{background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);padding:28px}
+.try{display:flex;flex-direction:column;gap:12px}
+.try-examples{display:flex;flex-wrap:wrap;gap:8px}.try-examples button{font:600 13px var(--sans);min-height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.try .btn,.try button.btn{font:600 15px var(--sans);min-height:46px;padding:0 20px;border-radius:12px;border:0;cursor:pointer}.btn.primary{background:var(--ink);color:#fff}
+.substep{font-size:clamp(22px,2.6vw,28px)}
+/* the gift shop */
+.gap-sub{color:var(--ink2);max-width:70ch}
+.gap-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.gap-card{display:flex;flex-direction:column;gap:10px}.gap-card .k{font-size:12px;font-weight:600;color:var(--mute)}
+.gap-card .ps-big{font-size:30px;line-height:1.15}
+.gap-bar{display:grid;grid-template-columns:64px minmax(0,1fr) 48px;gap:8px;align-items:center;font-size:12px;color:var(--mute)}
+.gap-bar>div{height:8px;border-radius:4px;background:var(--soft);overflow:hidden}.gap-bar>div i{display:block;height:100%;background:#BDBDB8}.gap-bar.money>div i{background:var(--paid)}
+.gap-bar>span:last-child{text-align:right;font-weight:600;color:var(--ink)}
+.gap-card small{font-size:12px;color:var(--mute)}
+.gap-rank{font-size:15px}.gap-rank .go{color:var(--paid);font-weight:700}
+.gap-more{border-top:1px solid var(--line);padding-top:12px}.gap-more summary{cursor:pointer;font-weight:600;font-size:14px}.gap-src,.replay-p{color:var(--ink2);font-size:14px;margin-top:10px}
+.replay{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px;display:flex;flex-direction:column;gap:8px}
+/* agents at work */
+.wins{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.win{display:flex;flex-direction:column;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;text-decoration:none;color:var(--ink)}
+.win .k{font-size:12px;font-weight:600;color:var(--mute)}.win b{font-size:17px;line-height:1.25}.win .pp{font-size:13px;color:var(--paid-ink);background:var(--paid-bg);border-radius:99px;padding:4px 10px;align-self:flex-start}.win small{font-size:13px;color:var(--mute)}
+.vs{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.vs>div{display:flex;flex-direction:column}.vs b{font-size:48px;font-weight:700;letter-spacing:-.03em;line-height:1}.vs>div:first-child b{color:var(--faint)}.vs .paid b{color:var(--paid)}.vs span{font-size:13px;color:var(--mute)}.vs>i{font-style:normal;font-size:28px;color:var(--faint)}
+.contrast{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.contrast .side{display:flex;flex-direction:column;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px}
+.contrast .side b{font-size:20px;line-height:1.25}.contrast .side small{font-size:13px;color:var(--mute)}.contrast .tag{font-size:12px;font-weight:600;color:var(--paid)}.contrast .syn .tag{color:var(--warn)}
+.more-detail{border-top:1px solid var(--line);padding-top:14px}.more-detail>summary{cursor:pointer;font-weight:600}
+.more{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+.more a{display:flex;flex-direction:column;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;text-decoration:none;color:var(--ink)}.more a span{font-size:13px;color:var(--mute)}
+.foot-links{display:inline-flex;flex-wrap:wrap;gap:4px 14px;margin-left:12px}.foot-links a{color:var(--mute)}
+@media(max-width:900px){.moves,.wins,.gap-grid,.contrast{grid-template-columns:1fr}.moves{margin-top:-12px}.move{min-height:0}}
+@media(max-width:640px){.hero-step{padding:18px}.jump-list{margin-top:-16px}}
 </style>
+
 </head>
 <body>
-<header class="top"><a class="brand" href="/"><span class="mark"><i></i></span>Paid Signal</a><nav aria-label="Main"><a href="/">Dashboard</a><a href="/judge">Judge path</a><a href="/audit">Audit</a><a href="/proof">Proof</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></nav></header>
-<main>
+<header class="ps-top"><nav aria-label="Main"><a class="ps-brand" href="/"><span class="ps-mark"><i></i></span>Paid Signal</a><div class="ps-links"><a href="/judge" aria-current="page">Judge path</a><a href="/audit" >Audit</a><a href="/proof" >Proof</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></div><span class="ps-live">PayPal sandbox live</span></nav></header>
+<main class="ps-main">
   <div class="intro">
-    <h1>AI agents run the money side of a chat sale. PayPal's record decides what they may do.</h1>
-    <p class="lede">Three things to try. The invoice, payment, refund and payout are real PayPal sandbox calls; nothing needs a login except paying.</p>
+    <h1>Pay $49. See what it changes. Undo it.</h1>
+    <p class="ps-lead">Real PayPal sandbox calls. Only your view changes.</p>
   </div>
   <div class="moves">
-    <div class="move dark"><span class="k">1 · Be the customer</span><b>Ask to book. Claude invoices you on PayPal. You pay. PayPal says PAID.</b><span class="sm">A real sandbox invoice, sent by the send agent after you approve it.</span><a class="go-btn" href="#customer">Start</a></div>
-    <div class="move"><span class="k amber">2 · Claude says no</span><div class="big"><b class="claimed">31</b><i>leads</i><i>→</i><b class="paid">1</b><i>paid</i></div><b>The owner asks to raise the free guide. Claude refuses and recommends the ad PayPal says is paying.</b><a class="ghost-btn" href="#answer">See the answer</a></div>
-    <div class="move"><span class="k green">3 · A real shop's book</span><div class="big"><b>705</b><i>kept orders, the same as the shop's workbook</i></div><p class="hook" id="hook"><!--hook:start-->In one real shop's October (figures reported by the author), the ad with <b>69.4% of the chats</b> brought <b>19.3% of the money</b>. Its book, run through our ledger, matches the shop's workbook, and its 7 double transfers are held.<!--hook:end--></p><a class="ghost-btn" href="#gap">Open the book</a></div>
+    <div class="move dark ps-card"><span class="k">1 · Be the customer</span><b>Claude invoices you. You pay. PayPal confirms.</b><span class="sm">Approve, then pay in PayPal.</span><a class="go-btn" href="#customer">Start</a></div>
+    <div class="move ps-card"><span class="k amber">2 · Claude says no</span><div class="ps-big"><span class="was">31</span> → 1</div><p class="ps-note">Leads vs paid orders. The owner asks to raise this ad. Claude refuses.</p><a class="ghost-btn" href="#answer">See the answer</a></div>
+    <div class="move ps-card"><span class="k green">3 · A real shop's book</span><div class="ps-big">69% → 19%</div><p class="hook" id="hook"><!--hook:start-->A real gift shop's October: the ad with <b>69.4% of the chats</b> brought <b>19.3% of the money</b>.<!--hook:end--></p><a class="ghost-btn" href="#gap">Open the book</a></div>
   </div>
   <p class="jump-list"><strong>Then:</strong> <a href="#refund">the refund agent and two buyers</a> · <a href="#commission">the creator paid per paid order</a> · <a href="/#report">the AG Studio report (custom widgets, Studio agents on Claude)</a></p>
 
   <section class="step hero-step" id="customer"><h2><em>▶</em>Be the customer</h2>
-    <div class="try" id="try-it"><p class="note">Write as a fictional customer. Claude decides; a booking becomes a real PayPal sandbox invoice. Approve it as the owner, pay it on PayPal as the customer, and watch PayPal confirm it here. About two minutes; no real money. What you do here shows only in your own view: the ledger this page quotes is frozen, so other judges see the same evidence. The approve buttons are open in this demo; a real shop puts them behind its own login.</p>
+    <div class="try" id="try-it"><p class="note">Ask for a booking. Approve the invoice, then pay it in PayPal. Sandbox only; your view changes.</p><details class="ps-more-box"><summary>Limits</summary><p class="note">The ledger quoted here is frozen for other judges. Approve buttons are open in this demo; a real shop puts them behind its own login. No real money moves.</p></details>
       <div class="try-examples" aria-label="Example customer messages">
         <button type="button" data-example="booking">Clear booking</button><button type="button" data-example="not-ready">Not ready</button><button type="button" data-example="injection">Prompt injection</button>
       </div>
-      <textarea id="try-message" maxlength="500" aria-label="Fictional customer message">Please book one trial class for Saturday and send me the invoice.</textarea>
+      <textarea id="try-message" class="ps-input" maxlength="500" aria-label="Fictional customer message">Please book one trial class for Saturday and send me the invoice.</textarea>
       <div class="row"><button class="btn primary" type="button" id="try-run">Ask the revenue agent</button></div>
       <div class="try-result" id="try-result" role="status" aria-live="polite"><p class="note">Choose an example or write a message, then ask the agent.</p></div>
     </div>
   </section>
-  <section class="gap" id="gap" aria-labelledby="gap-h"><!--gap:start--><h2 id="gap-h">Why it matters: one real shop's October, as reported by the author</h2><p class="gap-sub" id="gap-sub">A gift shop that sells in chat; the author runs its Meta ads. October 2026: 260M VND (about $10,000) on three ad groups, 12,100 chats, 705 orders paid and kept after refunds.</p><div class="gap-grid" id="gap-grid"><div class="gap-card"><span class="k">A · Attention video</span><div class="nums"><b>8,400</b><i>chats →</i><b class="paid">145</b><i>paid orders</i></div><div class="gap-bar"><span>of chats</span><div><i style="width:69.4%"></i></div><span>69.4%</span></div><div class="gap-bar money"><span>of money</span><div><i style="width:19.3%"></i></div><span>19.3%</span></div><small>16,667 VND a chat · 1.81x ad spend back in paid money</small></div><div class="gap-card"><span class="k">B · Customer reviews</span><div class="nums"><b>2,500</b><i>chats →</i><b class="paid">390</b><i>paid orders</i></div><div class="gap-bar"><span>of chats</span><div><i style="width:20.7%"></i></div><span>20.7%</span></div><div class="gap-bar money"><span>of money</span><div><i style="width:56.3%"></i></div><span>56.3%</span></div><small>30,000 VND a chat · 9.88x ad spend back in paid money</small></div><div class="gap-card"><span class="k">C · Personalised for an occasion</span><div class="nums"><b>1,200</b><i>chats →</i><b class="paid">170</b><i>paid orders</i></div><div class="gap-bar"><span>of chats</span><div><i style="width:9.9%"></i></div><span>9.9%</span></div><div class="gap-bar money"><span>of money</span><div><i style="width:24.4%"></i></div><span>24.4%</span></div><small>37,500 VND a chat · 7.16x ad spend back in paid money</small></div></div><p class="gap-rank" id="gap-rank">Ranked by cost per chat, the ad report's view: A, B, C. Ranked by money kept per ad dollar (revenue after refunds ÷ spend): <span class="go">B, C, A</span>. The cheapest chats came from the ad that brought the least money.</p><details class="gap-more"><summary>How the shop counted, what the split rule would suggest, and the limits</summary><p class="gap-src" id="gap-src"><b>How the shop counted.</b> Customers paid by bank transfer (VietQR); an order counts as paid only after the shop's accountant matched the money received to the order code. Meta records which ad started each chat; staff write that ad group's code into the order book, then match it against payments and refunds. That matching is done by hand today; it is the step Paid Signal does from PayPal's records. The figures are reported by the author from the order book and the ad account; the shop confirms them and agreed to publish its book (1,214 invoices, 735 payments, 30 refunds, anonymised customer ids, in docs/proof); the ad account's own exports are no longer accessible. "Money" is revenue after refunds, before product, delivery and fees.</p><p class="gap-src"><b>What Paid Signal would suggest.</b> Its split rule (<code>proposeSplit</code>, the same code as the demo: paid orders kept per dollar of spend, refunds excluded, order value not used) gives A 53.8% → 17.3%, B 28.8% → 46.3%, C 17.3% → 36.4%. That is an illustration, not a measured lift or an optimal allocation; which moves the budget agent may make is a separate rule (<code>supportedMoves</code>). A person decides, and Paid Signal does not change a live Meta budget. The shop's payments did not go through Paid Signal or PayPal: the shop is why it exists, not a result of it. Numbers: <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/merchant-case-2026-10.json">merchant-case-2026-10.json</a>.</p></details><!--gap:end--><div class="replay" id="replay"><!--replay:start--><h3 class="replay-h">The shop's book, run through Paid Signal's own ledger code</h3><p class="replay-p">735 bank transfers and the 30 refunds from its refund book, fed to the same <code>reconcile()</code> the demo uses, give 705 paid orders kept and 1,317M VND, the same as the shop's reconciliation workbook. <b>Its 7 double transfers are held</b>: each was the same amount sent again for the same order code, 4 to 31 minutes later. A shop paid by bank transfer can run its own book the same way, in the browser: <a href="/audit#shop-title">/audit</a>.</p><details class="gap-more"><summary>Method and limits</summary><p class="replay-p">A: 145 orders, 254M VND · B: 390 orders, 741M VND · C: 170 orders, 322M VND. This checks the arithmetic, the refunds and the order matching, not judgement or ad causality. For bank transfers the ledger holds the same amount sent again for one order code whatever the gap (7 of 7), and never pairs two different order codes. Without order codes it falls back to the time rule (same payer, same ad, close together): 2 of 7 with the 10-minute checkout window, 7 of 7 with the 60-minute window bank transfers now get, a window set after reading this book. Every customer in this book ordered once, so false alarms cannot be measured on it; unit tests cover one customer's two orders, a split payment and a repeat beyond the window.</p></details><!--replay:end--></div></section>
-  <h2 class="substep">What the agents already did with PayPal money</h2>
+  <section class="gap ps-sec" id="gap" aria-labelledby="gap-h"><!--gap:start--><h2 id="gap-h">One shop, October</h2><p class="gap-sub" id="gap-sub">A gift shop that sells in chat; the author runs its Meta ads. October 2026: 260M VND (about $10,000) on three ad groups, 12,100 chats, 705 orders paid and kept after refunds.</p><div class="gap-grid" id="gap-grid"><div class="ps-card gap-card"><span class="k">A · Attention video</span><div class="nums ps-big"><b>8,400</b><i>chats →</i><b class="paid">145</b><i>paid orders</i></div><div class="gap-bar"><span>of chats</span><div><i style="width:69.4%"></i></div><span>69.4%</span></div><div class="gap-bar money"><span>of money</span><div><i style="width:19.3%"></i></div><span>19.3%</span></div><small>16,667 VND a chat · 1.81x ad spend back in paid money</small></div><div class="ps-card gap-card"><span class="k">B · Customer reviews</span><div class="nums ps-big"><b>2,500</b><i>chats →</i><b class="paid">390</b><i>paid orders</i></div><div class="gap-bar"><span>of chats</span><div><i style="width:20.7%"></i></div><span>20.7%</span></div><div class="gap-bar money"><span>of money</span><div><i style="width:56.3%"></i></div><span>56.3%</span></div><small>30,000 VND a chat · 9.88x ad spend back in paid money</small></div><div class="ps-card gap-card"><span class="k">C · Personalised for an occasion</span><div class="nums ps-big"><b>1,200</b><i>chats →</i><b class="paid">170</b><i>paid orders</i></div><div class="gap-bar"><span>of chats</span><div><i style="width:9.9%"></i></div><span>9.9%</span></div><div class="gap-bar money"><span>of money</span><div><i style="width:24.4%"></i></div><span>24.4%</span></div><small>37,500 VND a chat · 7.16x ad spend back in paid money</small></div></div><p class="gap-rank" id="gap-rank">Ranked by cost per chat, the ad report's view: A, B, C. Ranked by money kept per ad dollar (revenue after refunds ÷ spend): <span class="go">B, C, A</span>. The cheapest chats came from the ad that brought the least money.</p><details class="gap-more"><summary>How the shop counted, what the split rule would suggest, and the limits</summary><p class="gap-src" id="gap-src"><b>How the shop counted.</b> Customers paid by bank transfer (VietQR); an order counts as paid only after the shop's accountant matched the money received to the order code. Meta records which ad started each chat; staff write that ad group's code into the order book, then match it against payments and refunds. That matching is done by hand today; it is the step Paid Signal does from PayPal's records. The figures are reported by the author from the order book and the ad account; the shop confirms them and agreed to publish its book (1,214 invoices, 735 payments, 30 refunds, anonymised customer ids, in docs/proof); the ad account's own exports are no longer accessible. "Money" is revenue after refunds, before product, delivery and fees.</p><p class="gap-src"><b>What Paid Signal would suggest.</b> Its split rule (<code>proposeSplit</code>, the same code as the demo: paid orders kept per dollar of spend, refunds excluded, order value not used) gives A 53.8% → 17.3%, B 28.8% → 46.3%, C 17.3% → 36.4%. That is an illustration, not a measured lift or an optimal allocation; which moves the budget agent may make is a separate rule (<code>supportedMoves</code>). A person decides, and Paid Signal does not change a live Meta budget. The shop's payments did not go through Paid Signal or PayPal: the shop is why it exists, not a result of it. Numbers: <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/merchant-case-2026-10.json">merchant-case-2026-10.json</a>.</p></details><!--gap:end--><div class="replay" id="replay"><!--replay:start--><h3 class="replay-h">Shop book, rerun in Paid Signal</h3><p class="replay-p">735 bank transfers and the 30 refunds from its refund book, fed to the same <code>reconcile()</code> the demo uses, give 705 paid orders kept and 1,317M VND, the same as the shop's reconciliation workbook. <b>Its 7 double transfers are held</b>: each was the same amount sent again for the same order code, 4 to 31 minutes later. A shop paid by bank transfer can run its own book the same way, in the browser: <a href="/audit#shop-title">/audit</a>.</p><details class="gap-more"><summary>Method and limits</summary><p class="replay-p">A: 145 orders, 254M VND · B: 390 orders, 741M VND · C: 170 orders, 322M VND. This checks the arithmetic, the refunds and the order matching, not judgement or ad causality. For bank transfers the ledger holds the same amount sent again for one order code whatever the gap (7 of 7), and never pairs two different order codes. Without order codes it falls back to the time rule (same payer, same ad, close together): 2 of 7 with the 10-minute checkout window, 7 of 7 with the 60-minute window bank transfers now get, a window set after reading this book. Every customer in this book ordered once, so false alarms cannot be measured on it; unit tests cover one customer's two orders, a split payment and a repeat beyond the window.</p></details><!--replay:end--></div></section>
+  <h2 class="substep">Agents at work</h2>
   <div class="wins" aria-label="What the agents did with real PayPal sandbox money">
     <a class="win" href="#answer"><span class="k">1 · Says no</span><b>Claude says no to raising the ad with 31 leads</b><span class="pp">PayPal: 1 paid order</span><small>It recommends raising the ad PayPal says is paying instead; the rule in code agrees.</small></a>
     <a class="win" href="#refund" id="win-refund"><span class="k">2 · Gives money back</span><b>The refund agent returns a double payment</b><span class="pp">PayPal: refund …</span><small>A person approves; Claude checks the pair and calls create_refund.</small></a>
     <a class="win" href="#commission" id="win-pay"><span class="k">3 · Pays out</span><b>The commission agent pays the ad's creator per paid order</b><span class="pp">PayPal Payouts: …</span><small>Not per lead: refunded orders earn nothing.</small></a>
   </div>
   <div class="vs" id="vs" aria-live="polite"><div><b>–</b><span>leads the ad report gives this ad</span></div><i>→</i><div class="paid"><b>–</b><span>paid orders PayPal confirms for it</span></div></div>
-  <p class="note">PayPal confirms the payment. Paid Signal prepares eligible website click, Messenger and lead-form events for Meta; Google click payments go to Google.</p>
+  <details class="ps-more-box"><summary>Event routing</summary><p class="note">PayPal confirms the payment. Paid Signal prepares eligible website click, Messenger and lead-form events for Meta; Google click payments go to Google.</p></details>
 
+
+  <section class="step ps-sec" id="ask"><h2><em>1</em>The owner asks</h2><p class="note">Loading the recorded run…</p></section>
+  <section class="step ps-sec" id="answer"><h2><em>2</em>Claude answers. Code checks.</h2></section>
+  <section class="step ps-sec" id="capture"><h2><em>3</em>Read the PayPal record</h2></section>
+
+
+
+
+  <section class="step ps-sec" id="refund"><h2><em>4</em>Refund a duplicate payment</h2><p class="note">Loading the ledger…</p></section>
+
+  <section class="step ps-sec" id="commission"><h2><em>5</em>Pay commission per paid order</h2><p class="note">Loading the ledger…</p></section>
+
+  <details class="more-detail"><summary>More detail: one real lead's invoice loop, and a synthetic week with a raise and a cut</summary>
+  <section class="step ps-sec" id="loop"><h2><em>6</em>Lead to paid invoice</h2>
+    <h3 class="substep">Live invoice loop</h3><p class="note">Loading the ledger…</p>
+  </section>
   <div class="contrast" id="contrast" aria-live="polite">
     <div class="side"><span class="tag">Live PayPal sandbox ledger</span><b id="c-live">…</b><small id="c-live-why"></small></div>
     <div class="side syn"><span class="tag">SYNTHETIC week, made-up payments</span><b id="c-syn">…</b><small id="c-syn-why"></small></div>
   </div>
-
-  <section class="step" id="ask"><h2><em>1</em>The owner asks</h2><p class="note">Loading the recorded run…</p></section>
-  <section class="step" id="answer"><h2><em>2</em>Claude reads the payments and answers; code checks the move</h2></section>
-  <section class="step" id="capture"><h2><em>3</em>Open the PayPal payment behind the answer</h2></section>
-
-
-
-
-  <section class="step" id="refund"><h2><em>4</em>The refund agent: a double payment goes back to the buyer</h2><p class="note">Loading the ledger…</p></section>
-
-  <section class="step" id="commission"><h2><em>5</em>The commission agent: the creator is paid per paid order, not per lead</h2><p class="note">Loading the ledger…</p></section>
-
-  <details class="more-detail"><summary>More detail: one real lead's invoice loop, and a synthetic week with a raise and a cut</summary>
-  <section class="step" id="loop"><h2><em>6</em>The invoice loop: a real lead becomes a PayPal payment</h2>
-    <h3 class="substep">Live invoice loop</h3><p class="note">Loading the ledger…</p>
-  </section>
-  <section class="step" id="week"><h2><em>7</em>A harder week: a raise and a cut together</h2><p class="note">On the live ledger two ads have 3 or more paid orders, and only one of them earns a raise, so a cut cannot show there. This labelled synthetic week has enough orders on two ads to need a raise and a cut at once; its payments are made up, not PayPal captures.</p></section>
+  <section class="step ps-sec" id="week"><h2><em>7</em>Raise and cut, together</h2><p class="note">On the live ledger two ads have 3 or more paid orders, and only one of them earns a raise, so a cut cannot show there. This labelled synthetic week has enough orders on two ads to need a raise and a cut at once; its payments are made up, not PayPal captures.</p></section>
   </details>
 
   <h2 class="substep">More</h2>
@@ -146,8 +131,9 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     <a href="/data"><b>Data use</b><span>How data is handled</span></a>
     <a href="https://github.com/longtt-marketing/paid-signal"><b>Code</b><span>Read the implementation</span></a>
   </div>
-  <p class="note">The demo shop and its ad export are fictional (the gift shop above is real); the money moves are real PayPal sandbox calls, and the two-buyer test uses a simulated refund tool. An approved decision is recorded, it does not change a live Meta budget.</p>
+  <details class="ps-more-box"><summary>Limits</summary><p class="note">The demo shop and its ad export are fictional (the gift shop above is real); the money moves are real PayPal sandbox calls, and the two-buyer test uses a simulated refund tool. An approved decision is recorded, it does not change a live Meta budget.</p></details>
 </main>
+<footer class="ps-foot">Fictional demo shop &#183; real PayPal sandbox calls &#183; Meta test events <span class="foot-links"><a href="/trail">Money trail</a><a href="/scenarios.html">Scenarios</a><a href="/connect.html">Connect a shop</a><a href="/data">Data use</a></span></footer>
 <script src="/judge.js"></script>
 </body>
 </html>

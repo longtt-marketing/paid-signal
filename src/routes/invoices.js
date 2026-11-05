@@ -1,6 +1,7 @@
 // Invoices (draft, approve, send, sync), the judge path's try-it flow, the revenue and chase agents, double-payment refunds.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
-import { createDraftInvoice, isEvidence, sendToMeta, guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS } from "../core.js";
+import { createDraftInvoice, isEvidence, sendToMeta, guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS, CREATOR, heldDuplicates, disputeState, commissionOrders, runPayoutAgent, PAYOUT_SYSTEM, PAYOUT_TOOLS, quota, adName, parseAdCsv } from "../core.js";
+import { tryImpact } from "../tryImpact.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
@@ -43,12 +44,79 @@ export async function route({ request, env, url, pp, orders, ip }) {
     }
 
     // The judge's invoice as PayPal reports it now: read live until it is paid.
-    if (url.pathname === "/api/judge/try/status") {
+    if (url.pathname === "/api/judge/try/status" && request.method === "GET") {
       const id = url.searchParams.get("id") || "";
       let rec = /^INV2-[A-Z0-9-]+$/.test(id) ? await env.LEDGER.get(`try:${id}`, "json") : null;
       if (!rec || rec.vid !== visitorId(request)) return json({ error: "Unknown invoice for this browser." }, 404);
-      if (rec.status !== "PAID" && rec.status !== "DRAFT") { try { rec = (await tryPaid(env, await tpp.getInvoice(id))) || rec; } catch {} }
+      if (rec.status !== "PAID" && rec.status !== "DRAFT") { try { rec = (await tryPaid(env, await tpp.getInvoice(id), url)) || rec; } catch {} }
       return json({ invoice: publicTry(rec), checked_at: new Date().toISOString() });
+    }
+
+    if (url.pathname === "/api/judge/try/impact" && request.method === "GET") {
+      const id = url.searchParams.get("id") || "";
+      const rec = /^INV2-[A-Z0-9-]+$/.test(id) ? await env.LEDGER.get(`try:${id}`, "json") : null;
+      if (!rec || rec.vid !== visitorId(request) || rec.status !== "PAID" || !rec.paid?.payment_id) return json({ error: "Unknown paid invoice for this browser." }, 404);
+      const payment = await env.LEDGER.get(`pay:${rec.paid.payment_id}`, "json");
+      if (!payment || payment.visitor !== rec.vid || payment.try_invoice !== id) return json({ error: "Payment is not in this browser's ledger." }, 404);
+      const [before, after, meta, csv] = await Promise.all([
+        listPayments(env), listPayments(env, rec.vid), env.LEDGER.get(`meta:${payment.capture_id}`, "json"),
+        env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`)).then((r) => r.text()),
+      ]);
+      const once = await env.LEDGER.get(`commission:v:${rec.vid}:once`, "json");
+      let payout = once?.batch_id ? await env.LEDGER.get(`commission:v:${rec.vid}:${once.batch_id}`, "json") : once ? { status: once.state } : null;
+      const settled = (b) => ["SUCCESS", "DENIED", "CANCELED", "FAILED", "UNCLAIMED", "RETURNED", "REFUNDED", "BLOCKED"].includes(b?.read_back?.item_status || "");
+      if (payout?.batch_id && !settled(payout)) {
+        try {
+          const out = await tpp.getPayout(payout.batch_id);
+          payout.status = out?.batch_header?.batch_status || payout.status;
+          payout.read_back = { status: out?.batch_header?.batch_status || null, item_status: out?.items?.[0]?.transaction_status || null,
+            time_completed: out?.batch_header?.time_completed || null, transaction_id: out?.items?.[0]?.transaction_id || null, read_at: new Date().toISOString() };
+          await env.LEDGER.put(`commission:v:${rec.vid}:${payout.batch_id}`, JSON.stringify(payout));
+        } catch {}
+      }
+      const refund = payment.refund_id ? { id: payment.refund_id, status: payment.status } : null;
+      return json(tryImpact({ before, after, adRows: parseAdCsv(csv).rows, payment, meta, payout, refund }));
+    }
+
+    if (url.pathname === "/api/judge/try/commission" && request.method === "POST") {
+      let body; try { body = await request.json(); } catch { return json({ error: "Send the invoice id as JSON." }, 400); }
+      const id = String(body.invoice_id || ""), vid = visitorId(request);
+      const rec = /^INV2-[A-Z0-9-]+$/.test(id) ? await env.LEDGER.get(`try:${id}`, "json") : null;
+      if (!vid || !rec || rec.vid !== vid) return json({ error: "Unknown invoice for this browser." }, 404);
+      if (rec.status !== "PAID" || !rec.paid?.payment_id) return json({ error: "PayPal has not confirmed this invoice as paid." }, 400);
+      const payment = await env.LEDGER.get(`pay:${rec.paid.payment_id}`, "json");
+      if (!payment || payment.visitor !== vid || payment.try_invoice !== id || payment.ad !== CREATOR.ad || payment.status !== "COMPLETED") return json({ error: "The paid order is not in this browser's ledger." }, 400);
+      if (Number(payment.refunded_amount || 0) >= Number(payment.amount)) return json({ error: "A refunded order cannot earn commission." }, 400);
+      const onceKey = `commission:v:${vid}:once`, lockKey = `commission-lock:v:${vid}`;
+      if (await env.LEDGER.get(onceKey)) return json({ error: "This browser has already used its one creator payout." }, 409);
+      if (await env.LEDGER.get(lockKey)) return json({ error: "A creator payout for this payment is already running." }, 409);
+      const payments = await listPayments(env, vid);
+      if (heldDuplicates(payments).has(payment.capture_id)) return json({ error: "A held duplicate payment cannot earn commission." }, 400);
+      const orders = commissionOrders(payments, CREATOR, heldDuplicates(payments), {}, disputeState).filter((o) => o.capture_id === payment.capture_id);
+      if (!orders[0]?.eligible) return json({ error: orders[0]?.why_not || "This order is not eligible for commission." }, 400);
+      if (!(await quota(env, "judge try commission payouts", 15))) return json({ error: "The shared daily limit of 15 judge creator payouts has been reached." }, 429);
+      await env.LEDGER.put(lockKey, "1", { expirationTtl: 180 });
+      // This permanent marker prevents a second attempt from paying again if PayPal accepted a payout but the reply was lost.
+      await env.LEDGER.put(onceKey, JSON.stringify({ state: "running", invoice_id: id, payment_id: payment.capture_id, at: new Date().toISOString() }));
+      const program = { ad: CREATOR.ad, ad_name: adName(CREATOR.ad), creator: CREATOR.creator, rate: CREATOR.rate };
+      const pay = {
+        create: async ({ capture_ids, total, note }) => tpp.createPayout({ batchId: `judge-try-${vid}-${(await sha(payment.capture_id)).slice(0, 12)}`,
+          receiver: CREATOR.receiver, value: CREATOR.rate, note: `Commission for one paid judge-path order. ${String(note || "").slice(0, 180)}`,
+          subject: "Your Kite Robotics creator commission (demo)", itemId: payment.capture_id.slice(0, 120) }),
+        get: (batchId) => tpp.getPayout(batchId),
+      };
+      const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: PAYOUT_SYSTEM, tools: PAYOUT_TOOLS });
+      let agent;
+      try { agent = await runPayoutAgent({ llm, pay, program, orders }); }
+      catch (e) { await env.LEDGER.delete(lockKey); return json({ error: `The commission agent could not run: ${String(e?.message || e).slice(0, 200)}` }, 502); }
+      if (agent.payout?.batch_id) {
+        const record = { ...agent.payout, at: new Date().toISOString(), invoice_id: id, payment_id: payment.capture_id,
+          paid_by: "commission agent (Claude + PayPal Payouts)" };
+        await env.LEDGER.put(`commission:v:${vid}:${agent.payout.batch_id}`, JSON.stringify(record));
+        await env.LEDGER.put(onceKey, JSON.stringify({ state: "paid", invoice_id: id, payment_id: payment.capture_id, batch_id: agent.payout.batch_id }));
+      } else await env.LEDGER.put(onceKey, JSON.stringify({ state: "unknown", invoice_id: id, payment_id: payment.capture_id, at: new Date().toISOString() }));
+      await env.LEDGER.delete(lockKey);
+      return json({ payout: agent.payout, summary: agent.summary, trace: agent.trace });
     }
 
     if (url.pathname === "/api/judge/try" && request.method === "POST") {
