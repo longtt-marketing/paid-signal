@@ -88,6 +88,7 @@ function showPaid(inv, wrap) {
   const paymentId = inv.paid?.payment_id;
   const rows = $("div", { className: "rows" }), msg = $("span", { className: "ps-note", role: "status", textContent: "Only your view changes." });
   const undo = btn("Undo: refund me", "sec2");
+  const head = chip("PAID", "ok");
   const refresh = async () => {
     if (!paymentId) { rows.replaceChildren(row("PayPal", "Waiting for the payment id", status("PAID"))); return; }
     try {
@@ -99,21 +100,25 @@ function showPaid(inv, wrap) {
       pay5.onclick = async () => { pay5.disabled = true; msg.textContent = "The commission agent is paying through PayPal Payouts…"; try { await post("/api/judge/try/commission", { invoice_id: inv.id }); await refresh(); } catch (e) { msg.textContent = e.message; pay5.disabled = false; } };
       const creatorEnd = d.creator.batch_id ? status(d.creator.payout_status || "PENDING") : d.creator.earns ? pay5 : chip("No commission");
       rows.replaceChildren(
-        row("Testimonial ad", "Paid orders", num(a.before.paid_orders, a.after.paid_orders)),
-        row("Per $1 of ads", "Paid revenue", num(a.before.back_per_ad_dollar, a.after.back_per_ad_dollar, (v) => `$${Number(v).toFixed(2)}`)),
+        ...(d.refund.refunded
+          // after Undo the count is back where it was: show the step up and the step back, not a flat 4 → 4
+          ? [row("Testimonial ad", "Paid orders: your payment, then your Undo", $("b", {}, [$("span", { className: "was", textContent: String(a.before.paid_orders) }), " → ", $("span", { className: "up", textContent: String(a.before.paid_orders + 1) }), " → ", $("span", { textContent: String(a.after.paid_orders) })]))]
+          : [row("Testimonial ad", "Paid orders", num(a.before.paid_orders, a.after.paid_orders)),
+            row("Per $1 of ads", "Paid revenue", num(a.before.back_per_ad_dollar, a.after.back_per_ad_dollar, (v) => `$${Number(v).toFixed(2)}`))]),
         row("Budget rule", `Raise testimonial: ${b.parent_carousel.after_raise_supported ? "still yes" : "no"}. Raise free guide: ${b.free_guide.after_raise_blocked ? "still no" : "now yes"}.`, chip("Re-run")),
-        row("Meta", d.meta.sent ? `Purchase test event received${d.meta.refund_note ? `; ${d.meta.refund_note}` : ""}` : `Not sent: ${d.meta.reason || "no receipt from Meta"}`, chip(d.meta.sent ? "Sent" : "Held", d.meta.sent ? "ok" : "held")),
+        row("Meta", d.meta.sent ? `Purchase test event received${d.meta.refund_note ? `; ${d.meta.refund_note}` : ""}` : `Not sent: ${String(d.meta.reason || "no receipt from Meta").replace(/^Held:\s*/i, "")}`, chip(d.meta.sent ? "Sent" : "Held", d.meta.sent ? "ok" : "held")),
         row("Ad's creator", d.creator.batch_id ? `Paid $5 through PayPal Payouts${d.creator.owed_back ? "; $5 owed back after the refund" : ""}` : d.refund.refunded ? (d.creator.owed_back ? "$5 owed back after the refund" : "Refunded order: no commission") : "Earns $5 for this paid order", creatorEnd),
         ...(d.refund.refunded ? [row("Undo", `Refunded ${usd(d.refund.amount)}`, chip(d.refund.status || "REFUNDED", "ok"))] : []),
       );
       undo.disabled = Boolean(d.refund.refunded);
+      head.textContent = d.refund.refunded ? "PAID, then REFUNDED" : "PAID";
       if (d.refund.refunded) steps(6);
       if (d.creator.batch_id && ["PENDING", "PROCESSING"].includes(d.creator.payout_status)) setTimeout(refresh, 5000);
     } catch (e) { rows.replaceChildren(row("Receipt", `Could not load: ${e.message}`)); }
   };
   undo.onclick = async () => { undo.disabled = true; msg.textContent = "Asking PayPal for the refund…"; try { await post("/api/refund", { capture_id: paymentId }); await refresh(); msg.textContent = "Only your view changes."; } catch (e) { msg.textContent = e.message; undo.disabled = false; } };
   wrap.replaceChildren(
-    $("h3", {}, ["What your payment changed ", status("PAID")]), rows,
+    $("h3", {}, ["What your payment changed ", head]), rows,
     details("Payment ids", [p(`Invoice ${inv.invoice_number || inv.id}, ${usd(inv.paid?.amount || inv.amount)}. PayPal payment ${paymentId || "pending"}${inv.paid?.paypal_payment_date ? `, PayPal date ${inv.paid.paypal_payment_date}` : ""}; seen here ${when(inv.paid?.seen_at)}.`)]),
     $("div", { className: "foot" }, [msg, undo]));
   refresh();
@@ -240,8 +245,8 @@ function showCommission(d) {
   };
   body.replaceChildren($("div", { className: "card" }, [
     $("div", { className: "grid3", style: "align-items:end" }, [
-      b ? stat(whole(b.total), "up", `paid for ${(b.capture_ids || []).length} orders`) : stat("$0", "", "paid so far"),
-      stat(whole(pr.contrast.per_lead), "was", `what paying per lead would cost (${pr.contrast.leads} leads, ${pr.contrast.paid_orders} paid order)`),
+      b ? stat(whole(b.total), "up", `paid for ${(b.capture_ids || []).length} paid orders (${new Date(b.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })})`) : stat("$0", "", "paid so far"),
+      stat(whole(pr.contrast.per_lead), "was", `the free guide, if paid per lead (${pr.contrast.leads} leads, ${pr.contrast.paid_orders} paid order)`),
       $("div", { className: "stat", style: "align-items:flex-start;gap:10px" }, [b ? chip(`Last payout: ${b.read_back?.item_status || b.status}`, /SUCCESS/.test(b.read_back?.item_status || "") ? "ok" : "neu") : chip("No payout yet"), approve]),
     ]),
     out,

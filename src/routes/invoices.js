@@ -278,8 +278,8 @@ export async function route({ request, env, url, pp, orders, ip }) {
       if (stop) return last ? json({ ...last, replay: true, note: "Today's limit for live tries is reached, so this is the last live decision for this buyer." }) : json({ error: stop }, 429);
       const pair = { first: { capture_id: "TRY-1ST", payer_key: "same-payer", ad: "trial_video", amount: "49.00", currency: "USD", captured_at: "2026-10-28T10:49:51.000Z" },
         second: { capture_id: "TRY-2ND", payer_key: "same-payer", ad: "trial_video", amount: "49.00", currency: "USD", captured_at: "2026-10-28T10:53:27.000Z" }, seconds: 216, context };
-      const tools = { create_refund: { execute: async () => JSON.stringify({ id: "SIMULATED", status: "COMPLETED", note: "simulated on the judge path; no money moved" }) },
-        get_refund: { execute: async (a) => JSON.stringify({ id: a.refund_id, status: "COMPLETED", amount: { value: "49.00", currency_code: "USD" } }) } };
+      const tools = { create_refund: { execute: async () => JSON.stringify({ id: "SIMULATED", status: "SIMULATED", note: "simulated on the judge path: no refund was sent to PayPal and no money moved" }) },
+        get_refund: { execute: async (a) => JSON.stringify({ id: a.refund_id, status: "SIMULATED", amount: { value: "49.00", currency_code: "USD" }, note: "simulated: not a PayPal refund" }) } };
       const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REFUND_SYSTEM, tools: REFUND_TOOLS });
       try {
         const out = await runRefundAgent({ llm, tools, pair });

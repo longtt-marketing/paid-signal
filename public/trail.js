@@ -55,7 +55,7 @@ async function show(id) {
   if (a) out.push(step("4", "What it changes for the ad", `${c.ad_name}: the budget reads paid orders, not leads.`,
     chip(a.move && (a.move.increase || a.move.reduce) ? [a.move.increase && "Raise allowed", a.move.reduce && "Cut allowed"].filter(Boolean).join(" · ") : "Keep only", a.move?.increase ? "ok" : "neu"),
     [rows([["Leads → paid orders", `${a.leads} → ${a.paid_orders}`], ["Spend / paid revenue", `${money(a.spend)} / ${money(a.paid_revenue)}`], ["Paid revenue per $1", a.per_dollar ? money(a.per_dollar) : "–"],
-      a.chance_covers_spend != null && ["Covers its spend", `${a.chance_covers_spend}% chance`], a.cut_after && ["Cut point", `If the next ${money(a.cut_after)} brings no paid order`]]),
+      a.chance_covers_spend != null && ["Covers its spend", `${a.chance_covers_spend}% chance (rough estimate, few orders)`], a.cut_after && ["Cut point", `If the next ${money(a.cut_after)} brings no paid order`]]),
       details("How the rule reads it", ["The chance is computed in code from this ad's paid orders per dollar, with a prior worth one order, against the shop's average paid order. A raise needs 3 paid orders and paid revenue above spend; the cut point says when a raise is taken back. The budget agent may only quote these numbers, and code refuses a move they do not support."])]));
   box.replaceChildren(...out);
   history.replaceState(null, "", `/trail?capture=${encodeURIComponent(p.capture_id)}`);

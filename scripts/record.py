@@ -404,10 +404,111 @@ def nudge(pg):
     glide(pg, pg.locator(".owes-list li").first, click=False); pg.wait_for_timeout(4000)
 
 
-SEGMENTS = {"judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
+# ---- V23: the A2 redesign (cards of rows) ----
+def scroll_to(pg, sel, block="start"):
+    pg.evaluate(f"document.querySelector({json.dumps(sel)}).scrollIntoView({{behavior:'smooth', block:'{block}'}})"); pg.wait_for_timeout(1400)
+
+
+def home23(pg):
+    """Dashboard: 62 leads against 9 paid, each ad's paid revenue per $1, six agents, the flow from the ad report to Meta."""
+    pg.wait_for_selector(".hb-row", timeout=60000); pg.wait_for_timeout(800)
+    mark(pg, "hero", ".duo"); glide(pg, pg.locator(".duo"), click=False); pg.wait_for_timeout(2400)
+    mark(pg, "byad", ".hero-bars"); glide(pg, pg.locator(".hb-row b").first, click=False); pg.wait_for_timeout(2200)
+    glide(pg, pg.locator(".hb-row b.good").first, click=False); pg.wait_for_timeout(2200)
+    scroll_to(pg, ".agents"); mark(pg, "agents", ".agent-grid"); glide(pg, pg.locator(".agent-grid article").nth(1), click=False); pg.wait_for_timeout(2600)
+    scroll_to(pg, ".flow-card"); mark(pg, "flow", ".flow-card"); glide(pg, pg.locator(".fl-ad.worst"), click=False); pg.wait_for_timeout(3200)
+
+
+def cust23(pg):
+    """Be the customer: a message, Claude drafts a real PayPal invoice, the owner approves, the send agent sends it."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_selector("#try-message", timeout=60000); pg.wait_for_timeout(500)
+    scroll_to(pg, "#customer")
+    box = pg.locator("#try-message"); glide(pg, box); box.fill("")
+    box.type("Hi! Can I book Saturday's trial class for my daughter Mai? Please send me the invoice.", delay=24)
+    mark(pg, "message", "#try-message"); pg.wait_for_timeout(300)
+    glide(pg, pg.locator("#try-run"))
+    pg.wait_for_function("() => /Drafted|Skipped|Flagged|used up|Not run/.test(document.querySelector('#try-result').innerText)", timeout=90000)
+    pg.wait_for_timeout(500); mark(pg, "draft", "#try-result"); glide(pg, pg.locator("#try-result .row").nth(1), click=False); pg.wait_for_timeout(2600)
+    btn = pg.get_by_role("button", name="Approve and send"); mark(pg, "approve", "#try-result .rows"); glide(pg, btn)
+    pg.wait_for_function("() => /Now pay|Not sent|used up/.test(document.querySelector('#try-result').innerText)", timeout=90000)
+    pg.wait_for_timeout(500); mark(pg, "sent", "#try-result .rows"); glide(pg, pg.locator("#try-result a.btn.go"), click=False); pg.wait_for_timeout(3500)
+
+
+def impact23(pg):
+    """The receipt of a judge's own run (the author's, 5 Nov): what the payment changed, then the Undo refund PayPal made."""
+    pg.context.add_cookies([{"name": "ps_vid", "value": os.environ["PS_VID"], "url": BASE}])
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_timeout(500)
+    scroll_to(pg, "#customer")
+    pg.evaluate("""async (id) => { const d = await (await fetch('/api/judge/try/status?id=' + id)).json();
+      document.getElementById('try-result').replaceChildren(); const w = document.createElement('div'); document.getElementById('try-result').append(w); steps(4); showPaid(d.invoice, w); }""", os.environ["PS_INV"])
+    pg.wait_for_function("() => /Testimonial ad/.test(document.querySelector('#try-result').innerText)", timeout=60000); pg.wait_for_timeout(800)
+    scroll_to(pg, "#try-result", "center")
+    rows = pg.locator("#try-result .row")
+    for i in range(min(rows.count(), 6)):
+        mark(pg, f"row{i}", f"#try-result .row >> nth={i}"); glide(pg, rows.nth(i).locator(".v"), click=False); pg.wait_for_timeout(1900)
+
+
+def says23(pg):
+    """Claude says no: 31 leads, 1 paid order; the owner's raise, Claude's refusal, and the rule in code refusing it too."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_function("() => /Refused|Accepted/.test(document.querySelector('#ask').innerText)", timeout=60000)
+    scroll_to(pg, "#answer")
+    mark(pg, "vs", "#vs"); glide(pg, pg.locator("#vs .big"), click=False); pg.wait_for_timeout(2200)
+    rows = pg.locator("#ask .row")
+    for i in range(3):
+        mark(pg, f"row{i}", f"#ask .row >> nth={i}"); glide(pg, rows.nth(i).locator(".v"), click=False); pg.wait_for_timeout(2300)
+
+
+def buyers23(pg):
+    """Same double charge, two buyers: live Claude declines one and refunds the other (refund tool simulated)."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_selector("#buyers .buyer", timeout=60000)
+    scroll_to(pg, "#refund")
+    cards = pg.locator("#buyers .buyer")
+    for i in range(2):
+        mark(pg, f"card{i}", f"#buyers .buyer >> nth={i}"); glide(pg, cards.nth(i).get_by_role("button", name="Ask Claude"))
+        pg.wait_for_function(f"() => /Refunds one|Keeps both|used up|limit/.test(document.querySelectorAll('#buyers .buyer')[{i}].innerText)", timeout=90000)
+        pg.wait_for_timeout(500); mark(pg, f"out{i}", f"#buyers .buyer >> nth={i}"); glide(pg, cards.nth(i).locator(".out"), click=False); pg.wait_for_timeout(3000)
+
+
+def money23(pg):
+    """The real refund the refund agent made, then the creator paid per paid order through PayPal Payouts."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_function("() => /COMPLETED/.test(document.querySelector('#refund-real').innerText)", timeout=60000)
+    pg.wait_for_selector("#commission-body .stat", timeout=60000)
+    scroll_to(pg, "#refund-real", "center")
+    rows = pg.locator("#refund-real .row")
+    for i in range(3):
+        mark(pg, f"r{i}", f"#refund-real .row >> nth={i}"); glide(pg, rows.nth(i).locator(".v"), click=False); pg.wait_for_timeout(1900)
+    scroll_to(pg, "#commission")
+    mark(pg, "paid", "#commission-body .stat >> nth=0"); glide(pg, pg.locator("#commission-body .stat").nth(0), click=False); pg.wait_for_timeout(2200)
+    mark(pg, "perlead", "#commission-body .stat >> nth=1"); glide(pg, pg.locator("#commission-body .stat").nth(1), click=False); pg.wait_for_timeout(2600)
+
+
+def trail23(pg):
+    """The money trail of one payment: the ad click, PayPal's record read live, Meta's reply, what it changes."""
+    pg.goto(BASE + "/trail?capture=3GY34151GC185303G", wait_until="networkidle"); pg.wait_for_function("() => document.querySelectorAll('#trail .sec').length >= 3", timeout=60000); pg.wait_for_timeout(800)
+    secs = pg.locator("#trail .sec")
+    for i, k in enumerate(["click", "paypal", "meta", "effect"]):
+        if i >= secs.count(): break
+        secs.nth(i).scroll_into_view_if_needed(); pg.evaluate(f"document.querySelectorAll('#trail .sec')[{i}].scrollIntoView({{behavior:'smooth', block:'start'}})"); pg.wait_for_timeout(1300)
+        mark(pg, k, f"#trail .sec >> nth={i}"); glide(pg, secs.nth(i).locator(".row .v").first, click=False); pg.wait_for_timeout(2400)
+
+
+def shop23(pg):
+    """A real gift shop's October: chats against money for three ad groups, then its book rerun in the ledger."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_selector("#gap-grid .shop-card", timeout=60000)
+    scroll_to(pg, "#gap")
+    cards = pg.locator("#gap-grid .shop-card")
+    for i in range(3):
+        mark(pg, f"card{i}", f"#gap-grid .shop-card >> nth={i}"); glide(pg, cards.nth(i).locator(".bar.money"), click=False); pg.wait_for_timeout(2000)
+    scroll_to(pg, "#replay", "center")
+    rows = pg.locator("#replay .row")
+    for i in range(2):
+        mark(pg, f"r{i}", f"#replay .row >> nth={i}"); glide(pg, rows.nth(i).locator(".v"), click=False); pg.wait_for_timeout(2600)
+
+
+SEGMENTS = {"home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
 
 with sync_playwright() as p:
-    b = p.chromium.launch(args=["--mute-audio", "--disable-sync", "--no-first-run", "--no-default-browser-check"])
+    b = p.chromium.launch(channel=os.environ.get("PS_CHANNEL") or None, args=["--mute-audio", "--disable-sync", "--no-first-run", "--no-default-browser-check"])
     try:
         for name in [a for a in sys.argv[1:] if a in SEGMENTS]:
             raw = OUT / "rec" / name; shutil.rmtree(raw, ignore_errors=True)
