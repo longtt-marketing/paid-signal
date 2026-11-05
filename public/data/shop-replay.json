@@ -6,6 +6,9 @@
   "revenue": 1317000000,
   "first_payments": 728,
   "refunds": 30,
+  "unmatched_payments": 0,
+  "unmatched_payment_amount": 0,
+  "unmatched_refunds": 0,
   "repeat_customers": 0
  },
  "groups": [

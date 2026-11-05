@@ -66,7 +66,13 @@ export function shopPayments(orders, payments, refunds) {
  * Without groups (no ad report) the money results are per ad group with no spend; includeDetails adds what /audit shows.
  */
 export function replayShop({ orders, payments, refunds, groups = null, includeDetails = false }) {
-  const ledger = shopPayments(orders, payments, refunds);
+  const known = new Set(orders.map((o) => field(o, "order")));
+  const all = shopPayments(orders, payments, refunds);
+  // a payment for an order the book does not have, or a refund for a payment it does not have, needs a person: shown, not counted
+  const ledger = all.filter((p) => known.has(p.order_id));
+  const unmatchedPayments = all.filter((p) => !known.has(p.order_id));
+  const paymentIds = new Set(all.map((p) => p.capture_id));
+  const unmatchedRefunds = refunds.filter((r) => !paymentIds.has(field(r, "refundPayment")));
   const hasAds = Array.isArray(groups);
   if (!groups) {
     const ids = [...new Set([...orders.map((o) => field(o, "ad")), ...payments.map((p) => field(p, "ad"))].filter(Boolean))];
@@ -77,7 +83,7 @@ export function replayShop({ orders, payments, refunds, groups = null, includeDe
   const byGroup = Object.fromEntries(final.ads.map((a) => [a.ad, a]));
   const heldFlags = possibleDuplicates(ledger.map((p) => ({ ...p, refunded_amount: "0" })));
   const knownOrders = new Set(orders.map((o) => field(o, "order")));
-  const unmatchedOrderCaptures = ledger.filter((p) => !knownOrders.has(p.order_id)).map((p) => p.capture_id);
+  const unmatchedOrderCaptures = unmatchedPayments.map((p) => p.capture_id);
   const rows = groups.map((g) => {
     const a = byGroup[g.id], groupPayments = ledger.filter((p) => p.ad === g.id);
     const flags = heldFlags.filter((f) => groupPayments.some((p) => p.capture_id === f.capture_id));
@@ -86,7 +92,7 @@ export function replayShop({ orders, payments, refunds, groups = null, includeDe
         refunds: groupPayments.reduce((n, p) => n + (p.refund_total || 0), 0), refund_count: groupPayments.reduce((n, p) => n + (p.refund_count || 0), 0),
         held: flags.length, held_same_order: flags.filter((f) => { const current = groupPayments.find((p) => p.capture_id === f.capture_id), first = groupPayments.find((p) => p.capture_id === f.first); return Boolean(current?.order_id) && current.order_id === first?.order_id && current.amount === first?.amount; }).length,
         held_payer_window: flags.filter((f) => groupPayments.find((p) => p.capture_id === f.capture_id)?.order_id !== groupPayments.find((p) => p.capture_id === f.first)?.order_id).length,
-        unmatched_orders: groupPayments.filter((p) => unmatchedOrderCaptures.includes(p.capture_id)).length,
+        unmatched_orders: unmatchedPayments.filter((p) => p.ad === g.id).length,
         spend: g.spend, chats: g.conversations, cost_per_chat: g.conversations ? g.spend / g.conversations : null,
         kept_per_ad_dollar: g.spend ? a.revenue_cents / 100 / g.spend : null,
       } : {}),
@@ -107,7 +113,8 @@ export function replayShop({ orders, payments, refunds, groups = null, includeDe
   const minutes = bankFlags.filter((f) => inBook.has(f.capture_id)).map((f) => Math.round(f.seconds / 60)).sort((x, y) => x - y);
   return {
     totals: { payments: ledger.length, paid: final.totals.paid, refunded_captures: final.totals.refunded, revenue: final.totals.revenue_cents / 100,
-      first_payments: ledger.filter((p) => !p.duplicate_in_book).length, refunds: refunds.length, ...(includeDetails ? { unmatched: final.unmatched_captures.length } : {}), repeat_customers: orders.length - new Set(orders.map((o) => o["Mã khách ẩn danh"])).size },
+      first_payments: ledger.filter((p) => !p.duplicate_in_book).length, refunds: refunds.length,
+      unmatched_payments: unmatchedPayments.length, unmatched_payment_amount: unmatchedPayments.reduce((n, p) => n + Number(p.amount), 0), unmatched_refunds: unmatchedRefunds.length, ...(includeDetails ? { unmatched: final.unmatched_captures.length } : {}), repeat_customers: orders.length - new Set(orders.map((o) => o["Mã khách ẩn danh"])).size },
     groups: rows,
     matches_book: includeDetails ? null : hasAds ? rows.every((r) => r.matches) : null,
     ...(includeDetails ? { rankings: hasAds ? { cost_per_chat: [...rows].sort((a,b) => a.cost_per_chat - b.cost_per_chat).map((x) => x.id), kept_per_ad_dollar: [...rows].sort((a,b) => b.kept_per_ad_dollar - a.kept_per_ad_dollar).map((x) => x.id) } : null, unmatched_captures: final.unmatched_captures, unmatched_order_captures: unmatchedOrderCaptures } : {}),

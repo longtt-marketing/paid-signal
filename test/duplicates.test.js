@@ -44,3 +44,7 @@ test("duplicates, hard positives: the same order paid twice is held whatever the
 test("duplicates: a second, smaller transfer for the same order (a split or top-up) is not a double payment", () => {
   assert.deepEqual(possibleDuplicates([t("P1", "ORD-1", 0, { payer_email_sha256: "cust-1" }), t("P2", "ORD-1", 30, { payer_email_sha256: "cust-2", amount: "500000" })]), []);
 });
+
+test("duplicates: the same customer topping up the same order with a different amount, minutes later, is not a double payment", () => {
+  assert.deepEqual(possibleDuplicates([t("P1", "ORD-1", 0), t("P2", "ORD-1", 12, { amount: "300000" })]), []);
+});

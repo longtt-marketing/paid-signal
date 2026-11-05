@@ -298,12 +298,12 @@ export function possibleDuplicates(payments, windowMs = 10 * 60 * 1000) {
   // a second payment a person confirmed as a separate order (e.g. a second child) counts as a paid order again
   const out = [];
   for (const [i, b] of live.entries()) {
-    // bank transfers carry the order code: the same amount sent again for the same order is a double payment whatever the
-    // gap, and two transfers for two different order codes are two orders, never a double payment (a PayPal order cannot be
-    // captured twice, so this only applies to transfers); otherwise same payer, same ad, close in time
+    // bank transfers carry the order code, and when both have one it alone decides: the same amount sent again for the same
+    // order is a double payment whatever the gap; a different amount is a top-up or split; two order codes are two orders (a
+    // PayPal order cannot be captured twice, so this only applies to transfers); without order codes: same payer, same ad, close in time
     const bank = b.method === "bank_transfer" && x0(b.order_id);
     const a = live.slice(0, i).reverse().find((x) => (bank && x.order_id === b.order_id && cents(x.amount) === cents(b.amount)) ||
-      (!(bank && x0(x.order_id) && x.order_id !== b.order_id) && (x.payer_email_sha256 === b.payer_email_sha256 && x.ad === b.ad && at(b) - at(x) <= win(b))));
+      (!(bank && x0(x.order_id)) && (x.payer_email_sha256 === b.payer_email_sha256 && x.ad === b.ad && at(b) - at(x) <= win(b))));
     if (a && !b.confirmed_distinct) out.push({ capture_id: b.capture_id, first: a.capture_id, seconds: Math.round((at(b) - at(a)) / 1000) });
   }
   return out;

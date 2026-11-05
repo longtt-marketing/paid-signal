@@ -190,7 +190,7 @@ function runShopBook(sample) {
     cells.forEach((cell, i) => { cell.dataset.label = labels[i]; });
     return el("tr", {}, cells);
   }));
-  $("shop-unmatched").textContent = `${result.unmatched_order_captures.length} payment${result.unmatched_order_captures.length === 1 ? "" : "s"} match no order code. Arithmetic check only; ad performance rankings describe the reported data and do not establish ad causality.`;
+  $("shop-unmatched").textContent = (!result.unmatched_order_captures.length && !result.totals.unmatched_refunds) ? "Every payment matches an order code and every refund matches a payment. Arithmetic check only; ad performance rankings describe the reported data and do not establish ad causality." : `${result.unmatched_order_captures.length} payment${result.unmatched_order_captures.length === 1 ? "" : "s"} match no order code (${moneyVnd(result.totals.unmatched_payment_amount || 0)}, not counted above) and ${result.totals.unmatched_refunds || 0} refund${result.totals.unmatched_refunds === 1 ? "" : "s"} match no payment; a person should look at these. Arithmetic check only; ad performance rankings describe the reported data and do not establish ad causality.`;
 }
 
 $("dl").onclick = () => {

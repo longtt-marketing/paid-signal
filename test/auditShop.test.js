@@ -50,3 +50,18 @@ test("published gift shop book replays to the shared ledger totals and group cou
 test("browser shop replay is an exact copy of the Worker module", () => {
   assert.equal(readFileSync(new URL("../public/lib/shopReplay.js", import.meta.url), "utf8"), readFileSync(new URL("../src/shopReplay.js", import.meta.url), "utf8"));
 });
+
+test("audit book: a payment for an order the book lacks, and a refund for a payment it lacks, are shown and not counted", async () => {
+  const { replayShop } = await import("../src/shopReplay.js");
+  const orders = [{ order_id: "O1", customer_id: "C1", ad_group: "A", amount: "100", status: "paid" }];
+  const payments = [
+    { payment_id: "P1", order_id: "O1", ad_group: "A", type: "first", paid_at: "2026-10-01 10:00", amount: "100" },
+    { payment_id: "P9", order_id: "O9", ad_group: "A", type: "first", paid_at: "2026-10-01 11:00", amount: "500" },
+  ];
+  const refunds = [{ refunded_payment_id: "PX", refund_amount: "50" }];
+  const r = replayShop({ orders, payments, refunds, includeDetails: true });
+  assert.equal(r.totals.paid, 1);
+  assert.equal(r.totals.revenue, 100);
+  assert.deepEqual([r.totals.unmatched_payments, r.totals.unmatched_payment_amount, r.totals.unmatched_refunds], [1, 500, 1]);
+  assert.equal(r.groups.find((g) => g.id === "A").unmatched_orders, 1);
+});
