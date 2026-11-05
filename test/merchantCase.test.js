@@ -45,3 +45,13 @@ test("the judge page carries the shop section as static HTML, matching the curre
   assert.ok(html.includes(`<!--hook:start-->${hookHTML(r)}<!--hook:end-->`) && hookHTML(r).includes("19.3% of the money"));
   assert.ok(html.indexOf('id="hook"') < html.indexOf('id="customer"') && html.indexOf('id="customer"') < html.indexOf('id="gap"'));
 });
+
+test("what if the shop had split the same spend by Paid Signal's rule: a range, flattening returns below returns that hold", () => {
+  const w = r.what_if;
+  assert.equal(w.kept_now, 1317000000);
+  const [lo, mid] = w.flattening, hi = w.returns_hold;
+  assert.ok(lo.lift > 0.08 && lo.lift < 0.1, String(lo.lift));     // b = 0.3: about 9%
+  assert.ok(mid.lift > 0.17 && mid.lift < 0.19, String(mid.lift)); // b = 0.5: about 18%
+  assert.ok(hi.lift > 0.47 && hi.lift < 0.49, String(hi.lift));    // b = 1: about 48%, the upper bound
+  assert.ok(lo.extra < mid.extra && mid.extra < hi.extra);
+});

@@ -161,6 +161,29 @@
     "share_proposed": 0.3638790779591582,
     "reason": "moved by paid orders per dollar"
    }
-  ]
+  ],
+  "what_if": {
+   "kept_now": 1317000000,
+   "flattening": [
+    {
+     "b": 0.3,
+     "kept": 1437252034,
+     "extra": 120252034,
+     "lift": 0.091
+    },
+    {
+     "b": 0.5,
+     "kept": 1549967459,
+     "extra": 232967459,
+     "lift": 0.177
+    }
+   ],
+   "returns_hold": {
+    "b": 1,
+    "kept": 1948951278,
+    "extra": 631951278,
+    "lift": 0.48
+   }
+  }
  }
 }

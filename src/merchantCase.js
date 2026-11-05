@@ -25,8 +25,25 @@ export function readMerchantCase(c) {
   return {
     totals: { spend, conversations, paid, net, roas: net / spend, cost_per_paid_order: Math.round(spend / paid), spend_usd: spend / c.usd_rate, net_usd: net / c.usd_rate },
     invoices_add_up: inv.paid + inv.unpaid_at_reconciliation + inv.cancelled_unpaid === inv.issued && inv.paid === sum((g) => g.first_paid),
-    groups, rank_by_cost_per_conversation: byCostPerConversation, rank_by_money_kept: byMoney, paid_signal_split: split,
+    groups, rank_by_cost_per_conversation: byCostPerConversation, rank_by_money_kept: byMoney, paid_signal_split: split, what_if: whatIf(groups, split),
   };
+}
+
+/**
+ * What the shop's own October says the same spend would have kept under Paid Signal's split: each group's money kept
+ * scales with its new share of spend to a power b (b = 1: returns hold as spend grows, an upper bound; b = 0.5 and 0.3:
+ * returns flatten, as marketing-mix models usually assume). An estimate from one month, not a measured lift.
+ * @param {{ id: string, net: number }[]} groups
+ * @param {{ id: string, share_now: number, share_proposed: number }[]} split
+ */
+export function whatIf(groups, split) {
+  const by = Object.fromEntries(split.map((x) => [x.id, x]));
+  const now = groups.reduce((n, g) => n + g.net, 0);
+  const at = (/** @type {number} */ b) => {
+    const kept = groups.reduce((n, g) => n + g.net * Math.pow(by[g.id].share_proposed / by[g.id].share_now, b), 0);
+    return { b, kept: Math.round(kept), extra: Math.round(kept - now), lift: Math.round((kept / now - 1) * 1000) / 1000 };
+  };
+  return { kept_now: now, flattening: [at(0.3), at(0.5)], returns_hold: at(1) };
 }
 
 const esc = (/** @type {unknown} */ s) => String(s).replace(/[&<>"]/g, (ch) => /** @type {Record<string,string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
@@ -49,6 +66,9 @@ export function gapHTML(r, c) {
   return `<div class="hd"><span class="no">5</span><h2 id="gap-h">A real shop's October</h2></div>`
     + `<p class="sub" id="gap-sub">A Vietnamese gift shop the author runs ads for. Paid by bank transfer.</p>`
     + `<div class="grid3" id="gap-grid">${cards}</div>`
+    + (() => { const w = r.what_if, lo = w.flattening[0], hi = w.flattening[1];
+        return `<div class="card" id="gap-whatif"><div class="row first"><span class="l">Same spend, split by Paid Signal</span><span class="v">The shop's own numbers imply ${Math.round(lo.lift * 100)}% to ${Math.round(hi.lift * 100)}% more revenue after refunds, before costs: ${vnd(lo.extra)} to ${vnd(hi.extra)} (about $${Math.round(lo.extra / 26000).toLocaleString("en-US")} to $${Math.round(hi.extra / 26000).toLocaleString("en-US")}) in one month</span><span class="chip neu">Estimate</span></div>`
+          + `<details class="det"><summary>How this is estimated</summary><p>From the shop's own October: each ad group's money kept after refunds scales with its new share of the same 260M VND spend, to a power of 0.3 or 0.5 (returns flatten as an ad gets more spend, the usual assumption in marketing-mix models). If returns did not flatten at all, the same split would keep ${Math.round(w.returns_hold.lift * 100)}% more, an upper bound. One month, three ad groups, spend moved beyond what October tested, and no test: this is what the shop's own numbers imply, not a measured lift. Code: <code>whatIf</code> in src/merchantCase.js, checked by test/merchantCase.test.js.</p></details></div>`; })()
     + `<details class="card det-card"><summary>How the shop counted, and limits</summary>`
     + `<p id="gap-rank">October 2026: ${vnd(r.totals.spend)} (about $${Math.round(r.totals.spend_usd).toLocaleString("en-US")}) on three ad groups, ${r.totals.conversations.toLocaleString("en-US")} chats, ${r.totals.paid} orders paid and kept after refunds. Ranked by cost per chat, the ad report's view: ${r.rank_by_cost_per_conversation.join(", ")}. Ranked by money kept per ad dollar: ${r.rank_by_money_kept.join(", ")}.</p>`
     + `<p id="gap-src">${esc(c.payment || "")} ${esc(c.attribution || "")} That matching is done by hand today; it is the step Paid Signal does from PayPal's records. The figures are reported by the author from the order book and the ad account; the shop confirms them and published its book (1,214 invoices, 735 payments, 30 refunds, anonymised customer ids, in docs/proof); the ad account's own exports are no longer accessible. "Money" is revenue after refunds, before product, delivery and fees.</p>`
