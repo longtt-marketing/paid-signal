@@ -176,6 +176,8 @@ export default function App({ first = null }) {
     if (Object.keys(by).length) setInvoices((cur) => cur.map((i) => (by[i.id] ? { ...i, reminded_at: at, reminder: { subject: by[i.id].subject, note: by[i.id].note } } : i)));
   }, []);
   const [studioPage, setStudioPage] = useState("overview");
+  const [allPays, setAllPays] = useState(false);
+  const [allInv, setAllInv] = useState(false);
   // sent but unpaid: the chase agent reads each with PayPal's Agent Toolkit, picks whom to remind and writes the note
   const askChase = async () => {
     setChase({ status: "running" });
@@ -285,6 +287,7 @@ export default function App({ first = null }) {
             <a href="/judge">Judge path</a>
             <a href="/audit">Audit</a>
             <a href="/proof">Proof</a>
+            <a href="https://github.com/longtt-marketing/paid-signal">Code</a>
           </nav>
           <div className="top-end">
             <span className="live"><i />PayPal sandbox live</span>
@@ -297,39 +300,40 @@ export default function App({ first = null }) {
           <div className="hero-copy">
             <p className="kicker">Kite Robotics Club · demo shop</p>
             <h1 className="duo"><span className="n claimed">{(t || first)?.leads ?? "…"} leads.</span><span className="n paid">{(t || first)?.paid ?? "…"} paid.</span></h1>
-            <p className="pitch">Ads learn from leads. PayPal knows who paid. Paid Signal lets AI agents act only on what PayPal confirms.</p>
-            <div className="hero-actions"><a className="cta" href="/judge#customer">Follow a payment</a><a className="hero-link" href="/audit">Audit your own ads →</a></div>
+            <p className="pitch">Ads learn from leads. PayPal knows who paid.</p>
+            <div className="hero-actions"><a className="cta" href="/judge#customer">Follow a payment</a><a className="cta ghost" href="/audit">Audit your ads</a></div>
           </div>
           <div className="hero-bars" aria-label="Leads and paid orders by ad">
-            <div className="hb-head"><b>By ad</b><span><i className="l" />leads <i className="p" />paid on PayPal</span></div>
+            <div className="hb-head"><b>By ad</b><span>paid revenue per $1 of ads</span></div>
             {byCost.length ? [...ads].sort((a, b) => b.leads - a.leads).map((a) => {
               const top = Math.max(...ads.map((x) => x.leads), 1), back = a.spend_cents ? a.revenue_cents / a.spend_cents : 0;
               return <div key={a.ad} className="hb-row">
                 <div className="hb-main"><span>{adName(a.ad)}</span>
                   <div className="hb-bars"><i className="l" style={{ width: `${(a.leads / top) * 100}%` }} /><i className="p" style={{ width: `${Math.max((a.paid / top) * 100, 2)}%` }} /></div>
                   <small>{a.leads} leads · {a.paid} paid</small></div>
-                <b className={a.ad === best ? "good" : back < 1 ? "warn" : ""}>{"$" + back.toFixed(2)}<small>back per $1</small></b>
+                <b className={a.ad === best ? "good" : back < 1 ? "warn" : ""}>{"$" + back.toFixed(2)}</b>
               </div>;
             }) : <p className="ghost">Loading the ledger…</p>}
+            {t && <div className="totals" aria-label="Totals">
+              <div><b>{usd(t.revenue_cents)}</b><small>paid revenue</small></div>
+              <div><b>{usd(t.spend_cents)}</b><small>ad spend</small></div>
+              <div title="Same payer, same ad, minutes apart: not counted until a person decides"><b>{t.held}</b><small>double payment held</small></div>
+            </div>}
           </div>
         </section>
-        {t && <div className="chips-row" aria-label="Totals">
-          <span><b>{usd(t.revenue_cents)}</b> paid revenue</span>
-          <span><b>{usd(t.spend_cents)}</b> ad spend</span>
-          <span><b>{costPerPaid}</b> per paid order</span>
-          {t.held > 0 && <span title="Same payer, same ad, minutes apart: not counted until a person decides"><b>{t.held}</b> double payment held</span>}
-        </div>}
         {error && <p className="err" role="alert">{error}</p>}
 
         <section className="agents" aria-label="Six agents">
-          <div className="sec-head"><h2>Six agents. Code holds the money.</h2><p className="muted">You approve every send, refund and payout.</p></div>
+          <div className="sec-head"><h2>Six agents. Code holds the money.</h2><p className="muted">You approve every invoice, refund and payout.</p></div>
           <div className="agent-grid">
-            <article><span className="step">1</span><div><b>Revenue</b><p>Reads the chat, drafts the invoice.</p><button className="link-btn" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading the leads…" : "Run it"}</button></div></article>
-            <article><span className="step">2</span><div><b>Send</b><p>Sends it once you approve.</p><button className="link-btn" onClick={() => scrollToId("approvals")}>See approvals</button></div></article>
-            <article><span className="step">3</span><div><b>Chase</b><p>Reminds who still owes.</p><button className="link-btn" disabled={chase.status === "running"} onClick={askChase}>{chase.status === "running" ? "Chasing…" : "Chase unpaid"}</button></div></article>
-            <article><span className="step">4</span><div><b>Refund</b><p>Returns a double payment.</p><a className="link-btn" href="/judge#refund">Watch it decide</a></div></article>
-            <article><span className="step">5</span><div><b>Commission</b><p>Pays the creator per paid order.</p><a className="link-btn" href="/judge#commission">See the payout</a></div></article>
-            <article><span className="step">6</span><div><b>Budget</b><p>Moves money only on PayPal proof.</p><span className="row"><button className="link-btn" disabled={agent.status === "running"} onClick={() => ask()}>{agent.status === "running" ? "Reading the ledger…" : "Ask it"}</button><button className="link-btn" disabled={agent.status === "running"} onClick={() => ask("Raise the free guide's budget: it brings the most leads.")}>Ask it to raise the free guide</button></span></div></article>
+            {[
+              ["Revenue", "Reads the chat, drafts the invoice.", "create_invoice", <button className="mini" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading…" : "Run"}</button>],
+              ["Send", "Sends it once you approve.", "send_invoice", <button className="mini" onClick={() => scrollToId("approvals")}>Approvals</button>],
+              ["Chase", "Reminds who still owes.", "send_invoice_reminder", <button className="mini" disabled={chase.status === "running"} onClick={askChase}>{chase.status === "running" ? "Chasing…" : "Chase"}</button>],
+              ["Refund", "Returns a double payment.", "create_refund", <a className="mini" href="/judge#refund">Watch</a>],
+              ["Commission", "Pays the creator per paid order.", "Payouts", <a className="mini" href="/judge#commission">Watch</a>],
+              ["Budget", "Moves money only on PayPal proof.", "evidence gate", <button className="mini" disabled={agent.status === "running"} onClick={() => ask()}>{agent.status === "running" ? "Reading…" : "Ask"}</button>],
+            ].map(([n, does, tool, act]) => <article key={n}><div><b>{n}</b><p>{does}</p></div><div className="agent-foot"><code>{tool}</code>{act}</div></article>)}
           </div>
         </section>
 
@@ -342,17 +346,17 @@ export default function App({ first = null }) {
         <div className="cols">
           <div className="col-main">
             <section className="card" aria-label="Per ad">
-              <div className="card-head"><h2>Per ad</h2><span className="muted">Sorted by spend</span></div>
+              <div className="card-head"><h2>Per ad</h2><span className="muted">No budget moves under 3 paid orders</span></div>
               <div className="scroll-x desktop-only">
                 <table className="grid">
-                  <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Paid revenue after refunds, minus this ad's spend. Product cost is not included.">After ad spend</th><th>Per paid order</th><th title="Chance this ad's paid revenue covers its ad spend, from its paid orders so far at the shop's average paid order. While it is not clear, the spend with no paid order that would make 'below its ad spend' 90% likely.">Covers its spend?</th></tr></thead>
+                  <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Chance, computed in code, that this ad's paid revenue covers its ad spend">Covers spend?</th></tr></thead>
                   <tbody>
-                    {byCost.map((a) => (
-                      <tr key={a.ad}><td>{adName(a.ad)}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td>{a.paid}{a.held > 0 && <small className="held"> +{a.held} held</small>}{a.disputed > 0 && <small className="held"> +{a.disputed} disputed</small>}</td><td>{usd(a.revenue_cents)}</td><td className={a.net_cents < 0 ? "neg" : a.net_cents > 0 ? "pos" : ""}>{signed(a.net_cents)}</td>
-                        <td>{a.cost_per_paid_cents == null ? <span className="pill warn">no paid order</span> : <span className={`pill ${a.ad === best ? "good" : a.ad === worst ? "warn" : ""}`}>{usd(a.cost_per_paid_cents)}</span>}</td>
-                        <td className="odds-cell">{odds[a.ad] ? <>{Math.round(odds[a.ad].chance_covers_spend * 100)}%<small className="odds">{odds[a.ad].more_spend_to_decide_cents != null ? `cut if the next $${Math.round(odds[a.ad].more_spend_to_decide_cents / 100)} brings no paid order` : odds[a.ad].verdict}</small></> : "–"}</td></tr>
-                    ))}
-                    {t && <tr className="total"><td>Total</td><td>{usd(t.spend_cents)}</td><td>{t.leads}</td><td>{t.paid}</td><td>{usd(t.revenue_cents)}</td><td className={t.net_cents < 0 ? "neg" : t.net_cents > 0 ? "pos" : ""}>{signed(t.net_cents)}</td><td>{costPerPaid}</td><td></td></tr>}
+                    {byCost.map((a) => {
+                      const o = odds[a.ad], pc = o ? Math.round(o.chance_covers_spend * 100) : null;
+                      return <tr key={a.ad} title={o ? (o.more_spend_to_decide_cents != null ? `Cut if the next ${usd(o.more_spend_to_decide_cents)} brings no paid order` : o.verdict) : ""}><td>{adName(a.ad).split(" · ")[0]}</td><td>{usd(a.spend_cents)}</td><td>{a.leads}</td><td><b>{a.paid}</b>{a.held > 0 && <small className="held"> +{a.held} held</small>}</td><td>{usd(a.revenue_cents)}</td>
+                        <td>{pc == null ? "–" : <span className={`pill ${pc >= 80 ? "good" : pc < 30 ? "warn" : ""}`}>{pc}%</span>}</td></tr>;
+                    })}
+                    {t && <tr className="total"><td>Total</td><td>{usd(t.spend_cents)}</td><td>{t.leads}</td><td>{t.paid}</td><td>{usd(t.revenue_cents)}</td><td></td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -366,20 +370,20 @@ export default function App({ first = null }) {
                   </div>
                 </article>)}
               </div>
-              <p className="muted small">No budget moves on fewer than 3 paid orders.</p>
             </section>
 
             <PhoneDisclosure id="payments" title="Payments" className="card" summaryText={state ? `${state.payments.length} in the ledger` : ""}>
-              <div className="card-head phone-section-head"><h2>Payments</h2>{state && <span className="ok">{state.payments.length} in the ledger · checked against PayPal</span>}</div>
-              <p className="muted">Refund one and its ad drops. Demo payments only preview a refund; your own payments refund for real.</p>
+              <div className="card-head phone-section-head"><h2>Payments</h2>{state && <span className="pill good">{state.payments.length} in the ledger</span>}</div>
               <div id="captures" className="list">
-                {(state?.payments || []).slice().reverse().map((p) => (
+                {(state?.payments || []).slice().reverse().slice(0, allPays ? undefined : 5).map((p) => (
                   <div key={p.capture_id} className="cap">
-                    <span><b>{p.ad && p.ad !== "direct" ? adName(p.ad) : "No ad click"}{metaSent[p.capture_id]?.ok && <i className="meta-ok" title={`Meta received this Purchase (test events) ${clock(metaSent[p.capture_id].at)}`}>Meta ✓</i>}</b>{dup[p.capture_id] && <em className="dup">Possible duplicate of {dup[p.capture_id]} <button type="button" className="dup-btn" onClick={() => markDistinct(p.capture_id)}>Separate order? Count it</button></em>}<small className="mono">{p.capture_id} · {money(p.amount)}{Number(p.refunded_amount) > 0 ? ` · refunded ${money(p.refunded_amount)}` : ""}{p.via === "invoice" ? " · invoice" : ""}</small></span>
-                    {p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED" ? <button className="mini" onClick={() => refund(p)}>Refund</button> : <span className="tag">Refunded</span>}
+                    <span title={`${p.capture_id}${dup[p.capture_id] ? ` · possible duplicate of ${dup[p.capture_id]}` : ""}`}><b>{p.ad && p.ad !== "direct" ? adName(p.ad) : "No ad click"}</b><small>{money(p.amount)}{p.via === "invoice" ? " · invoice" : ""}{metaSent[p.capture_id]?.ok ? " · Meta received" : ""}{Number(p.refunded_amount) > 0 && p.status !== "REFUNDED" ? ` · refunded ${money(p.refunded_amount)}` : ""}</small>{dup[p.capture_id] && <button type="button" className="dup-btn" onClick={() => markDistinct(p.capture_id)}>Separate order? Count it</button>}</span>
+                    <span className="pill-wrap">{dup[p.capture_id] ? <span className="pill warn">Held</span> : p.status === "REFUNDED" ? <span className="pill">Refunded</span> : <span className="pill good">Paid</span>}</span>
+                    {p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED" ? <button className="mini" onClick={() => refund(p)}>Refund</button> : <span />}
                   </div>
                 ))}
               </div>
+              {(state?.payments || []).length > 5 && <button type="button" className="more-row" onClick={() => setAllPays((v) => !v)}>{allPays ? "Show fewer" : `All ${state.payments.length} payments`}<span>{allPays ? "−" : "+"}</span></button>}
             </PhoneDisclosure>
 
             <PhoneDisclosure id="signal" title="Ad platform signal" className="card" summaryText={state ? `${state.meta.events.length} Meta events` : ""}>
@@ -432,7 +436,7 @@ export default function App({ first = null }) {
                     <span className={`tag ${a.change}`}>Budget · {CHANGE[a.change] || a.change}</span>
                     <b>{adName(a.ad)}</b>
                     <p>{a.reason}</p>
-                    <div className="chips">{a.evidence.map((e) => <span key={e} className="chip">{e.startsWith("row:") ? `${short(e.slice(4))} row` : `capture ${e}`}</span>)}</div>
+                    <details className="ev"><summary>Evidence: {a.evidence.length} item{a.evidence.length === 1 ? "" : "s"} checked in code</summary><div className="chips">{a.evidence.map((e) => <span key={e} className="chip">{e.startsWith("row:") ? `${short(e.slice(4))} row` : `capture ${e}`}</span>)}</div></details>
                     {decisions[i] ? <p className="decided">{decisions[i].verdict === "approved" ? (a.change === "keep" ? "Agreed: no change" : "Approved") : "Dismissed"} · logged {new Date(decisions[i].at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} · {decisions[i].id}</p>
                       : <div className="row"><button className="primary" onClick={() => decide(i, "approved")}>{a.change === "keep" ? "Agree, no change" : "Approve"}</button><button onClick={() => decide(i, "dismissed")}>Dismiss</button></div>}
                   </article>
@@ -468,9 +472,9 @@ export default function App({ first = null }) {
                   <small className="trace">{chase.trace.map((s) => s.refused ? `${s.tool} refused` : s.tool).join(" → ")}{chase.ms ? ` · ${(chase.ms / 1000).toFixed(1)} s` : ""} · reminders sent with PayPal's Agent Toolkit</small></div>}
                 {syncNote && <p className="note" role="status">Could not re-check sent invoices with PayPal: {syncNote}</p>}
                 {invoices.length === 0 && <p className="muted">No drafts yet. Open the Studio assistant and choose "Invoice warm leads".</p>}
-                {[...invoices].sort((x, y) => (x.status === "CANCELLED") - (y.status === "CANCELLED")).map((i) => (
+                {[...invoices].sort((x, y) => (x.status === "CANCELLED") - (y.status === "CANCELLED")).slice(0, allInv ? undefined : 5).map((i) => (
                   <div key={i.id} className={`cap inv ${i.sent_by ? "agent" : ""}`}>
-                    <span><b>{i.lead.replace(" (fictional)", "")}</b><small>{short(i.ad)} · {money(i.amount)}{i.lines?.length > 1 ? ` · ${i.lines.length} children, sibling 20% off` : ""}{i.sent_by ? " · sent by the agent" : i.status === "DRAFT" ? (i.drafted_by ? " · drafted by the agent" : " · draft") : ""}{i.reminded_at && !["PAID", "CANCELLED"].includes(i.status) ? ` · reminded ${clock(i.reminded_at)}` : ""}</small>{i.reminder && i.status !== "PAID" && <small className="agent-say" title={i.reminder.subject}>“{i.reminder.note}”</small>}{sending[i.id] && <small className="agent-say" role="status">{sending[i.id]}</small>}</span>
+                    <span><b>{i.lead.replace(" (fictional)", "")}</b><small>{short(i.ad)} · {money(i.amount)}{i.lines?.length > 1 ? ` · ${i.lines.length} children, sibling 20% off` : ""}{i.sent_by ? " · sent by the agent" : i.status === "DRAFT" ? (i.drafted_by ? " · drafted by the agent" : " · draft") : ""}{i.reminded_at && !["PAID", "CANCELLED"].includes(i.status) ? ` · reminded ${clock(i.reminded_at)}` : ""}</small>{sending[i.id] && <small className="agent-say" role="status">{sending[i.id]}</small>}</span>
                     {i.status === "DRAFT" ? <button className="mini go" disabled={sending[i.id] === "Agent checking and sending…"} onClick={() => send(i.id)}>Approve</button>
                       : i.status === "PAID" ? <span className="ok">Paid</span>
                       : i.status === "CANCELLED" ? <span className="muted">Cancelled, not owed</span>
@@ -478,6 +482,7 @@ export default function App({ first = null }) {
                   </div>
                 ))}
               </PhoneDisclosure>
+              {invoices.length > 5 && <button type="button" className="more-row" onClick={() => setAllInv((v) => !v)}>{allInv ? "Show fewer" : `All ${invoices.length} invoices`}<span>{allInv ? "−" : "+"}</span></button>}
               <button className="btn wide" onClick={openAssistant}>Open the Studio assistant</button>
             </section>
 

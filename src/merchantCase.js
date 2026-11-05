@@ -41,18 +41,18 @@ export function gapHTML(r, c) {
   const pct = (/** @type {number} */ x) => `${(x * 100).toFixed(1)}%`;
   const vnd = (/** @type {number} */ n) => `${(n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 1 })}M VND`;
   const bar = (/** @type {string} */ label, /** @type {number} */ x, cls = "") =>
-    `<div class="gap-bar${cls ? " " + cls : ""}"><span>${label}</span><div><i style="width:${(x * 100).toFixed(1)}%"></i></div><span>${pct(x)}</span></div>`;
-  const cards = r.groups.map((g) => `<div class="ps-card gap-card"><span class="k">${esc(g.id)} · ${esc(g.name)}</span>`
-    + `<div class="nums ps-big"><b>${g.conversations.toLocaleString("en-US")}</b><i>chats →</i><b class="paid">${g.paid}</b><i>paid orders</i></div>`
-    + bar("of chats", g.share_conversations) + bar("of money", g.share_net, "money")
-    + `<small>${g.cost_per_conversation.toLocaleString("en-US")} VND a chat · ${g.roas.toFixed(2)}x ad spend back in paid money</small></div>`).join("");
+    `<div class="bar${cls ? " " + cls : ""}"><span>${label}</span><div><i style="width:${(x * 100).toFixed(1)}%"></i></div><b>${pct(x)}</b></div>`;
+  const cards = r.groups.map((g) => `<div class="card shop-card"><span class="k">${esc(g.id)} · ${esc(g.name)}</span>`
+    + bar("chats", g.share_conversations) + bar("money", g.share_net, "money")
+    + `<small>${g.conversations.toLocaleString("en-US")} chats · ${g.paid} kept orders · ${g.roas.toFixed(2)}x ad spend back</small></div>`).join("");
   const split = r.paid_signal_split.map((s) => `${s.id} ${(s.share_now * 100).toFixed(1)}% → ${(s.share_proposed * 100).toFixed(1)}%`).join(", ");
-  return `<h2 id="gap-h">One shop, October</h2>`
-    + `<p class="gap-sub" id="gap-sub">A gift shop that sells in chat; the author runs its Meta ads. October 2026: ${vnd(r.totals.spend)} (about $${Math.round(r.totals.spend_usd).toLocaleString("en-US")}) on three ad groups, ${r.totals.conversations.toLocaleString("en-US")} chats, ${r.totals.paid} orders paid and kept after refunds.</p>`
-    + `<div class="gap-grid" id="gap-grid">${cards}</div>`
-    + `<p class="gap-rank" id="gap-rank">Ranked by cost per chat, the ad report's view: ${r.rank_by_cost_per_conversation.join(", ")}. Ranked by money kept per ad dollar (revenue after refunds ÷ spend): <span class="go">${r.rank_by_money_kept.join(", ")}</span>. The cheapest chats came from the ad that brought the least money.</p>`
-    + `<details class="gap-more"><summary>How the shop counted, what the split rule would suggest, and the limits</summary><p class="gap-src" id="gap-src"><b>How the shop counted.</b> ${esc(c.payment || "")} ${esc(c.attribution || "")} That matching is done by hand today; it is the step Paid Signal does from PayPal's records. The figures are reported by the author from the order book and the ad account; the shop confirms them and agreed to publish its book (1,214 invoices, 735 payments, 30 refunds, anonymised customer ids, in docs/proof); the ad account's own exports are no longer accessible. "Money" is revenue after refunds, before product, delivery and fees.</p>`
-    + `<p class="gap-src"><b>What Paid Signal would suggest.</b> Its split rule (<code>proposeSplit</code>, the same code as the demo: paid orders kept per dollar of spend, refunds excluded, order value not used) gives ${split}. That is an illustration, not a measured lift or an optimal allocation; which moves the budget agent may make is a separate rule (<code>supportedMoves</code>). A person decides, and Paid Signal does not change a live Meta budget. The shop's payments did not go through Paid Signal or PayPal: the shop is why it exists, not a result of it. Numbers: <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/merchant-case-2026-10.json">merchant-case-2026-10.json</a>.</p></details>`;
+  return `<div class="hd"><span class="no">5</span><h2 id="gap-h">A real shop's October</h2></div>`
+    + `<p class="sub" id="gap-sub">A Vietnamese gift shop the author runs ads for. Paid by bank transfer.</p>`
+    + `<div class="grid3" id="gap-grid">${cards}</div>`
+    + `<details class="card det-card"><summary>How the shop counted, and limits</summary>`
+    + `<p id="gap-rank">October 2026: ${vnd(r.totals.spend)} (about $${Math.round(r.totals.spend_usd).toLocaleString("en-US")}) on three ad groups, ${r.totals.conversations.toLocaleString("en-US")} chats, ${r.totals.paid} orders paid and kept after refunds. Ranked by cost per chat, the ad report's view: ${r.rank_by_cost_per_conversation.join(", ")}. Ranked by money kept per ad dollar: ${r.rank_by_money_kept.join(", ")}.</p>`
+    + `<p id="gap-src">${esc(c.payment || "")} ${esc(c.attribution || "")} That matching is done by hand today; it is the step Paid Signal does from PayPal's records. The figures are reported by the author from the order book and the ad account; the shop confirms them and published its book (1,214 invoices, 735 payments, 30 refunds, anonymised customer ids, in docs/proof); the ad account's own exports are no longer accessible. "Money" is revenue after refunds, before product, delivery and fees.</p>`
+    + `<p>Paid Signal's split rule (the same code as the demo: paid orders kept per dollar of spend) would suggest ${split}. An illustration, not a measured lift; a person decides, and Paid Signal does not change a live Meta budget. The shop's payments did not go through Paid Signal or PayPal: the shop is why it exists, not a result of it. Numbers: <a href="https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/merchant-case-2026-10.json">merchant-case-2026-10.json</a>.</p></details>`;
 }
 
 /**
@@ -62,5 +62,5 @@ export function gapHTML(r, c) {
 export function hookHTML(r) {
   const a = r.groups.reduce((x, g) => (g.share_conversations > x.share_conversations ? g : x));
   const pct = (/** @type {number} */ x) => `${(x * 100).toFixed(1)}%`;
-  return `A real gift shop's October: the ad with <b>${pct(a.share_conversations)} of the chats</b> brought <b>${pct(a.share_net)} of the money</b>.`;
+  return `The ad with ${pct(a.share_conversations)} of the chats brought ${pct(a.share_net)} of the money.`;
 }
