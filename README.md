@@ -65,7 +65,7 @@ No login is needed to look around; paying needs the sandbox buyer from the Devpo
 2. **[Dashboard](https://paid-signal.thelongmarketing.workers.dev)**: 62 leads against 9 PayPal-confirmed paid orders; **Ask the revenue agent**, **Approve** a draft (send agent), **Chase unpaid** (chase agent).
 3. **Report · AG Studio** tab (`/#report`): four custom widgets with cross-filters; open the Studio assistant and choose **Review ad budgets** (a custom Studio agent on Claude submits through the evidence gate) or **Nudge who still owes**.
 4. **[Proof](https://paid-signal.thelongmarketing.workers.dev/proof)**: held-out evals (revenue agent 24 of 24 bookings, 20 of 20 not-ready leads, 0 of 16 injections invoiced), the evidence gate under attack (11 kinds of planted error, 100 of each: all caught), the refund-agent eval, the shop replay, live PayPal and Meta checks, and a budget simulation (run on the 30 Oct ledger of 6 paid orders: $1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs).
-5. **[Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit)** in the browser, and any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
+5. **[Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit)** in the browser (Ads Manager export plus PayPal activity, or a bank-transfer shop's own order book, payments and refunds; *Load the gift shop's book* runs the published one), and any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
 
 API checks without the UI: import [`postman/paid-signal.postman_collection.json`](postman/paid-signal.postman_collection.json) into Postman (read-only requests, 20 tests, including the MCP server). To add Paid Signal to a real shop: [docs/INTEGRATE.md](docs/INTEGRATE.md).
 
@@ -171,7 +171,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 157 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 165 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

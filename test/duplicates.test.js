@@ -26,3 +26,21 @@ test("duplicates: a replayed capture keeps a person's confirmation", async () =>
   await recordCapture(env, order);
   assert.equal(JSON.parse(kv.get("pay:B")).confirmed_distinct.reason, "second child");
 });
+
+const t = (id, order, minutes, extra = {}) => ({ capture_id: id, order_id: order, payer_email_sha256: "cust-1", ad: "A", amount: "1500000", currency: "VND",
+  captured_at: new Date(Date.UTC(2026, 9, 1, 10, 0) + minutes * 60000).toISOString(), method: "bank_transfer", ...extra });
+
+test("duplicates, hard negatives: one customer's two orders by bank transfer are two orders, even minutes apart", () => {
+  assert.deepEqual(possibleDuplicates([t("P1", "ORD-1", 0), t("P2", "ORD-2", 12)]), []);
+  assert.deepEqual(possibleDuplicates([t("P1", "ORD-1", 0), t("P2", "ORD-2", 3, { amount: "1500000" })]), []);
+});
+
+test("duplicates, hard positives: the same order paid twice is held whatever the gap; with no order code the time rule applies", () => {
+  assert.deepEqual(possibleDuplicates([t("P1", "ORD-1", 0), t("P2", "ORD-1", 180)]).map((d) => d.capture_id), ["P2"]);
+  assert.deepEqual(possibleDuplicates([t("P1", "", 0), t("P2", "", 40)]).map((d) => d.capture_id), ["P2"]);
+  assert.deepEqual(possibleDuplicates([t("P1", "", 0), t("P2", "", 90)]), []);
+});
+
+test("duplicates: a second, smaller transfer for the same order (a split or top-up) is not a double payment", () => {
+  assert.deepEqual(possibleDuplicates([t("P1", "ORD-1", 0, { payer_email_sha256: "cust-1" }), t("P2", "ORD-1", 30, { payer_email_sha256: "cust-2", amount: "500000" })]), []);
+});

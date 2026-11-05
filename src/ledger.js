@@ -291,15 +291,19 @@ export const BANK_TRANSFER_WINDOW_MS = 60 * 60 * 1000;
 
 /** Two live captures from the same payer for the same ad within `windowMs` look like a double click at checkout. */
 export function possibleDuplicates(payments, windowMs = 10 * 60 * 1000) {
+  const x0 = (/** @type {any} */ v) => v !== undefined && v !== null && v !== "";
   const win = (/** @type {any} */ p) => (p.method === "bank_transfer" ? BANK_TRANSFER_WINDOW_MS : windowMs);
   const at = (p) => Date.parse(p.captured_at);
   const live = payments.filter((p) => p.payer_email_sha256 && cents(p.refunded_amount || 0) < cents(p.amount)).sort((a, b) => at(a) - at(b));
   // a second payment a person confirmed as a separate order (e.g. a second child) counts as a paid order again
   const out = [];
   for (const [i, b] of live.entries()) {
-    // a bank transfer sent again against the same order code is a double payment whatever the gap (a PayPal order cannot
-    // be captured twice, so this only applies to transfers); otherwise same payer, same ad, close in time
-    const a = live.slice(0, i).reverse().find((x) => (b.method === "bank_transfer" && x.order_id && x.order_id === b.order_id) || (x.payer_email_sha256 === b.payer_email_sha256 && x.ad === b.ad && at(b) - at(x) <= win(b)));
+    // bank transfers carry the order code: the same amount sent again for the same order is a double payment whatever the
+    // gap, and two transfers for two different order codes are two orders, never a double payment (a PayPal order cannot be
+    // captured twice, so this only applies to transfers); otherwise same payer, same ad, close in time
+    const bank = b.method === "bank_transfer" && x0(b.order_id);
+    const a = live.slice(0, i).reverse().find((x) => (bank && x.order_id === b.order_id && cents(x.amount) === cents(b.amount)) ||
+      (!(bank && x0(x.order_id) && x.order_id !== b.order_id) && (x.payer_email_sha256 === b.payer_email_sha256 && x.ad === b.ad && at(b) - at(x) <= win(b))));
     if (a && !b.confirmed_distinct) out.push({ capture_id: b.capture_id, first: a.capture_id, seconds: Math.round((at(b) - at(a)) / 1000) });
   }
   return out;

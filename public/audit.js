@@ -1,6 +1,7 @@
 // No-login audit: a shop's own Ads Manager export and PayPal activity download, read in this browser with the same ledger
 // code the Worker runs (/lib/ledger.js, a copy of src/ledger.js that a test keeps identical). Nothing is uploaded.
 import { parseAdCsv, parsePayPalCsv, reconcile, supportedMoves, paybackOdds, SHOP_COSTS, packClick } from "/lib/ledger.js";
+import { replayShop, validateShopHeaders } from "/lib/shopReplay.js";
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, kids = []) => { const e = Object.assign(document.createElement(tag), props); for (const k of [].concat(kids)) if (k != null) e.append(k); return e; };
@@ -105,6 +106,91 @@ function audit() {
     "Ad | spend | leads | paid | refunded | paid revenue | budget rule",
     ...rec.ads.map((r) => `${r.ad} | ${usd(r.spend_cents)} | ${r.leads} | ${r.paid} | ${r.refunded} | ${usd(r.revenue_cents)} | ${moves[r.ad] ? (moves[r.ad].increase ? "raise allowed" : moves[r.ad].reduce ? "cut" : "keep") : "keep: fewer than 3 paid orders"}`),
     "", "What to do next:", ...todo.map((x) => `- ${x}`), "", `Costs used: ${Math.round(share * 100)}% product and delivery, PayPal fees as charged (or 2.99% + $0.49 when the file has none).`].join("\n");
+}
+
+// The bank-transfer book is read locally with the shared ledger modules.
+const shopFiles = { orders: null, payments: null, refunds: null, ads: null };
+const shopInputs = { orders: "shop-orders", payments: "shop-payments", refunds: "shop-refunds", ads: "shop-ads" };
+function parseShopCsv(text) {
+  const rows = []; let row = [], field = "", quoted = false;
+  const source = String(text ?? "").replace(/^\uFEFF/, "").replace(/\r/g, "");
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+    if (quoted) { if (ch === '"' && source[i + 1] === '"') { field += '"'; i++; } else if (ch === '"') quoted = false; else field += ch; }
+    else if (ch === '"') quoted = true;
+    else if (ch === ",") { row.push(field); field = ""; }
+    else if (ch === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+    else field += ch;
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  const [head, ...body] = rows.filter((r) => r.some((v) => v.trim()));
+  if (!head) return [];
+  return body.map((r) => Object.fromEntries(head.map((h, i) => [h.trim(), (r[i] ?? "").trim()])));
+}
+const moneyVnd = (n) => (Math.abs(n) >= 1e6 ? `${(n / 1e6).toLocaleString("en-US", { maximumFractionDigits: 1 })}M VND` : `${Math.round(n).toLocaleString("en-US")} VND`);
+const shopReady = () => { $("shop-run").disabled = !(shopFiles.orders && shopFiles.payments && shopFiles.refunds); };
+for (const [key, id] of Object.entries(shopInputs)) {
+  const input = $(id), zone = input.closest(".drop");
+  const take = async (file) => {
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { $("shop-msg").textContent = `${file.name} is larger than 20 MB.`; return; }
+    shopFiles[key] = await file.text(); $(`${id}-ok`).textContent = file.name; $("shop-msg").textContent = ""; shopReady();
+  };
+  input.addEventListener("change", (e) => take(e.target.files[0]));
+  zone.addEventListener("dragover", (e) => { e.preventDefault(); zone.style.borderColor = "var(--blue)"; });
+  zone.addEventListener("dragleave", () => { zone.style.borderColor = ""; });
+  zone.addEventListener("drop", (e) => { e.preventDefault(); zone.style.borderColor = ""; take(e.dataTransfer.files[0]); });
+}
+$("shop-run").onclick = () => runShopBook(false);
+$("shop-sample").onclick = async () => {
+  const button = $("shop-sample"); button.disabled = true;
+  try {
+    const names = ["orders", "payments", "refunds", "ads"];
+    const values = await Promise.all(names.map(async (key) => {
+      const response = await fetch(`/data/shop/${key}-2026-10.csv`);
+      if (!response.ok) throw new Error(`Could not load ${key} sample (${response.status}).`);
+      return response.text();
+    }));
+    names.forEach((key, i) => { shopFiles[key] = values[i]; $(`${shopInputs[key]}-ok`).textContent = `Gift shop sample: ${key}.csv`; });
+    shopReady(); runShopBook(true);
+  } catch (e) { $("shop-msg").textContent = e.message; }
+  button.disabled = false;
+};
+function runShopBook(sample) {
+  $("shop-msg").textContent = "";
+  const orders = parseShopCsv(shopFiles.orders), payments = parseShopCsv(shopFiles.payments), refunds = parseShopCsv(shopFiles.refunds);
+  const missing = validateShopHeaders(orders, payments, refunds);
+  if (missing.length) { $("shop-msg").textContent = `Missing required columns: ${missing.join("; ")}.`; return; }
+  let groups = null;
+  if (shopFiles.ads) {
+    const adRows = parseShopCsv(shopFiles.ads), heads = new Set(adRows.flatMap((r) => Object.keys(r)));
+    const groupKey = ["group", "ad_group"].find((x) => heads.has(x));
+    const spendKey = heads.has("spend") ? "spend" : null;
+    const chatsKey = ["chats", "conversations"].find((x) => heads.has(x));
+    const absent = [[groupKey, "group"], [spendKey, "spend"], [chatsKey, "chats"]].filter(([found]) => !found).map(([, name]) => name);
+    if (absent.length) { $("shop-msg").textContent = `Ad report missing required columns: ${absent.join(", ")}.`; return; }
+    groups = adRows.map((r) => ({ id: r[groupKey], spend: Number(r[spendKey]), conversations: Number(r[chatsKey]), first_paid: 0, full_refunds: 0, gross: 0, refunded: 0 }));
+    if (groups.some((g) => !g.id || !Number.isFinite(g.spend) || g.spend < 0 || !Number.isInteger(g.conversations) || g.conversations < 0)) {
+      $("shop-msg").textContent = "Ad report needs a group name, non-negative spend and whole-number chats on every row."; return;
+    }
+  }
+  const result = replayShop({ orders, payments, refunds, groups, includeDetails: true });
+  $("shop-out").hidden = false;
+  $("shop-tag").textContent = sample ? "Published gift shop book" : "Your files, read in this browser";
+  $("shop-head").textContent = `${result.totals.paid} paid orders kept | ${moneyVnd(result.totals.revenue)} after refunds | ${result.groups.reduce((n, g) => n + g.held, 0)} double payments held`;
+  $("shop-rank").textContent = result.rankings ? `Rankings: cost per chat ${result.rankings.cost_per_chat.join(" → ")} | money kept per ad spend ${result.rankings.kept_per_ad_dollar.join(" → ")}.` : "Ad report not supplied; money results only.";
+  $("shop-rows").closest("table").classList.toggle("money-only", !result.rankings);
+  const labels = ["Ad group", "Paid orders kept", "Money kept", "Refunds", "Double payments held", "No matching order", "Cost / chat", "Kept per ad spend"];
+  $("shop-rows").replaceChildren(...result.groups.map((g) => {
+    const values = [g.id, String(g.paid), moneyVnd(g.revenue), `${g.refund_count} refunds | ${moneyVnd(g.refunds)}`,
+      g.held ? `${g.held} (${[g.held_same_order ? `${g.held_same_order} same order code` : "", g.held_payer_window ? `${g.held_payer_window} same payer, close in time` : ""].filter(Boolean).join(", ")})` : "0",
+      String(g.unmatched_orders), g.cost_per_chat == null ? "none" : moneyVnd(g.cost_per_chat),
+      g.kept_per_ad_dollar == null ? "none" : `${g.kept_per_ad_dollar.toFixed(2)}x`];
+    const cells = values.map((v) => el("td", { textContent: v }));
+    cells.forEach((cell, i) => { cell.dataset.label = labels[i]; });
+    return el("tr", {}, cells);
+  }));
+  $("shop-unmatched").textContent = `${result.unmatched_order_captures.length} payment${result.unmatched_order_captures.length === 1 ? "" : "s"} match no order code. Arithmetic check only; ad performance rankings describe the reported data and do not establish ad causality.`;
 }
 
 $("dl").onclick = () => {

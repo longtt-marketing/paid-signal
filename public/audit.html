@@ -46,7 +46,9 @@ pre{margin:8px 0 0;background:#0e1116;color:#e8e6df;border-radius:12px;padding:1
 code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(--chip);padding:1px 6px;border-radius:6px}
 .tag{display:inline-block;font:600 12px "Inter Tight",sans-serif;padding:3px 9px;border-radius:999px;background:var(--blue-bg);color:var(--blue)}
 [hidden]{display:none!important}
+.shop-files{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.shop-drop{min-width:0}.shop-drop input{width:100%}.shop-result{margin-top:18px}.shop-table{min-width:0;table-layout:fixed}.shop-table th,.shop-table td{text-align:left;overflow-wrap:anywhere}.shop-table th:nth-child(n+2),.shop-table td:nth-child(n+2){text-align:right}.shop-table.money-only th:nth-last-child(-n+2),.shop-table.money-only td:nth-last-child(-n+2){display:none}.shop-note{font-size:14px;color:var(--mute)}
 @media (max-width:700px){.top{padding:14px 16px}main{padding:28px 16px 64px}.files{grid-template-columns:1fr}}
+@media (max-width:520px){.shop-files{grid-template-columns:1fr}.shop-table thead{display:none}.shop-table,.shop-table tbody,.shop-table tr,.shop-table td{display:block;width:100%}.shop-table tr{padding:10px 0;border-bottom:1px solid var(--line)}.shop-table td{display:flex;justify-content:space-between;gap:12px;text-align:right!important;padding:5px 0;border:0}.shop-table td:first-child{font-weight:700}.shop-table td::before{content:attr(data-label);font-weight:600;color:var(--mute);text-align:left;flex:0 0 46%}}
 </style>
 </head>
 <body>
@@ -71,6 +73,23 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
     </div>
     <p class="note">Everything runs in this page with the same code the Worker uses (<a href="/lib/ledger.js">ledger.js</a>); nothing is uploaded, and no AI reads your files. The sample files are the demo shop: a fictional ad export and its PayPal sandbox payments, read live.</p>
     <p class="note err" id="msg" role="alert"></p>
+  </section>
+
+  <section class="card" aria-labelledby="shop-title">
+    <h2 id="shop-title">Your shop's own book (bank transfers)</h2>
+    <p class="shop-note">Drop your order book, payments and refunds. They stay in this browser; this checks the book's arithmetic and double payments, not whether ads caused a sale.</p>
+    <div class="shop-files">
+      <div class="drop shop-drop"><b>Order book (CSV)</b><input type="file" id="shop-orders" accept=".csv,text/csv"><small id="shop-orders-ok"></small></div>
+      <div class="drop shop-drop"><b>Payments (CSV)</b><input type="file" id="shop-payments" accept=".csv,text/csv"><small id="shop-payments-ok"></small></div>
+      <div class="drop shop-drop"><b>Refunds (CSV)</b><input type="file" id="shop-refunds" accept=".csv,text/csv"><small id="shop-refunds-ok"></small></div>
+      <div class="drop shop-drop"><b>Ad report (optional CSV)</b><input type="file" id="shop-ads" accept=".csv,text/csv"><small id="shop-ads-ok">Without it, results show money only.</small></div>
+    </div>
+    <div class="row"><button class="btn primary" id="shop-run" disabled>Run the book</button><button class="btn" id="shop-sample">Load the gift shop's book</button></div>
+    <p class="note err" id="shop-msg" role="alert"></p>
+    <div class="shop-result" id="shop-out" hidden aria-live="polite"><span class="tag" id="shop-tag"></span><p class="head" id="shop-head"></p><p class="shop-note" id="shop-rank"></p>
+      <div class="tbl"><table class="shop-table"><thead><tr><th>Ad group</th><th>Paid orders kept</th><th>Money kept</th><th>Refunds</th><th>Double payments held</th><th>No matching order</th><th>Cost / chat</th><th>Kept per ad spend</th></tr></thead><tbody id="shop-rows"></tbody></table></div>
+      <p class="note" id="shop-unmatched"></p>
+    </div>
   </section>
 
   <section class="card" id="out" hidden aria-live="polite">

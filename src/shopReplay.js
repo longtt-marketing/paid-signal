@@ -4,7 +4,42 @@
 import { reconcile, possibleDuplicates, BANK_TRANSFER_WINDOW_MS } from "./ledger.js";
 
 /** "2026-10-01 14:38" in the shop's time zone (Vietnam, UTC+7) as ISO. */
-export const shopTime = (/** @type {string} */ s) => `${String(s).trim().replace(" ", "T")}:00+07:00`;
+export const shopTime = (/** @type {string} */ s) => {
+  const value = String(s).trim().replace(" ", "T");
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(value)) return value;
+  return `${value.length === 16 ? `${value}:00` : value}+07:00`;
+};
+
+
+// the column names a book may use for each field, in the shop's Vietnamese headers or plain English
+/** @type {Record<string, string[]>} */
+const COLUMNS = {
+  order: ["order_id", "order code", "M\u00e3 \u0111\u01a1n n\u1ed9i b\u1ed9", "S\u1ed1 \u0111\u1ed1i chi\u1ebfu"],
+  customer: ["customer_id", "M\u00e3 kh\u00e1ch \u1ea9n danh"],
+  ad: ["ad_group", "group", "Nh\u00f3m Ads"],
+  invoice: ["invoice value", "amount", "Gi\u00e1 tr\u1ecb h\u00f3a \u0111\u01a1n"],
+  status: ["status", "Tr\u1ea1ng th\u00e1i"],
+  payment: ["payment_id", "M\u00e3 giao d\u1ecbch n\u1ed9i b\u1ed9"],
+  type: ["type", "Lo\u1ea1i giao d\u1ecbch"],
+  time: ["paid_at", "time", "Ng\u00e0y thu"],
+  amount: ["amount", "S\u1ed1 ti\u1ec1n thu"],
+  refundPayment: ["refunded_payment_id", "S\u1ed1 \u0111\u1ed1i chi\u1ebfu"],
+  refundAmount: ["refund_amount", "S\u1ed1 ti\u1ec1n ho\u00e0n"],
+};
+const field = (/** @type {Record<string, string>} */ row, /** @type {string} */ key) => { for (const name of COLUMNS[key]) if (Object.hasOwn(row, name)) return row[name]; return ""; };
+/**
+ * Which required columns a dropped book lacks, by file, named as the English header to add.
+ * @param {Record<string, string>[]} orders @param {Record<string, string>[]} payments @param {Record<string, string>[]} refunds
+ */
+export function validateShopHeaders(orders, payments, refunds) {
+  /** @type {string[]} */
+  const missing = [];
+  const check = (/** @type {Record<string, string>[]} */ rows, /** @type {string} */ file, /** @type {string[]} */ keys) => { const headers = new Set(rows.flatMap((r) => Object.keys(r))); for (const key of keys) if (!COLUMNS[key].some((name) => headers.has(name))) missing.push(`${file}: ${COLUMNS[key][0]}`); };
+  check(orders, "order book", ["order", "customer", "ad", "invoice", "status"]);
+  check(payments, "payments", ["payment", "order", "ad", "type", "time", "amount"]);
+  check(refunds, "refunds", ["refundPayment", "refundAmount"]);
+  return missing;
+}
 
 /**
  * The book's rows (objects keyed by the CSV headers) as ledger payments. The anonymised customer id stands where the
@@ -13,31 +48,50 @@ export const shopTime = (/** @type {string} */ s) => `${String(s).trim().replace
  * @param {Record<string, string>[]} orders @param {Record<string, string>[]} payments @param {Record<string, string>[]} refunds
  */
 export function shopPayments(orders, payments, refunds) {
-  const customer = Object.fromEntries(orders.map((o) => [o["Mã đơn nội bộ"], o["Mã khách ẩn danh"]]));
+  const customer = Object.fromEntries(orders.map((o) => [field(o, "order"), field(o, "customer")]));
   const back = /** @type {Record<string, number>} */ ({});
-  for (const r of refunds) back[r["Số đối chiếu"]] = (back[r["Số đối chiếu"]] || 0) + Number(r["Số tiền hoàn"]);
-  return payments.map((p) => ({
-    capture_id: p["Mã giao dịch nội bộ"], order_id: p["Số đối chiếu"], ad: p["Nhóm Ads"],
-    amount: String(p["Số tiền thu"]), currency: "VND", captured_at: shopTime(p["Ngày thu"]),
-    refunded_amount: String(back[p["Mã giao dịch nội bộ"]] || 0), payer_email_sha256: customer[p["Số đối chiếu"]] || null,
-    method: "bank_transfer", duplicate_in_book: p["Loại giao dịch"] === "Thu trùng",
-  }));
+  for (const r of refunds) { const id = field(r, "refundPayment"); back[id] = (back[id] || 0) + Number(field(r, "refundAmount")); }
+  return payments.map((p) => {
+    const id = field(p, "payment"), orderId = field(p, "order"), backAmount = back[id] || 0;
+    return { capture_id: id, order_id: orderId, ad: field(p, "ad"), amount: String(field(p, "amount")), currency: "VND",
+      captured_at: shopTime(field(p, "time")), refunded_amount: String(backAmount), payer_email_sha256: customer[orderId] || null,
+      method: "bank_transfer", duplicate_in_book: /duplicate|repeat|tr\u00f9ng/i.test(field(p, "type")),
+      refund_count: refunds.filter((r) => field(r, "refundPayment") === id).length, refund_total: backAmount };
+  });
 }
 
 /**
- * @param {{ orders: Record<string, string>[], payments: Record<string, string>[], refunds: Record<string, string>[],
- *   groups: { id: string, spend: number, conversations: number, first_paid: number, full_refunds: number, gross: number, refunded: number }[] }} book
+ * @param {{ orders: Record<string, string>[], payments: Record<string, string>[], refunds: Record<string, string>[], includeDetails?: boolean,
+ *   groups?: { id: string, spend: number, conversations: number, first_paid: number, full_refunds: number, gross: number, refunded: number }[] | null }} book
+ * Without groups (no ad report) the money results are per ad group with no spend; includeDetails adds what /audit shows.
  */
-export function replayShop({ orders, payments, refunds, groups }) {
+export function replayShop({ orders, payments, refunds, groups = null, includeDetails = false }) {
   const ledger = shopPayments(orders, payments, refunds);
+  const hasAds = Array.isArray(groups);
+  if (!groups) {
+    const ids = [...new Set([...orders.map((o) => field(o, "ad")), ...payments.map((p) => field(p, "ad"))].filter(Boolean))];
+    groups = ids.map((id) => ({ id, spend: 0, conversations: 0, first_paid: 0, full_refunds: 0, gross: 0, refunded: 0 }));
+  }
   const adRows = groups.map((g) => ({ ad: g.id, spend_cents: g.spend * 100, leads: g.conversations }));
   const final = reconcile(adRows, ledger);
   const byGroup = Object.fromEntries(final.ads.map((a) => [a.ad, a]));
+  const heldFlags = possibleDuplicates(ledger.map((p) => ({ ...p, refunded_amount: "0" })));
+  const knownOrders = new Set(orders.map((o) => field(o, "order")));
+  const unmatchedOrderCaptures = ledger.filter((p) => !knownOrders.has(p.order_id)).map((p) => p.capture_id);
   const rows = groups.map((g) => {
-    const a = byGroup[g.id];
+    const a = byGroup[g.id], groupPayments = ledger.filter((p) => p.ad === g.id);
+    const flags = heldFlags.filter((f) => groupPayments.some((p) => p.capture_id === f.capture_id));
     return { id: g.id, payments: a.captures.length, paid: a.paid, refunded_captures: a.refunded, revenue: a.revenue_cents / 100,
-      book_paid: g.first_paid - g.full_refunds, book_revenue: g.gross - g.refunded,
-      matches: a.paid === g.first_paid - g.full_refunds && a.revenue_cents / 100 === g.gross - g.refunded };
+      ...(includeDetails ? {
+        refunds: groupPayments.reduce((n, p) => n + (p.refund_total || 0), 0), refund_count: groupPayments.reduce((n, p) => n + (p.refund_count || 0), 0),
+        held: flags.length, held_same_order: flags.filter((f) => { const current = groupPayments.find((p) => p.capture_id === f.capture_id), first = groupPayments.find((p) => p.capture_id === f.first); return Boolean(current?.order_id) && current.order_id === first?.order_id && current.amount === first?.amount; }).length,
+        held_payer_window: flags.filter((f) => groupPayments.find((p) => p.capture_id === f.capture_id)?.order_id !== groupPayments.find((p) => p.capture_id === f.first)?.order_id).length,
+        unmatched_orders: groupPayments.filter((p) => unmatchedOrderCaptures.includes(p.capture_id)).length,
+        spend: g.spend, chats: g.conversations, cost_per_chat: g.conversations ? g.spend / g.conversations : null,
+        kept_per_ad_dollar: g.spend ? a.revenue_cents / 100 / g.spend : null,
+      } : {}),
+      book_paid: includeDetails ? null : g.first_paid - g.full_refunds, book_revenue: includeDetails ? null : g.gross - g.refunded,
+      matches: includeDetails ? null : a.paid === g.first_paid - g.full_refunds && a.revenue_cents / 100 === g.gross - g.refunded };
   });
   // as the money arrived: no refund made yet, so a double transfer is still live and the ledger must hold it
   const arriving = ledger.map((p) => ({ ...p, refunded_amount: "0" }));
@@ -53,9 +107,10 @@ export function replayShop({ orders, payments, refunds, groups }) {
   const minutes = bankFlags.filter((f) => inBook.has(f.capture_id)).map((f) => Math.round(f.seconds / 60)).sort((x, y) => x - y);
   return {
     totals: { payments: ledger.length, paid: final.totals.paid, refunded_captures: final.totals.refunded, revenue: final.totals.revenue_cents / 100,
-      first_payments: ledger.filter((p) => !p.duplicate_in_book).length, refunds: refunds.length, repeat_customers: orders.length - new Set(orders.map((o) => o["Mã khách ẩn danh"])).size },
+      first_payments: ledger.filter((p) => !p.duplicate_in_book).length, refunds: refunds.length, ...(includeDetails ? { unmatched: final.unmatched_captures.length } : {}), repeat_customers: orders.length - new Set(orders.map((o) => o["Mã khách ẩn danh"])).size },
     groups: rows,
-    matches_book: rows.every((r) => r.matches),
+    matches_book: includeDetails ? null : hasAds ? rows.every((r) => r.matches) : null,
+    ...(includeDetails ? { rankings: hasAds ? { cost_per_chat: [...rows].sort((a,b) => a.cost_per_chat - b.cost_per_chat).map((x) => x.id), kept_per_ad_dollar: [...rows].sort((a,b) => b.kept_per_ad_dollar - a.kept_per_ad_dollar).map((x) => x.id) } : null, unmatched_captures: final.unmatched_captures, unmatched_order_captures: unmatchedOrderCaptures } : {}),
     duplicates: {
       in_book: inBook.size,
       // the window the live PayPal demo uses (a double click at checkout lands within seconds)
@@ -79,6 +134,6 @@ export function replayHTML(r) {
   const d = r.duplicates;
   const groups = r.groups.map((g) => `${g.id}: ${g.paid} orders, ${vnd(g.revenue)}`).join(" · ");
   return `<h3 class="replay-h">The shop's book, run through Paid Signal's own ledger code</h3>`
-    + `<p class="replay-p">${r.totals.payments} bank transfers (${r.totals.first_payments} first payments and their repeats) and the ${r.totals.refunds} refunds from its refund book, fed to the same <code>reconcile()</code> the demo uses. It ${r.matches_book ? "gives the same result as" : "does not match"} the shop's reconciliation workbook: ${r.totals.paid} paid orders kept, ${vnd(r.totals.revenue)} (${groups}). That checks the arithmetic, the refunds and the order matching; it is not a test of judgement.</p>`
-    + `<p class="replay-p"><b>The double transfers:</b> the book has ${d.in_book}, ${d.gap_minutes[0]} to ${d.gap_minutes[d.gap_minutes.length - 1]} minutes apart (a customer thinks the first transfer failed and sends again). Each is a second transfer for the same order code, so the ledger now holds a bank transfer sent again for one order whatever the gap: ${d.same_order.caught} of ${d.in_book}. The time rule alone (same payer, same ad, close together, for payments with no order id) held ${d.card_window.caught} of ${d.in_book} with the 10-minute checkout window and ${d.bank_window.caught} of ${d.in_book} with the ${d.bank_window_minutes}-minute window bank transfers now get, a window set after reading this book. Every customer in this book ordered once, so false alarms cannot be measured here.</p>`;
+    + `<p class="replay-p">${r.totals.payments} bank transfers and the ${r.totals.refunds} refunds from its refund book, fed to the same <code>reconcile()</code> the demo uses, give ${r.totals.paid} paid orders kept and ${vnd(r.totals.revenue)}, ${r.matches_book ? "the same as" : "not the same as"} the shop's reconciliation workbook. <b>Its ${d.in_book} double transfers are held</b>: each was the same amount sent again for the same order code, ${d.gap_minutes[0]} to ${d.gap_minutes[d.gap_minutes.length - 1]} minutes later. A shop paid by bank transfer can run its own book the same way, in the browser: <a href="/audit#shop-title">/audit</a>.</p>`
+    + `<details class="gap-more"><summary>Method and limits</summary><p class="replay-p">${groups}. This checks the arithmetic, the refunds and the order matching, not judgement or ad causality. For bank transfers the ledger holds the same amount sent again for one order code whatever the gap (${d.same_order.caught} of ${d.in_book}), and never pairs two different order codes. Without order codes it falls back to the time rule (same payer, same ad, close together): ${d.card_window.caught} of ${d.in_book} with the 10-minute checkout window, ${d.bank_window.caught} of ${d.in_book} with the ${d.bank_window_minutes}-minute window bank transfers now get, a window set after reading this book. Every customer in this book ordered once, so false alarms cannot be measured on it; unit tests cover one customer's two orders, a split payment and a repeat beyond the window.</p></details>`;
 }
