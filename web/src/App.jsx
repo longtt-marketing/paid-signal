@@ -178,6 +178,7 @@ export default function App({ first = null }) {
   const [studioPage, setStudioPage] = useState("overview");
   const [allPays, setAllPays] = useState(false);
   const [allInv, setAllInv] = useState(false);
+  const [allAct, setAllAct] = useState(false);
   // sent but unpaid: the chase agent reads each with PayPal's Agent Toolkit, picks whom to remind and writes the note
   const askChase = async () => {
     setChase({ status: "running" });
@@ -430,8 +431,8 @@ export default function App({ first = null }) {
                 {agent.status === "running" && <div className="skel" aria-live="polite"><i /><i /><i /><span>Claude is reading the ledger…</span></div>}
                 {(agent.trace || []).filter((s) => s.tool === "submit_recommendation" && s.why).map((s, k) => <div key={k} className="dec bad"><b>Code refused Claude's {k === 0 ? "first" : "next"} proposal</b>{s.why.map((w) => <small key={w}>{w}</small>)}</div>)}
                 {agent.status === "error" && <p className="err">{agent.error}</p>}
-                {agent.recommendation && <p className="headline">{agent.recommendation.headline}</p>}
-                {actions.map((a, i) => (
+                {agent.recommendation && <p className="headline clamp">{agent.recommendation.headline}</p>}
+                {actions.slice(0, allAct ? undefined : 2).map((a, i) => (
                   <article key={i} className={`action ${decisions[i]?.verdict || ""}`}>
                     <span className={`tag ${a.change}`}>Budget · {CHANGE[a.change] || a.change}</span>
                     <b>{adName(a.ad)}</b>
@@ -441,8 +442,8 @@ export default function App({ first = null }) {
                       : <div className="row"><button className="primary" onClick={() => decide(i, "approved")}>{a.change === "keep" ? "Agree, no change" : "Approve"}</button><button onClick={() => decide(i, "dismissed")}>Dismiss</button></div>}
                   </article>
                 ))}
-                {agent.source && <p className="trace">From the {agent.source}</p>}
-                {agent.trace && <p className="trace">{agent.trace.map((s) => s.tool + (s.ad ? `(${s.ad})` : "")).join(" → ")} · {(agent.ms / 1000).toFixed(1)} s</p>}
+                {actions.length > 2 && <button type="button" className="more-row" onClick={() => setAllAct((v) => !v)}>{allAct ? "Show fewer" : `All ${actions.length} changes`}<span>{allAct ? "−" : "+"}</span></button>}
+                {(agent.source || agent.trace) && <details className="ev"><summary>Run details</summary>{agent.source && <p className="trace">From the {agent.source}</p>}{agent.trace && <p className="trace">{agent.trace.map((s) => s.tool + (s.ad ? `(${s.ad})` : "")).join(" → ")} · {(agent.ms / 1000).toFixed(1)} s</p>}</details>}
               </div>
               {revenue.status !== "idle" && <PhoneDisclosure id="revenue" title="Invoice proposals" className="phone-disclosure-inner"
                 summaryText={revenue.status === "running" ? "Working…" : revenue.status === "error" ? "Needs attention" : `${revenue.drafts.filter((d) => d.id).length} drafts`}>

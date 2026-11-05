@@ -9,14 +9,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/ds.css">
 <style>
-.shop-layout{max-width:920px;width:100%;margin:0 auto}.product{display:flex;flex-direction:column;gap:18px}.shop-pay{display:flex;flex-direction:column;gap:16px}.shop-pay button{width:100%;min-height:48px}.click{display:flex;gap:10px;align-items:center;padding:12px;border-radius:10px;background:var(--soft);font-size:13px}.click i{width:8px;height:8px;border-radius:50%;background:var(--paid)}.click.none{color:var(--mute)}.click.none i{background:var(--faint)}.msg{color:var(--bad);font-size:14px}.shop-receipt{max-width:650px;margin:auto;display:grid;gap:18px}.shop-receipt h1{font-size:48px}.shop-rows{display:grid;gap:10px}.shop-rows>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;border-top:1px solid var(--line);padding-top:12px}.shop-rows b{text-align:right;overflow-wrap:anywhere}
+.shop-layout{max-width:920px;width:100%;margin:0 auto}.product{display:flex;flex-direction:column;gap:18px}.shop-pay{display:flex;flex-direction:column;gap:16px}.shop-pay button{width:100%;min-height:48px}.click{display:flex;gap:10px;align-items:center;padding:12px;border-radius:10px;background:var(--soft);font-size:13px}.click i{width:8px;height:8px;border-radius:50%;background:var(--paid)}.click.none{color:var(--mute)}.click.none i{background:var(--faint)}.msg{color:var(--bad);font-size:14px}.msg:empty{display:none}
+.demo-bar{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;padding:10px 24px;background:var(--ink);color:#CFCFCB;font-size:13px}.demo-bar a{color:#fff;font-weight:600;text-decoration:none}
+.shop-top{max-width:920px;margin:0 auto;padding:22px 24px 0;display:flex;align-items:center;gap:10px;font-size:17px}
+.shop-logo{width:32px;height:32px;border-radius:10px;background:#2B59C3;color:#fff;display:grid;place-items:center;font-weight:700}
+.shop-layout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
+.product,.shop-pay{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:28px}
+.product h1{font-size:clamp(36px,5vw,52px)}.shop-points{margin:0;padding-left:18px;display:grid;gap:8px;color:var(--ink2)}
+.shop-total{display:flex;justify-content:space-between;align-items:baseline}.shop-total b{font-size:36px;letter-spacing:-.02em}
+.shop-pay button.alt{background:#fff;border:1px solid #D6D6D2;border-radius:12px;font:600 15px var(--sans);cursor:pointer}
+.shop-notice{font-size:12px;color:var(--mute)}.shop-notice a{color:var(--ink)}.shop-receipt{max-width:650px;margin:auto;display:grid;gap:18px}.shop-receipt h1{font-size:48px}.shop-rows{display:grid;gap:10px}.shop-rows>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;border-top:1px solid var(--line);padding-top:12px}.shop-rows b{text-align:right;overflow-wrap:anywhere}
+@media(max-width:760px){.shop-layout{grid-template-columns:1fr}.product,.shop-pay{padding:20px}}
 @media(max-width:640px){.shop-layout{grid-template-columns:1fr}.shop-receipt h1{font-size:40px}}
 </style>
 
 </head>
 <body>
-<header class="ps-top"><nav aria-label="Main"><a class="ps-brand" href="/"><span class="ps-mark"><i></i></span>Paid Signal</a><div class="ps-links"><a href="/">Dashboard</a><a href="/judge">Judge path</a><a href="/audit">Audit</a><a href="/proof">Proof</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></div><span class="ps-live">PayPal sandbox live</span></nav></header>
-<main class="ps-main">
+<div class="demo-bar"><span>Demo shop for <a href="/">Paid Signal</a> · PayPal sandbox, no real money</span><a href="/judge">Judge path →</a></div>
+<header class="shop-top"><span class="shop-logo" aria-hidden="true">K</span><b>Kite Robotics Club</b></header>
+<main class="ps-main" style="padding-top:24px">
   <div class="shop-layout" id="shop">
     <section class="product ps-card">
       <h1>Robotics trial class</h1>
@@ -27,8 +38,8 @@
       <div class="shop-total"><span>Total</span><b>$49.00</b></div>
       <div id="paypal-buttons"></div>
       <button class="alt" id="redirect" type="button">Pay in this tab</button>
-      <details class="ps-more-box shop-notice"><summary>Data use</summary><p>This demo sends purchase details to Meta as test events. <a href="/data">See what data goes where</a>.</p></details>
       <p class="click none" id="click"><i></i><span>No ad click on this visit</span></p>
+      <p class="shop-notice">Purchase details go to Meta as test events. <a href="/data">Data use</a></p>
       <p class="msg" id="msg" role="status"></p>
     </section>
   </div>

@@ -215,7 +215,9 @@ function showRefund(d) {
       try { const j = await post("/api/duplicates/refund", { capture_id: o.capture_id }); if (j.refund) showRefund({ last: j, open: [] }); else out.textContent = `Not refunded: ${j.summary}`; }
       catch (e) { out.textContent = e.message; b.disabled = false; }
     };
-    cards.push($("div", { className: "card" }, [$("div", { className: "rows" }, [row("Open now", `A second payment ${o.seconds} s after the first, same payer and ad`, b)]), out]));
+    const openRow = row("Open now", `A second payment ${o.seconds} s after the first, same payer and ad`, b);
+    const host = cards[0]?.querySelector(".rows");
+    if (host) { host.append(openRow); host.after(out); } else cards.push($("div", { className: "card" }, [$("div", { className: "rows" }, [openRow]), out]));
   }
   if (!cards.length) cards.push($("div", { className: "card" }, [row("Ledger", "No double payment is flagged right now")]));
   real.replaceChildren(...cards);

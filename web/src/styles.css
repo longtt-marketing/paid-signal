@@ -288,3 +288,18 @@ a.mini:hover{background:var(--head);color:var(--ink)}
 details.ev summary{cursor:pointer;font-size:12px;color:var(--mute);list-style:none}details.ev summary::-webkit-details-marker{display:none}details.ev[open] .chips{margin-top:8px}
 .agent-grid article>.agent-foot{flex-direction:row;justify-content:space-between;align-items:center}
 @media (max-width:560px){.agent-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.agent-grid article{padding:14px;gap:10px}.agent-grid article p{font-size:13px}.agent-foot code{display:none}.agent-grid article>.agent-foot{justify-content:flex-start}}
+/* balanced lower grid: cards pair up row by row instead of one long side column */
+.cols{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;align-items:start}
+.col-main,.col-side{display:contents}
+.col-side{position:static}
+.cols>.col-main>*:nth-child(1){order:1}.cols>.col-side>#approvals{order:2}
+.cols>.col-main>*:nth-child(2){order:3}.cols>.col-side>*:nth-child(2){order:4}
+.cols>.col-main>*:nth-child(3){order:5}.cols>.col-side>*:nth-child(3){order:6}
+.headline.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:15px}
+.sec-head{flex-direction:column;align-items:flex-start;gap:4px}
+@media (max-width:1000px){.cols{grid-template-columns:1fr}}
+/* lower grid by areas: left Per ad, Payments, Signal; right Approvals; then Activity and Ad links side by side */
+.cols{grid-template-areas:"perad appr" "pay appr" "sig appr" "act links"}
+.cols>.col-main>*:nth-child(1){grid-area:perad}.cols>.col-main>*:nth-child(2){grid-area:pay}.cols>.col-main>*:nth-child(3){grid-area:sig}
+.cols>.col-side>#approvals{grid-area:appr;align-self:stretch}.cols>.col-side>*:nth-child(2){grid-area:act;align-self:stretch}.cols>.col-side>*:nth-child(3){grid-area:links;align-self:stretch}
+@media (max-width:1000px){.cols{grid-template-areas:"perad" "appr" "pay" "sig" "act" "links"}}

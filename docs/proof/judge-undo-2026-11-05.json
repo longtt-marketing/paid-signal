@@ -1,0 +1,13 @@
+{
+  "what": "One live run of the judge path's 'Follow your payment' with Undo, by the author as a judge would do it (sandbox buyer).",
+  "invoice": "INV2-AB9T-LVSL-98G5-G5UG",
+  "drafted_at": "2026-11-05T08:15Z",
+  "paypal_payment_id": "43N86137W60191945",
+  "amount": "49.00",
+  "currency": "USD",
+  "ledger_after_pay": "written as this browser's own payment (try_invoice set, not part of the frozen evidence ledger)",
+  "meta": { "sent": false, "held": "no ad click", "at": "2026-11-05T08:18:05Z" },
+  "undo": { "route": "/api/refund (PayPal Payments v2 capture refund on the invoice payment id)", "status_after": "REFUNDED", "refunded_amount": "49.00", "refunded_at": "2026-11-05T08:18:12Z" },
+  "creator_payout": "not pressed in this run",
+  "source": "Workers KV records pay:43N86137W60191945, try:INV2-AB9T-LVSL-98G5-G5UG and meta:43N86137W60191945, read 2026-11-05"
+}
