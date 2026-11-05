@@ -231,7 +231,7 @@ function showCommission(d) {
   const b = d.batches?.[0];
   const earning = d.orders.filter((o) => o.eligible).length;
   const stat = (big, cls, small) => $("div", { className: "stat" }, [$("span", { className: `big ${cls}`, textContent: big }), $("small", { textContent: small })]);
-  const approve = earning ? btn(`Approve ${earning} order${earning === 1 ? "" : "s"}`, "sm") : null;
+  const approve = earning ? btn(`Pay ${earning} new order${earning === 1 ? "" : "s"}`, "sm sec2") : null;
   const out = $("span", { className: "ps-note", role: "status" });
   if (approve) approve.onclick = async () => {
     approve.disabled = true; out.textContent = "The commission agent is paying through PayPal Payouts…";
@@ -242,7 +242,7 @@ function showCommission(d) {
     $("div", { className: "grid3", style: "align-items:end" }, [
       b ? stat(whole(b.total), "up", `paid for ${(b.capture_ids || []).length} orders`) : stat("$0", "", "paid so far"),
       stat(whole(pr.contrast.per_lead), "was", `what paying per lead would cost (${pr.contrast.leads} leads, ${pr.contrast.paid_orders} paid order)`),
-      $("div", { className: "stat", style: "align-items:flex-start;gap:10px" }, [b ? chip(`PayPal Payouts: ${b.read_back?.item_status || b.status}`, /SUCCESS/.test(b.read_back?.item_status || "") ? "ok" : "neu") : chip("No payout yet"), approve]),
+      $("div", { className: "stat", style: "align-items:flex-start;gap:10px" }, [b ? chip(`Last payout: ${b.read_back?.item_status || b.status}`, /SUCCESS/.test(b.read_back?.item_status || "") ? "ok" : "neu") : chip("No payout yet"), approve]),
     ]),
     out,
     details("Every order, and the code limits", [

@@ -350,7 +350,7 @@ export default function App({ first = null }) {
               <div className="card-head"><h2>Per ad</h2><span className="muted">No budget moves under 3 paid orders</span></div>
               <div className="scroll-x desktop-only">
                 <table className="grid">
-                  <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Chance, computed in code, that this ad's paid revenue covers its ad spend">Covers spend?</th></tr></thead>
+                  <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Chance, computed in code, that this ad's paid revenue covers its ad spend">Chance it covers spend</th></tr></thead>
                   <tbody>
                     {byCost.map((a) => {
                       const o = odds[a.ad], pc = o ? Math.round(o.chance_covers_spend * 100) : null;
@@ -411,10 +411,10 @@ export default function App({ first = null }) {
                     <details><summary>Event payload shape (IDs redacted)</summary><pre tabIndex={0} aria-label="Meta Purchase event payload shape">{JSON.stringify(ev, null, 2)}</pre></details>
                   </div>;
                 })()}
-                <div className="sig-side">
+                <details className="sig-more"><summary>Held back and Google adjustments</summary><div className="sig-side">
                   {state?.meta.held.length > 0 && <div><b>Held back from Meta</b>{state.meta.held.map((h) => <small key={h.capture_id}>{h.capture_id} · {state.metaSends.some((m) => m.capture_id === h.capture_id && m.superseded) ? "Google click: goes to Google only now (it reached Meta once, before that rule)" : h.reason}</small>)}</div>}
                   {state && <div><b>Google adjustments</b>{state.google.adjustments.map((a) => <small key={a.order_id + a.adjustment_type}>{a.adjustment_type === "RETRACTION" ? "Retraction" : "Restatement"} · {a.order_id}{a.adjusted_value ? ` → $${a.adjusted_value}` : ""}</small>)}</div>}
-                </div>
+                </div></details>
               </div>
             </PhoneDisclosure>
           </div>
@@ -431,7 +431,7 @@ export default function App({ first = null }) {
                 {agent.status === "running" && <div className="skel" aria-live="polite"><i /><i /><i /><span>Claude is reading the ledger…</span></div>}
                 {(agent.trace || []).filter((s) => s.tool === "submit_recommendation" && s.why).map((s, k) => <div key={k} className="dec bad"><b>Code refused Claude's {k === 0 ? "first" : "next"} proposal</b>{s.why.map((w) => <small key={w}>{w}</small>)}</div>)}
                 {agent.status === "error" && <p className="err">{agent.error}</p>}
-                {agent.recommendation && <p className="headline clamp">{agent.recommendation.headline}</p>}
+                
                 {actions.slice(0, allAct ? undefined : 2).map((a, i) => (
                   <article key={i} className={`action ${decisions[i]?.verdict || ""}`}>
                     <span className={`tag ${a.change}`}>Budget · {CHANGE[a.change] || a.change}</span>

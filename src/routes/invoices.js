@@ -30,7 +30,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       if (!rec || !rec.vid || rec.vid !== visitorId(request)) return json({ error: "Only an invoice Claude drafted for you in this browser can be sent." }, 404);
       if (rec.status !== "DRAFT") return json({ invoice: publicTry(rec) });
       if (!(Number(rec.amount) > 0 && Number(rec.amount) <= 200)) return json({ error: "Only small demo invoices are sent." }, 400);
-      const stop = await claudeGuard(env, request, "judge sends", 3, 60); if (stop) return json({ error: stop }, 429);
+      const stop = await claudeGuard(env, request, "judge sends", 10, 60); if (stop) return json({ error: stop }, 429);
       const tools = toolkitTools(tryEnv, { invoices: { get: true, send: true } });
       const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: SEND_SYSTEM, tools: SEND_TOOLS });
       let agent;
@@ -123,8 +123,9 @@ export async function route({ request, env, url, pp, orders, ip }) {
       let body;
       try { body = await request.json(); } catch { return json({ error: "Send a message as JSON." }, 400); }
       if (typeof body.message !== "string" || !body.message.trim() || body.message.length > 500) return json({ error: "Enter a message of 1 to 500 characters." }, 400);
-      const stop = await claudeGuard(env, request, "judge try runs", 3, CLAUDE_DAILY);
-      if (stop) return revenueUnavailable(await revenueFallback(env), 429);
+      const stop = await claudeGuard(env, request, "judge try runs", 12, CLAUDE_DAILY);
+      // a judge who used up today's live runs gets a plain answer, not an unrelated saved batch summary
+      if (stop) return json({ error: "Today's live Claude runs for this network are used up. The recorded runs on /proof show the same agent; try again tomorrow.", limited: true }, 429);
       const t0 = Date.now(), lead = { lead: "Judge lead", ad: "parent_carousel", source: "other", click_id: "", channel: "web", email: "judge-lead@example.com", message: body.message.trim() };
       try {
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });

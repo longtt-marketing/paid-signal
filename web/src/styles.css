@@ -303,3 +303,8 @@ details.ev summary{cursor:pointer;font-size:12px;color:var(--mute);list-style:no
 .cols>.col-main>*:nth-child(1){grid-area:perad}.cols>.col-main>*:nth-child(2){grid-area:pay}.cols>.col-main>*:nth-child(3){grid-area:sig}
 .cols>.col-side>#approvals{grid-area:appr;align-self:stretch}.cols>.col-side>*:nth-child(2){grid-area:act;align-self:stretch}.cols>.col-side>*:nth-child(3){grid-area:links;align-self:stretch}
 @media (max-width:1000px){.cols{grid-template-areas:"perad" "appr" "pay" "sig" "act" "links"}}
+.desk>#studio{order:1}.desk>.cols{order:2}.desk>.foot{order:3}
+.fl-cap details summary,.sig-more summary{cursor:pointer;font:600 12.5px var(--sans);list-style:none}.fl-cap details summary::-webkit-details-marker,.sig-more summary::-webkit-details-marker{display:none}
+.fl-cap details summary::after,.sig-more summary::after{content:" +";font-weight:400}.fl-cap details[open] summary::after,.sig-more[open] summary::after{content:" −"}
+.sig-more{grid-column:1/-1}.sig-more[open] .sig-side{margin-top:10px}
+.sig{grid-template-columns:1fr}

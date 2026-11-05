@@ -57,9 +57,9 @@ export default function FlowChart({ ads, payments, sends, held, worst }) {
           <text key={`lbl${r.ad}`} x={xs[0] + colW + 6} y={seg[0][j].y + Math.min(seg[0][j].h, 22) / 2 + 4} className={`fl-ad ${r.ad === worst ? "worst" : ""}`}>{short(r.ad)} · {r.leads}</text>
         ))}
       </svg>
-      <figcaption className="fl-cap">
+      <figcaption className="fl-cap"><details><summary>How the counts add up</summary>
         Paid: {totals.paid - byInvoice} at checkout, {byInvoice} by invoice. Meta received {totals.sent}: {live} sent at capture{totals.sent - live > 0 ? `, ${totals.sent - live} sent later for payments made before the live link` : ""}.{google ? ` ${google} from a Google click ${google === 1 ? "goes" : "go"} to Google instead${early ? ` (${early === 1 ? "it" : "they"} also reached Meta once, before Google buyers went to Google only; not counted here)` : ""}.` : ""}
-      </figcaption>
+      </details></figcaption>
     </figure>
   );
 }

@@ -66,7 +66,7 @@ function picker(d) {
   const sel = document.getElementById("picker");
   if (!drawn) {
     drawn = true;
-    sel.replaceChildren(...d.payments.slice().reverse().map((x) => $("option", { value: x.capture_id, textContent: `${x.ad_name} · ${money(x.amount)} · ${x.via === "invoice" ? "invoice" : "checkout"}` })));
+    sel.replaceChildren(...d.payments.slice().reverse().map((x) => $("option", { value: x.capture_id, textContent: `${x.ad_name} · ${money(x.amount)} · ${x.via === "invoice" ? "invoice" : "checkout"}${x.status === "REFUNDED" ? " · refunded" : Number(x.refunded_amount) > 0 ? ` · ${money(x.refunded_amount)} refunded` : ""}` })));
     sel.onchange = () => show(sel.value);
   }
   sel.value = d.payment.capture_id;

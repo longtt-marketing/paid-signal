@@ -134,7 +134,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
         ad_row: row && { leads: row.leads, paid_orders: row.paid, spend: (row.spend_cents / 100).toFixed(2), paid_revenue: (row.revenue_cents / 100).toFixed(2),
           per_dollar: row.spend_cents ? (row.revenue_cents / row.spend_cents).toFixed(2) : null, chance_covers_spend: odds ? Math.round(odds.chance_covers_spend * 100) : null,
           cut_after: odds?.more_spend_to_decide_cents != null ? (odds.more_spend_to_decide_cents / 100).toFixed(2) : null, move: move ? { increase: move.increase, reduce: move.reduce, why: move.why } : null },
-        payments: payments.map((x) => ({ capture_id: x.capture_id, ad_name: x.ad ? adName(x.ad) : "No ad click", amount: x.amount, captured_at: x.captured_at, via: x.via || "checkout",
+        payments: payments.map((x) => ({ capture_id: x.capture_id, ad_name: x.ad ? adName(x.ad) : "No ad click", amount: x.amount, captured_at: x.captured_at, via: x.via || "checkout", status: x.status, refunded_amount: x.refunded_amount || "0.00",
           meta: metaBy[x.capture_id]?.ok ? (x.source === "g" ? "Google click, sent in backfill before the Google-only rule; not counted" : metaBy[x.capture_id].backfill ? "sent in backfill" : "sent at capture") : metaBy[x.capture_id]?.held ? `held (${metaBy[x.capture_id].held})` : "not sent" })),
       });
     }

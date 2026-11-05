@@ -166,15 +166,15 @@ test("judge try: an injection is skipped and flagged", async () => {
   assert.deepEqual([...out.env.LEDGER.m.keys()].filter((k) => /^(try|inv):/.test(k)), []);
 });
 
-test("judge try: visitor cap returns 429 with the saved revenue run", async () => {
+test("judge try: visitor cap returns a plain 429, not an unrelated saved batch run", async () => {
   const env = { LEDGER: kv(), ANTHROPIC_API_KEY: "test", PAYPAL_CLIENT_ID: "id", PAYPAL_CLIENT_SECRET: "secret" };
   const day = new Date().toISOString().slice(0, 10);
-  await env.LEDGER.put(`quota:judge try runs:ip:192.0.2.80:${day}`, "3");
+  await env.LEDGER.put(`quota:judge try runs:ip:192.0.2.80:${day}`, "12");
   await env.LEDGER.put("run:revenue", JSON.stringify({ at: "2026-11-02T00:00:00Z", summary: "Saved invoice run", drafts: [], skips: [], refusals: [], trace: [], ms: 12 }));
   const out = await judgeTry("Book a trial class.", () => tool("create_invoice", {}), env);
   const body = await out.response.json();
-  assert.equal(out.response.status, 429); assert.match(body.error, /Latest saved invoice run/);
-  assert.equal(body.fallback.run.summary, "Saved invoice run"); assert.equal(out.llmCalls(), 0);
+  assert.equal(out.response.status, 429); assert.match(body.error, /live Claude runs/); assert.equal(body.limited, true);
+  assert.ok(!JSON.stringify(body).includes("Saved invoice run")); assert.equal(out.llmCalls(), 0);
 });
 
 test("judge try: a Claude failure returns the saved revenue fallback", async () => {
