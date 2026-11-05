@@ -1,6 +1,6 @@
 // Checkout, capture, refunds, PayPal webhooks, the money trail and the ledger.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
-import { isEvidence, visitorId, utc, PRODUCT, AD_KEYS, CLICK_ID, json, sha, publicLead, cachedList, applyDispute, listPayments, recordCapture, sendToMeta, applyRefund, heldDuplicates, SEEDED_BEFORE, demoLeads, recordInvoicePayment, tryPaid, guard, paypal, packClick, parseAdCsv, reconcile, possibleDuplicates, paybackOdds, disputeState, supportedMoves, adName } from "../core.js";
+import { ordersSdk, isEvidence, visitorId, utc, PRODUCT, AD_KEYS, CLICK_ID, json, sha, publicLead, cachedList, applyDispute, listPayments, recordCapture, sendToMeta, applyRefund, heldDuplicates, SEEDED_BEFORE, demoLeads, recordInvoicePayment, tryPaid, guard, paypal, packClick, parseAdCsv, reconcile, possibleDuplicates, paybackOdds, disputeState, supportedMoves, adName } from "../core.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
@@ -47,7 +47,9 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const stop = await guard(env, request, "refunds", 3, 30); if (stop) return json({ error: stop }, 429);
       // the same refund retried (double click, network retry) carries the same request id, so PayPal applies it once
       const refundKey = `refund-${capture_id}-${amount === undefined ? "full" : Number(amount).toFixed(2)}-${cur.refunded_amount || "0.00"}`;
-      const r = await orders.refundCapture(capture_id, { amount: amount === undefined ? undefined : Number(amount).toFixed(2), requestId: refundKey });
+      // a judge's own try payment was taken by the try app when one is set; refund it through the same app
+      const refunder = cur.try_invoice && env.TRY_PAYPAL_CLIENT_ID && env.TRY_PAYPAL_CLIENT_SECRET ? ordersSdk({ clientId: env.TRY_PAYPAL_CLIENT_ID, secret: env.TRY_PAYPAL_CLIENT_SECRET }) : orders;
+      const r = await refunder.refundCapture(capture_id, { amount: amount === undefined ? undefined : Number(amount).toFixed(2), requestId: refundKey });
       // mark the refund as applied first, so PayPal's PAYMENT.CAPTURE.REFUNDED webhook for it is not counted again
       await env.LEDGER.put(`seen:${r.id}`, "1");
       const rec = await applyRefund(env, capture_id, r.amount?.value || amount, r.create_time);
