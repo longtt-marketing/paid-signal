@@ -14,13 +14,13 @@ For shops that close a sale in a chat or a lead form and bill by PayPal invoice 
 
 ## What it does
 
-1. **Chat to invoice.** The revenue agent reads each lead's message and drafts the invoice with `create_invoice`; code sets the price and recipient inside the call. A person approves; the send agent sends; the chase agent reminds.
+The core loop, in three steps:
+
+1. **Chat to PayPal invoice.** The revenue agent reads each lead's message and drafts the invoice with the Agent Toolkit's `create_invoice`; code sets the price and recipient inside the call. A person approves; the send agent sends; the chase agent reminds, within code limits.
 2. **Payment to ledger.** Payments are matched to ads from the capture, the invoice and signature-verified webhooks. Refunds come off; likely double payments and open disputes are held out. Transaction Search cross-checks the ledger against PayPal's history.
-3. **Money back.** For a held double payment, the refund agent reads what the buyer wrote and refunds the second payment with `create_refund` once a person approves (a real sandbox refund of $49, COMPLETED). On the judge path, give live Claude the same double charge from two buyers, one who paid for a second child and one whose page froze: it declines one and refunds the other, with the refund tool simulated (held-out test: 13 of 14 right).
-4. **Creator paid per paid order.** The parent who made the testimonial earns $5 per PayPal-confirmed paid order, not per lead (per lead, the free guide would pay $155 for 1 paid order). The commission agent pays through PayPal Payouts; code fixes the recipient and checks every order. A refund after a payout shows as owed back.
-5. **Budget by money.** An evidence gate in code checks every number, capture id and the direction of every move; below 3 paid orders an ad's budget does not move.
-6. **Back to Meta.** A PayPal-confirmed payment from a Meta ad is built as a Purchase in the form Meta documents for a website click, a Messenger chat or a lead form.
-7. **Check your own shop.** [/audit](https://paid-signal.thelongmarketing.workers.dev/audit) matches an Ads Manager export to a PayPal activity download in the browser, nothing uploaded; a shop paid by bank transfer can drop its order book instead.
+3. **Budget by money.** The budget agent recommends moves from that ledger; an evidence gate in code checks every number, capture id and the direction of every move, and below 3 paid orders an ad's budget does not move. A person approves.
+
+**Also on the same ledger:** the refund agent returns a held double payment once a person approves (a real sandbox refund of $49, COMPLETED; on the judge path, live Claude declines one of two look-alike double charges and refunds the other, held-out test 13 of 14); the ad's creator is paid $5 per PayPal-confirmed paid order through Payouts, not per lead (per lead, the free guide would pay $155 for 1 paid order); a confirmed payment from a Meta ad goes back to Meta as a Purchase; and [/audit](https://paid-signal.thelongmarketing.workers.dev/audit) runs the ledger on your own Ads Manager export and PayPal download in the browser, nothing uploaded.
 
 ## Built with PayPal
 
