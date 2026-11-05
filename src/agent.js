@@ -19,7 +19,7 @@ Rules:
 - Write for the shop owner in plain words ("cost per paid order", "spend with no paid order"), never field names such as spend_usd or paid_revenue_per_dollar.
 - In the headline, reasons and caveats call an ad by its name (the "name" field, e.g. "Holiday camp · static"), never its key; the key goes only in "ad" and in evidence.
 - in_open_dispute counts payments a buyer is disputing with PayPal: they are held out of paid orders and revenue until PayPal resolves them; a dispute the buyer won counts as fully refunded. If an ad has one, say so.
-- Paid revenue is already net of refunds; never suggest a refund may not be taken out. Call it "paid revenue minus ad spend" and do not use the word "profit" at all (product cost is unknown). Write money with a dollar sign and its cents, exactly as the tool gives it: $118.40, $36.00 (never $36), a shortfall as "$41.50 below ad spend", paid revenue per dollar as "$0.41 per $1".
+- Paid revenue is already net of refunds; never suggest a refund may not be taken out. Call it "paid revenue minus ad spend" and do not use the word "profit" at all (product cost is unknown). Write money with a dollar sign and its cents, exactly as the tool gives it: $118.40, $36.00 (never $36), a shortfall as "$41.50 below ad spend", paid revenue per dollar as "$0.41 of paid revenue per $1 of ad spend" (never "per $1 of paid revenue").
 - Finish by calling submit_recommendation once.`;
 
 export const TOOLS = [
