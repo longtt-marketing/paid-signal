@@ -91,6 +91,29 @@ export async function route({ request, env, url, pp, orders, ip }) {
 
     // The money trail of one payment: the ad click, what PayPal itself says about the capture (read now, not from the
     // ledger), what Meta answered, and what the payment changes for its ad. Defaults to the payment Meta got at capture.
+    // Verify with PayPal: every payment in the evidence ledger read back from PayPal now (invoice payments through
+    // Invoicing v2, checkout captures through the server SDK), compared on amount and refund state. Cached 10 minutes.
+    if (url.pathname === "/api/verify") {
+      const cached = await env.LEDGER.get("verify:last", "json");
+      if (cached && Date.now() - Date.parse(cached.checked_at) < 600000) return json({ ...cached, cached: true });
+      const stop = await guard(env, request, "PayPal readbacks", 20, 300); if (stop) return json({ error: stop }, 429);
+      const payments = (await listPayments(env)).filter(isEvidence);
+      const items = await Promise.all(payments.map(async (p) => {
+        const ledgerRefunded = Number(p.refunded_amount || 0) >= Number(p.amount);
+        try {
+          let status, amount, read;
+          if (p.via === "invoice") { const inv = await pp.getInvoice(p.order_id); status = inv.status; amount = inv.amount?.value; read = "Invoicing v2"; }
+          else { const c = await orders.getCapture(p.capture_id); status = c.status; amount = c.amount?.value; read = "Payments v2 (server SDK)"; }
+          const paypalRefunded = /REFUNDED/.test(String(status)) && !/PARTIALLY/.test(String(status));
+          const match = Number(amount) === Number(p.amount) && (paypalRefunded === ledgerRefunded || (p.via === "invoice" && !ledgerRefunded && status === "PAID"));
+          return { id: p.capture_id, kind: p.via === "invoice" ? "invoice payment" : "checkout capture", ad: p.ad || null, amount: p.amount, ledger: ledgerRefunded ? "refunded" : Number(p.refunded_amount || 0) > 0 ? "partly refunded" : "paid", paypal: status, read, match };
+        } catch (e) { return { id: p.capture_id, kind: p.via === "invoice" ? "invoice payment" : "checkout capture", amount: p.amount, ledger: ledgerRefunded ? "refunded" : "paid", paypal: null, error: String(e?.message || e).slice(0, 120), match: false }; }
+      }));
+      const out = { checked_at: new Date().toISOString(), total: items.length, matched: items.filter((i) => i.match).length, items };
+      await env.LEDGER.put("verify:last", JSON.stringify(out), { expirationTtl: 3600 });
+      return json(out);
+    }
+
     if (url.pathname === "/api/trail") {
       const [payments, metas] = await Promise.all([listPayments(env, visitorId(request)), cachedList(env, "meta:")]);
       const metaBy = Object.fromEntries(metas.map((m) => [m.capture_id, m]));

@@ -4,17 +4,21 @@ import { claudeAdapter } from "./claudeAdapter.js";
 import { createAiHarness, directLlmRunner } from "ag-studio";
 import { adName } from "./names.js";
 import { seededHistory } from "./history.js";
+import { REPLAY_PROMPT, HAS_REPLAY } from "./claudeAdapter.js";
 
 const get = async (path, signal) => { const r = await fetch(path, { signal }); const d = await r.json(); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; };
 const post = async (path, body, signal) => { const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal }); const d = await r.json(); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; };
 
 export const PROMPT_STARTERS = [
+  // shown only once a recorded run is bundled (web/src/replay-budget.json)
+  ...(HAS_REPLAY ? [{ label: "Replay a budget run (no model call)", prompt: `${REPLAY_PROMPT}: ask the budget agent which ads to cut or grow, and have it show the evidence on this page.` }] : []),
   { label: "Which ads bring paid orders?", prompt: "Using the Paid Signal tools, which ads bring paying customers and which only bring leads? Quote the numbers exactly." },
   { label: "Invoice warm leads", prompt: "Have the revenue agent read what the unpaid leads wrote and draft PayPal invoices for the ones ready to pay. Tell me who it invoiced, for how much, and who it skipped or flagged and why." },
   { label: "Review ad budgets", prompt: "Ask the budget agent which ads to cut or grow, and have it show the evidence on this page." },
   { label: "Chart paid revenue by ad", prompt: "Add a bar chart of paid revenue by ad to this page." },
   { label: "Nudge who still owes", prompt: "Ask the nudge agent to remind, kindly, the people who still owe us for a sent invoice, and show who still owes on the Who still owes page." },
   { label: "Explain the real shop", prompt: "Open the Real shop: October page. Using its tables (Real shop: ad groups, Real shop: payments), explain in three sentences which ad group the ad account overrated: its share of chats against its share of the money kept. Quote the numbers exactly and say the shop was paid by bank transfer." },
+  { label: "Show only the free guide", prompt: "Filter the Ads vs PayPal page to the free guide, then tell me in two lines what PayPal confirms for it against what the ad report claims." },
   { label: "Check against PayPal", prompt: "Check the webhook ledger against PayPal's own transaction history and tell me if anything is missing." },
 ];
 
@@ -25,6 +29,7 @@ nothing is sent here: each draft waits in Approvals, and only after the shop own
 check_paypal_ledger compares the webhook ledger with PayPal's Transaction Search.
 For budget questions (which ads to cut, keep or grow), delegate to the budget agent; it checks its numbers in code.
 For invoices that were sent and not paid, delegate to the nudge agent: it sends friendly PayPal reminders within code limits.
+To show one ad (or one shop ad group) across a page, call filter_page_to_ad; to build a new view, use the blank "Your page".
 The tables "Real shop: ad groups" and "Real shop: payments" are a real Vietnamese gift shop's October book (VND, paid by bank transfer, not PayPal): the same gap between what the ad account counts and the money kept. Say so whenever you use them.
 Answer the owner briefly: at most six short lines (for budgets: Grow, Keep, Cut, then one line on what the evidence gate decided). Never pass on widget health-check notes or layout chatter.`;
 
@@ -110,6 +115,22 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           const d = await post("/api/agent/chase", {}, ctx.signal);
           onNudge?.(d);
           return ctx.success(`${d.reminded.length} reminder(s) sent.`, { reminded: d.reminded.map((r) => ({ invoice: r.id, note: r.note })), chase_agent_summary: d.summary, waiting_before: d.eligible });
+        },
+      }),
+      api.defineAiTool({
+        name: "filter_page_to_ad",
+        description: "Filter the report page to one ad (or, on the Real shop page, one ad group), the same cross-filter a click on that ad in the custom widget applies. Pass the ad key (free_guide, trial_video, parent_carousel, holiday_static) or the group letter (A, B, C); pass clear: true to remove the filter.",
+        params: (s) => s.object({ ad: s.string({ description: "Ad key or shop group letter." }).optional(), clear: s.boolean().optional() }),
+        execute: async (args, ctx) => {
+          const studio = typeof window !== "undefined" ? window.__studio : null;
+          if (!studio) return ctx.success("The report is not open.", { applied: false });
+          const st = studio.getState(), shop = /^[ABC]$/.test(String(args.ad || "").toUpperCase());
+          const pageId = shop ? "shop" : "overview", widgetId = shop ? "gap" : "claim", field = shop ? "shopGroups.name" : "ads.name";
+          const SHOP = { A: "A · Attention video", B: "B · Customer reviews", C: "C · Personalised for an occasion" };
+          const value = shop ? SHOP[String(args.ad).toUpperCase()] : adName(String(args.ad || ""));
+          const pages = st.pages.map((pg) => pg.id !== pageId ? pg : { ...pg, crossFilter: args.clear ? { values: {} } : { values: { [widgetId]: [{ type: "value", field: { id: field }, group: 0, values: [value] }] } } });
+          studio.setState({ ...st, pages, selectedPageId: pageId });
+          return ctx.success(args.clear ? "Filter cleared." : `The ${pageId === "shop" ? "Real shop" : "Ads vs PayPal"} page now shows only ${value}.`, { applied: true, page: pageId, value: args.clear ? null : value });
         },
       }),
       api.defineAiTool({

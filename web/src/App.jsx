@@ -129,6 +129,8 @@ export default function App({ first = null }) {
     }).catch(() => {});
   }, []);
   // webhooks first; this asks PayPal about sent invoices too, since the sandbox does not always emit INVOICING.INVOICE.PAID
+  // a custom Studio widget that acted (the Nudge button) asks for fresh invoices, so the board shows the new reminders
+  useEffect(() => { const on = () => loadInvoices(); addEventListener("paid-signal:refresh", on); return () => removeEventListener("paid-signal:refresh", on); }, [loadInvoices]);
   const syncInvoices = useCallback(async () => { setSyncNote(""); try { const d = await api("/api/invoices/sync", {}); if (d.paid && csvRef.current) load(csvRef.current); } catch (e) { setSyncNote(e.message); } loadInvoices(); }, [load, loadInvoices]);
   useEffect(() => { syncInvoices(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -176,6 +178,7 @@ export default function App({ first = null }) {
     if (Object.keys(by).length) setInvoices((cur) => cur.map((i) => (by[i.id] ? { ...i, reminded_at: at, reminder: { subject: by[i.id].subject, note: by[i.id].note } } : i)));
   }, []);
   const [studioPage, setStudioPage] = useState("overview");
+  const [layoutNote, setLayoutNote] = useState("");
   const [allPays, setAllPays] = useState(false);
   const [allInv, setAllInv] = useState(false);
   const [allAct, setAllAct] = useState(false);
@@ -513,14 +516,16 @@ export default function App({ first = null }) {
 
         <section id="studio" className="card studio-card" ref={studioBox} aria-label="AG Studio">
           <div className="card-head">
-            <div><h2>{view === "report" ? "Report · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2><p className="muted">Five custom widgets, a real shop's book, cross-filters, Claude in the assistant.</p></div>
+            <div><h2>{view === "report" ? "Report · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2><p className="muted">Five custom widgets, a real shop's book, cross-filters, Claude in the assistant.{layoutNote ? ` ${layoutNote}.` : ""}</p></div>
             <div className="row">
               {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {myDecisionCount > 0 && <span className="count">{myDecisionCount}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
+              <button className="btn" onClick={() => setLayoutNote(studio.current?.saveLayout() ? "Saved in this browser" : "Could not save")}>Save layout</button>
+              <button className="btn" onClick={() => { studio.current?.resetLayout(); setLayoutNote("Back to the default report"); }}>Reset</button>
               <button className="btn dark" onClick={openAssistant}>Open the Studio assistant</button>
             </div>
           </div>
           <div className="studio-pages" role="tablist" aria-label="Report pages">
-            {[["overview", "Ads vs PayPal"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["shop", "Real shop: October"]].map(([id, label]) => (
+            {[["overview", "Ads vs PayPal"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["shop", "Real shop: October"], ["mine", "Your page"]].map(([id, label]) => (
               <button key={id} role="tab" aria-selected={studioPage === id} className={studioPage === id ? "on" : ""} onClick={() => { setStudioPage(id); studio.current?.selectPage(id); }}>{label}</button>
             ))}
           </div>

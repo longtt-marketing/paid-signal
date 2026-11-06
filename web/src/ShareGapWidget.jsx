@@ -1,11 +1,14 @@
 // Custom AG Studio widget: each ad's share of what the ad report counts next to its share of the money kept.
 // Shares are worked out here from the two sums Studio returns, so page filters and cross-filters apply as usual.
 import { useEffect, useState } from "react";
+import { widgetFormat, withSection } from "./widgetForm.js";
 
 const pick = (row, field, i) => row[field?.key] ?? row[field?.id] ?? Object.values(row)[i];
 const pct = (x) => `${(x * 100).toFixed(1)}%`;
 
-export function ShareGapWidget({ dataMapping, widgetApi, context }) {
+export function ShareGapWidget({ dataMapping, format, widgetApi, context }) {
+  // flag a row when the ad report gives it this many points more than its share of the money (set in the edit panel)
+  const flagAt = Number(format?.style?.flagPoints ?? 25);
   const [rows, setRows] = useState([]);
   const cat = dataMapping?.category?.[0], reported = dataMapping?.reported?.[0], money = dataMapping?.money?.[0];
 
@@ -36,7 +39,7 @@ export function ShareGapWidget({ dataMapping, widgetApi, context }) {
             <i className="claim-claimed" style={{ width: `${r.a * 100}%` }} />
             <i className="claim-confirmed" style={{ width: `${Math.max(0.8, r.b * 100)}%` }} />
           </div>
-          <span className={`claim-v${r.b < r.a / 2 ? " gap" : ""}`}>{pct(r.a)} → {pct(r.b)}</span>
+          <span className={`claim-v${(r.a - r.b) * 100 > flagAt ? " gap" : ""}`}>{pct(r.a)} → {pct(r.b)}</span>
         </div>
       ))}
       <div className="claim-key"><span><i className="claim-claimed" /> share of what the ad report counts</span><span><i className="claim-confirmed" /> share of the money kept</span></div>
@@ -53,7 +56,9 @@ export const shareGapWidgetDefinition = {
     reported: { type: "field", supportedRoles: ["numeric"], requires: { per: "dataMapping.category", cardinality: "one" }, required: true, aiDescription: "What the ad report counts, e.g. leads or chats." },
     money: { type: "field", supportedRoles: ["numeric"], requires: { per: "dataMapping.category", cardinality: "one" }, required: true, aiDescription: "Money kept after refunds, from payments." },
   },
-  form: (params) => params.createDefaults({ dataMappingItems: [{ key: "category", label: "Ad" }, { key: "reported", label: "Counted by the ad report" }, { key: "money", label: "Money kept" }] }),
+  form: (params) => withSection(params.createDefaults({ dataMappingItems: [{ key: "category", label: "Ad" }, { key: "reported", label: "Counted by the ad report" }, { key: "money", label: "Money kept" }] }),
+    { key: "flag", label: "Overrated ads", items: [{ type: "number", id: "format.style.flagPoints", label: "Flag when the report's share is ahead by more than (points)", defaultValue: 25, min: 0, max: 100, step: 5 }] }),
+  formatShape: widgetFormat((s) => s.object({ flagPoints: s.number({ description: "Flag a row in amber when its share of what the ad report counts exceeds its share of the money kept by more than this many percentage points. Default 25." }).optional() })),
   comp: ShareGapWidget,
   featureConfig: { crossFilter: { supportsHighlight: true } },
   ai: { label: "Reported share vs money share", description: "Each ad or ad group: its share of what the ad report counts against its share of the money kept; clicking one filters the page to it.", usage: "Map category to the ad or group name, reported to leads or chats, money to money kept." },

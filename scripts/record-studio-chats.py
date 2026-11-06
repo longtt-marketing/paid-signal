@@ -37,6 +37,7 @@ def record(pw, label):
     # the panel opens on the newest saved thread: start a fresh one so the run is recorded on its own
     pg.evaluate("() => { const n = [...document.querySelectorAll('#studio button')].find((x) => /^New( chat)?$/.test(x.textContent.trim())); if (n) n.click(); }")
     pg.wait_for_timeout(2000)
+    pg.evaluate("() => { window.__psRecordTurns = {}; }")  # the adapter keeps every Claude reply, keyed by agent, for replay
     ok = pg.evaluate("(l) => { const b = [...document.querySelectorAll('#studio button')].find((x) => x.textContent.trim() === l); if (b) b.click(); return !!b; }", label)
     if not ok: raise SystemExit(f"starter not found: {label}")
     start, last, still = time.time(), "", 0
@@ -47,11 +48,14 @@ def record(pw, label):
         ended = bool(msgs) and msgs[-1].get("role") == "assistant" and any(p.get("type") == "text" for p in msgs[-1].get("parts", []))
         still = still + 1 if cur == last else 0; last = cur
         if ended and still >= 4: break
+    turns = pg.evaluate("() => JSON.stringify(window.__psRecordTurns || {})")
     b.close()
+    if label == "Review ad budgets":  # the budget run is also replayed through Studio's own agent loop (web/src/replay-budget.json)
+        (OUT.parent / "replay-budget.json").write_text(json.dumps({"recorded": date.today().isoformat(), "turns": json.loads(turns)}, ensure_ascii=False), "utf8")
     t = slim(json.loads(last))
     t["summary"]["title"] = TITLES.get(label, label)
     t["messages"].append({"id": f"note-{t['summary']['threadId']}", "role": "assistant", "createdAt": len(t["messages"]),
-        "parts": [{"type": "text", "text": f"_Recorded from the live app on {date.today().isoformat()}; opening it calls no model. Anything it added to the report is not saved with it: ask again to watch it happen live._"}]})
+        "parts": [{"type": "text", "text": f"_Recorded from the live app on {date.today().isoformat()}; opening it calls no model." + (" To watch Studio carry it out again, chart included, pick Replay a budget run (no model call)._" if label == "Review ad budgets" else " Ask again to watch it happen live._")}]})
     return t
 
 

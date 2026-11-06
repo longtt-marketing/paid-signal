@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**AI agents run the money side of a sale. Every money movement is pinned to PayPal's records and checked in code.**
+**The ad report says the free guide wins (31 leads). PayPal says the testimonial ad makes the money (4 paid orders against 1). Paid Signal's AI agents act only on what PayPal confirms, and every money movement is checked in code.**
 
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
@@ -55,6 +55,8 @@ carries no ad, and what the budget rule allows; nothing is uploaded. **Try it wi
 
 ## Judge it
 
+**In 60 seconds, no login:** open the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge), press **Verify with PayPal** (every payment in the ledger read back from PayPal now), then [try to trick Claude](https://paid-signal.thelongmarketing.workers.dev/judge#trick), then open the [AG Studio report](https://paid-signal.thelongmarketing.workers.dev/#report) and click an ad to filter the page.
+
 No login is needed to look around; paying needs the sandbox buyer from the Devpost testing notes.
 
 1. **[Judge path](https://paid-signal.thelongmarketing.workers.dev/judge)**, three cards at the top:
@@ -63,7 +65,7 @@ No login is needed to look around; paying needs the sandbox buyer from the Devpo
    - **A real shop's book**: the gift shop's published book run through the same ledger code (`node scripts/eval-shop-replay.mjs`).
    Below them: the refund agent and the two-buyer test, the commission agent paying the creator through Payouts, the money trail of one payment.
 2. **[Dashboard](https://paid-signal.thelongmarketing.workers.dev)**: 62 leads against 9 PayPal-confirmed paid orders; **Ask the revenue agent**, **Approve** a draft (send agent), **Chase unpaid** (chase agent).
-3. **Report · AG Studio** tab (`/#report`): four custom widgets with cross-filters; open the Studio assistant and choose **Review ad budgets** (a custom Studio agent on Claude submits through the evidence gate) or **Nudge who still owes**.
+3. **Report · AG Studio** tab (`/#report`): five custom widgets (a click on an ad filters the page), a page on the real shop's book, and the Studio assistant: **Replay a budget run** (Studio carries out a recorded run, no model call), **Review ad budgets** (a custom Studio agent on Claude submits through the evidence gate) or **Nudge who still owes**. How it is built: [docs/AG-STUDIO.md](docs/AG-STUDIO.md).
 4. **[Proof](https://paid-signal.thelongmarketing.workers.dev/proof)**: held-out evals (revenue agent 24 of 24 bookings, 20 of 20 not-ready leads, 0 of 16 injections invoiced), the evidence gate under attack (11 kinds of planted error, 100 of each: all caught), the refund-agent eval, the shop replay, live PayPal and Meta checks, and a budget simulation (run on the 30 Oct ledger of 6 paid orders: $1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs).
 5. **[Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit)** in the browser (Ads Manager export plus PayPal activity, or a bank-transfer shop's own order book, payments and refunds; *Load the gift shop's book* runs the published one), and any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
 
@@ -128,8 +130,11 @@ Six Claude agents, each with its own tools checked against a JSON Schema; code o
 
 ## AG Studio
 
+How it is built, file by file: [docs/AG-STUDIO.md](docs/AG-STUDIO.md).
+
 `web/` is a React app on AG Studio: data sources for ads and PayPal captures joined on the ad key, calculated measures
-(cost per paid order, paid revenue per ad dollar), a themed report, and four custom widgets, **Claimed vs confirmed**
+(cost per paid order, paid revenue per ad dollar), a themed report, and five custom widgets (the fifth, **Reported share vs
+money share**, is in `web/src/ShareGapWidget.jsx`), **Claimed vs confirmed**
 (`web/src/ClaimWidget.jsx`), a **payment timeline** (`web/src/TimelineWidget.jsx`: paid, partly refunded and refunded
 payments per ad), **leads, PayPal invoices and paid orders per ad** (`web/src/FunnelWidget.jsx`) and **Who still owes**
 (`web/src/OwesWidget.jsx`: every sent invoice, how long it has waited and the chase agent's last nudge), that read through

@@ -24,6 +24,16 @@ export function toMessages(items) {
   return out;
 }
 
+// Replay: a recorded run is played back turn by turn through Studio's own agent loop, so Studio really executes the
+// recorded tool calls (the page agent adds the chart) while no model is called. Turns are keyed by the agent (a hash of
+// its instructions) and taken in order. Recording fills window.__psRecordTurns the same way (scripts/record-studio-chats.py).
+import REPLAY from "./replay-budget.json";
+export const REPLAY_PROMPT = "Replay the recorded budget run";
+export const HAS_REPLAY = Object.keys(REPLAY.turns || {}).length > 0;
+const hash = (s) => { let h = 5381; for (const ch of String(s)) h = ((h << 5) + h + ch.charCodeAt(0)) | 0; return (h >>> 0).toString(36); };
+const firstUser = (items) => text((items || []).find((it) => it.type === "message" && it.kind === "input")?.content);
+let used = {}, replaying = false;
+
 const toolChoice = (c) => (!c || c === "auto" ? undefined : c === "none" ? { type: "none" } : c === "required" ? { type: "any" } : { type: "tool", name: c.name });
 
 export function claudeAdapter({ endpoint = "/api/ai/turn", model = "claude-sonnet-5-5" } = {}) {
@@ -44,9 +54,24 @@ export function claudeAdapter({ endpoint = "/api/ai/turn", model = "claude-sonne
           tools: (request.tools || []).filter((t) => t.kind !== "provided").map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters || { type: "object", properties: {} } })),
           tool_choice: toolChoice(request.toolChoice),
         };
-        const res = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: options?.signal });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error?.message || data.error || `Claude proxy HTTP ${res.status}`);
+        // the agent, by the opening of its instructions (the rest carries live page state that differs between runs)
+        const key = hash(String(request.instructions || "").slice(0, 160));
+        const items = request.input || [];
+        if (firstUser(items).startsWith(REPLAY_PROMPT) && !items.some((it) => it.kind === "output")) { used = {}; replaying = true; }
+        let data;
+        if (replaying && REPLAY.turns?.[key] && (used[key] || 0) < REPLAY.turns[key].length) {
+          // the recorded reply for this agent's next turn; a short pause so the run reads at a human pace
+          const n = used[key] = (used[key] || 0) + 1, list = REPLAY.turns[key];
+          data = list[n - 1];
+          await new Promise((r) => setTimeout(r, 700));
+          // the lead's last recorded turn (no tool call) ends the replay
+          if (firstUser(items).startsWith(REPLAY_PROMPT) && !(data.content || []).some((b) => b.type === "tool_use")) replaying = false;
+        } else {
+          const res = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: options?.signal });
+          data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error?.message || data.error || `Claude proxy HTTP ${res.status}`);
+          if (typeof window !== "undefined" && window.__psRecordTurns) (window.__psRecordTurns[key] ||= []).push(data);
+        }
         const output = [];
         for (const [i, b] of (data.content || []).entries()) {
           if (b.type === "text" && b.text) {

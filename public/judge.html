@@ -44,7 +44,8 @@ details.det ul{margin:6px 0 0;padding-left:18px}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 /* first screen */
-.intro{display:flex;flex-direction:column;gap:14px;max-width:720px}
+.intro{display:flex;flex-direction:column;gap:14px;max-width:900px}
+.intro h1{font-size:clamp(28px,3.6vw,44px);line-height:1.1;letter-spacing:-.02em}
 .intro .ps-lead{max-width:none}
 .four{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:-56px}
 .four a{display:flex;flex-direction:column;gap:10px;min-height:172px;text-decoration:none;color:var(--ink)}
@@ -94,8 +95,8 @@ details.det ul{margin:6px 0 0;padding-left:18px}
 <header class="ps-top"><nav aria-label="Main"><a class="ps-brand" href="/"><span class="ps-mark"><i></i></span>Paid Signal</a><div class="ps-links"><a href="/">Dashboard</a><a href="/judge" aria-current="page">Judge path</a><a href="/audit">Audit</a><a href="/proof">Proof</a><a href="https://github.com/longtt-marketing/paid-signal">Code</a></div><span class="ps-live">PayPal sandbox live</span></nav></header>
 <main class="ps-main jp">
   <section class="intro">
-    <h1>Pay $49. See what it changes. Undo it.</h1>
-    <p class="ps-lead">Real PayPal sandbox calls, start to finish. Or open the <a href="/#report">AG Studio report</a> first.</p>
+    <h1>The ad report says the free guide wins. PayPal says the testimonial ad makes the money.</h1>
+    <p class="ps-lead">Paid Signal's AI agents act only on what PayPal confirms. Pay $49, see what it changes, undo it: real PayPal sandbox calls. Or <a href="#customer" id="trick-link">try to trick Claude</a>, or open the <a href="/#report">AG Studio report</a>.</p>
   </section>
   <nav class="four" aria-label="Four things to try">
     <a class="card dark" href="#customer"><span class="k">1 · Be the customer</span><b>Claude invoices you. You pay.</b><span>Start →</span></a>
@@ -103,6 +104,14 @@ details.det ul{margin:6px 0 0;padding-left:18px}
     <a class="card" href="#refund"><span class="k">3 · Money back</span><span class="big">$49</span><small>double payment refunded</small></a>
     <a class="card" href="#gap"><span class="k">4 · A real shop</span><span class="big"><span class="was">69%</span> → 19%</span><small class="hook" id="hook"><!--hook:start-->The ad with 69.4% of the chats brought 19.3% of the money.<!--hook:end--></small></a>
   </nav>
+
+  <section class="sec" id="verify">
+    <div class="card" style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px">
+      <div style="display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 320px"><span class="k">Check every number</span><b style="font-size:18px" id="verify-head">Every payment in the ledger, read back from PayPal now.</b><span class="ps-note" id="verify-note">Invoices through Invoicing v2, captures through the server SDK; amount and refund state compared.</span></div>
+      <button class="btn go" type="button" id="verify-run">Verify with PayPal</button>
+    </div>
+    <div id="verify-out"></div>
+  </section>
 
   <section class="sec" id="customer">
     <div class="hd"><span class="no go">1</span><h2>Be the customer</h2></div>

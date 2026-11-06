@@ -36,6 +36,9 @@ export const toolDisplay = {
     label: (p) => ({ text: p.status === "done" ? "Chase agent sent kind PayPal reminders" : "Chase agent is reading the unpaid invoices", pill: data(p).reminded ? `${data(p).reminded.length} sent` : undefined }),
     detail: body((d) => (d.reminded || []).length ? d.reminded.map((r) => [r.invoice, `“${r.note}”`]) : [["No reminder sent", d.chase_agent_summary || "nobody needed one"]]),
   },
+  filter_page_to_ad: {
+    label: (p) => ({ text: p.args?.clear ? "Cleared the page filter" : "Filtered the page to one ad", pill: data(p).value || undefined }),
+  },
   check_paypal_ledger: {
     label: (p) => ({ text: "Checked the ledger against PayPal's Transaction Search", pill: data(p).matched ? `${data(p).matched.length} of ${data(p).ledger_count} matched` : undefined }),
     detail: body((d) => d.status !== "ok" ? [["PayPal", d.reason || "unavailable"]] : [

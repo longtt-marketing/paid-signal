@@ -1,10 +1,13 @@
 // Custom AG Studio widget: for each ad, the leads the ad platform claims next to the paid orders PayPal confirms.
 // It reads its data through Studio's widget API, so page filters and cross-filters apply to it like any built-in widget.
 import { useEffect, useState } from "react";
+import { widgetFormat, withSection } from "./widgetForm.js";
 
 const pick = (row, field, i) => row[field?.key] ?? row[field?.id] ?? Object.values(row)[i];
 
-export function ClaimWidget({ dataMapping, widgetApi, context }) {
+export function ClaimWidget({ dataMapping, format, widgetApi, context }) {
+  // the budget rule's floor: an ad below this many paid orders is marked (set in the edit panel; code's rule is 3)
+  const floor = Number(format?.style?.floor ?? 3);
   const [rows, setRows] = useState([]);
   const cat = dataMapping?.category?.[0], claimed = dataMapping?.claimed?.[0], confirmed = dataMapping?.confirmed?.[0];
 
@@ -34,7 +37,7 @@ export function ClaimWidget({ dataMapping, widgetApi, context }) {
             <i className="claim-claimed" style={{ width: `${(r.claimed / max) * 100}%` }} />
             <i className={r.confirmed ? "claim-confirmed" : "claim-none"} style={{ width: `${Math.max(r.confirmed ? 1.5 : 0.8, (r.confirmed / max) * 100)}%` }} />
           </div>
-          <span className={`claim-v${r.confirmed ? "" : " gap"}`}>{r.claimed} → {r.confirmed}</span>
+          <span className={`claim-v${r.confirmed < floor ? " gap" : ""}`} title={r.confirmed < floor ? `Below ${floor} paid orders: the budget rule will not move it` : ""}>{r.claimed} → {r.confirmed}</span>
         </div>
       ))}
       <div className="claim-key"><span><i className="claim-claimed" /> leads the ad reports</span><span><i className="claim-confirmed" /> paid orders PayPal confirms</span></div>
@@ -51,7 +54,9 @@ export const claimWidgetDefinition = {
     claimed: { type: "field", supportedRoles: ["numeric"], requires: { per: "dataMapping.category", cardinality: "one" }, required: true, aiDescription: "What the ad platform reports, e.g. leads." },
     confirmed: { type: "field", supportedRoles: ["numeric"], requires: { per: "dataMapping.category", cardinality: "one" }, required: true, aiDescription: "What PayPal confirms, e.g. paid orders." },
   },
-  form: (params) => params.createDefaults({ dataMappingItems: [{ key: "category", label: "Ad" }, { key: "claimed", label: "Claimed by the ad" }, { key: "confirmed", label: "Confirmed by PayPal" }] }),
+  form: (params) => withSection(params.createDefaults({ dataMappingItems: [{ key: "category", label: "Ad" }, { key: "claimed", label: "Claimed by the ad" }, { key: "confirmed", label: "Confirmed by PayPal" }] }),
+    { key: "floor", label: "Budget floor", items: [{ type: "number", id: "format.style.floor", label: "Mark ads below this many paid orders", defaultValue: 3, min: 0, max: 20, step: 1 }] }),
+  formatShape: widgetFormat((s) => s.object({ floor: s.number({ description: "Ads with fewer PayPal-confirmed paid orders than this are marked in amber: the budget rule in code does not move them. Default 3." }).optional() })),
   comp: ClaimWidget,
   featureConfig: { crossFilter: { supportsHighlight: true } },
   ai: { label: "Claimed vs confirmed", description: "Per ad, the leads the ad platform claims next to the paid orders PayPal confirms; clicking an ad filters the page to it.", usage: "Map category to ads.name, claimed to the sum of ads.leads, confirmed to the sum of ads.payers." },

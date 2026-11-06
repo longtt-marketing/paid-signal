@@ -1,6 +1,6 @@
 ## Paid Signal in brief
 
-**The ad report credits the free guide with 31 leads. PayPal confirms one paid order. Paid Signal makes AI agents act on the second number.**
+**The ad report says the free guide wins (31 leads). PayPal says the testimonial ad makes the money (4 paid orders against 1). Paid Signal's AI agents act only on what PayPal confirms.**
 
 **One loop, on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) (sandbox, a few minutes):**
 1. **Claude says no.** The owner asks to raise the free guide; with 1 paid order, Claude refuses, and the rule in code refuses it too.
@@ -9,7 +9,7 @@
 
 **Real data:** in a Vietnamese gift shop, the ad with 69% of the chats brought 19% of the money; its published book reruns through the same ledger code to the same 705 orders ([see it run](https://paid-signal.thelongmarketing.workers.dev/audit#shop)).
 
-**Also:** double payments refunded, the ad's creator paid per paid order, Meta told only what PayPal confirms, /audit for your own files, and AG Studio where the agents act on PayPal. A person approves every money move; code holds every amount.
+**Also:** double payments refunded, the ad's creator paid per paid order, Meta told only what PayPal confirms, /audit for your own files, AG Studio where the agents act on PayPal, and a Verify with PayPal button that reads every ledger payment back from PayPal at click time. A person approves every money move; code holds every amount.
 
 **Links, no login:** [Judge path](https://paid-signal.thelongmarketing.workers.dev/judge) · [AG Studio report](https://paid-signal.thelongmarketing.workers.dev/#report) · [Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit) · [Dashboard](https://paid-signal.thelongmarketing.workers.dev) · [Proof](https://paid-signal.thelongmarketing.workers.dev/proof) · [Code](https://github.com/longtt-marketing/paid-signal)
 
@@ -29,7 +29,12 @@ Agent Toolkit (`create_invoice`, `get_invoice`, `send_invoice`, `send_invoice_re
 
 ## AG Grid: AG Studio as the agent workspace
 
-Studio's agents here act on PayPal, not only read: from Studio's assistant the revenue agent drafts real PayPal sandbox invoices (each waits for approval) and the nudge agent sends PayPal reminders within code limits. Two custom agents (budget, nudge) run on Studio's Agent Framework with Claude through a custom `AgLlmAdapter`, delegate to Studio's page agent, and the budget agent's recommendation passes the same evidence gate as the app. Five custom widgets (claimed vs confirmed, payment timeline, leads to invoices to paid orders, who still owes, reported share vs money share); a click on an ad in the first or the last filters the whole page, as Studio's own charts do, five report pages, a ledger-paper theme drawn for the report (warm sheets, green ink for money kept) and a phone layout. Every Paid Signal tool has its own chat card, so a judge sees the invoices drafted, the reminders sent and what the gate decided. The assistant opens on three recorded real runs (the budget agent through the gate, the nudge agent's PayPal reminders, the real shop explained from its tables) that replay without calling a model, and opening the budget run puts the chart it asked for back on the report; any judge can run them live again. A test checks that Studio's totals equal the ledger's and the shop book's. One page runs on the real gift shop's book (two more tables: its three ad groups and 735 payments), so Studio shows the same gap on real data. Dashboard → Report · AG Studio → Studio assistant.
+- **Agents that act on PayPal:** from Studio's assistant the revenue agent drafts real PayPal sandbox invoices (each waits for approval) and the nudge agent sends PayPal reminders within code limits.
+- **Studio Agent Framework:** Claude through a custom `AgLlmAdapter`; two custom agents (budget, nudge) delegate to Studio's page agent, and the budget agent's answer passes the same evidence gate as the app. Every Paid Signal tool has its own chat card.
+- **Widgets and report:** five custom widgets, two with their own settings in Studio's edit panel; a click on an ad filters the whole page, and the Who still owes widget's Nudge button sends PayPal reminders after the owner's click. Five pages, one on the real gift shop's book (its three ad groups and 735 payments), a ledger-paper theme and a phone layout. A test checks that Studio's totals equal the ledger's and the shop book's.
+- **Recorded runs:** the assistant opens on three real runs (budget, nudge, the real shop), and Replay a budget run plays one back through Studio's own agent loop, so Studio carries out the recorded tool calls (the page agent adds the chart) with no model call. How it is built: docs/AG-STUDIO.md.
+
+Open it first: [AG Studio report](https://paid-signal.thelongmarketing.workers.dev/#report).
 
 ## How we tested it
 

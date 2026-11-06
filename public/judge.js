@@ -33,6 +33,25 @@ for (const b of document.querySelectorAll("[data-example]")) b.onclick = () => {
   box("try-message").value = tryExamples[b.dataset.example];
   for (const x of document.querySelectorAll("[data-example]")) x.setAttribute("aria-pressed", String(x === b));
 };
+// "try to trick Claude" (intro link, or /judge#trick): load the planted-instruction message, ready to send
+const trick = () => { document.querySelector('[data-example="injection"]')?.click(); box("try-message").focus(); };
+document.getElementById("trick-link")?.addEventListener("click", () => setTimeout(trick, 60));
+if (location.hash === "#trick") { box("customer")?.scrollIntoView(); trick(); }
+// Verify with PayPal: the whole evidence ledger read back from PayPal at click time, N of N
+box("verify-run").onclick = async () => {
+  const b = box("verify-run"), head = box("verify-head"), out = box("verify-out");
+  b.disabled = true; b.textContent = "Reading PayPal…";
+  try {
+    const d = await getJSON("/api/verify");
+    if (d.error) throw new Error(d.error);
+    head.textContent = `${d.matched} of ${d.total} payments match PayPal.`;
+    box("verify-note").textContent = `Read from PayPal ${when(d.checked_at)}${d.cached ? " (cached, refreshed every 10 minutes)" : ""}.`;
+    out.replaceChildren(details("Each payment, as PayPal reports it", [$("div", { className: "rows" }, d.items.map((i) =>
+      row(`${i.ad ? name(i.ad) : "No ad"} · ${i.kind}`, `${i.id} · $${Number(i.amount).toFixed(2)} · ledger ${i.ledger}, PayPal ${i.paypal || i.error || "?"}`, chip(i.match ? "Match" : "Differs", i.match ? "ok" : "no2"))))]));
+    b.textContent = "Verify again";
+  } catch (e) { head.textContent = `PayPal could not be read just now: ${e.message}`; b.textContent = "Verify with PayPal"; }
+  b.disabled = false;
+};
 box("try-run").onclick = async () => {
   const run = box("try-run"), result = box("try-result");
   run.disabled = true; run.textContent = "Claude is reading…";

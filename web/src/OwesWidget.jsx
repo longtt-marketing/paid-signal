@@ -34,6 +34,20 @@ export function OwesWidget({ dataMapping, widgetApi, context }) {
   }, [who, status, amount, days, nudge, widgetApi, context?.dataVersion, tick]);
 
   const out = rows.filter((r) => r.status !== "Paid"), paid = rows.filter((r) => r.status === "Paid");
+  // the widget acts too: the owner's click is the approval, then the chase agent decides who a kind PayPal reminder would
+  // help and sends it through the Agent Toolkit; code allows only unpaid invoices, at most three a run
+  const [busy, setBusy] = useState(false), [said, setSaid] = useState("");
+  const nudgeNow = async () => {
+    if (!window.confirm("Send kind PayPal reminders now? The chase agent picks who to remind (at most three, unpaid invoices only).")) return;
+    setBusy(true); setSaid("The chase agent is reading the unpaid invoices from PayPal…");
+    try {
+      const r = await fetch("/api/agent/chase", { method: "POST" }), d = await r.json();
+      if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+      setSaid(d.reminded?.length ? `Sent ${d.reminded.length} PayPal reminder${d.reminded.length === 1 ? "" : "s"}: ${d.reminded.map((x) => x.id).join(", ")}.` : d.summary || "Nobody needed a reminder.");
+      dispatchEvent(new Event("paid-signal:refresh"));
+    } catch (e) { setSaid(`Not sent: ${e.message}`); }
+    setBusy(false);
+  };
   return (
     <div className="owes">
       <div className="owes-score">
@@ -41,6 +55,7 @@ export function OwesWidget({ dataMapping, widgetApi, context }) {
         <div><b className="ok">{usd(paid.reduce((n, r) => n + r.amount, 0))}</b><span>paid, {paid.length} invoice{paid.length === 1 ? "" : "s"}</span></div>
         <div><b className="soft">{out.filter((r) => r.status === "Nudged").length}</b><span>nudged kindly</span></div>
       </div>
+      {out.length > 0 && <div className="owes-act"><button type="button" onClick={nudgeNow} disabled={busy}>{busy ? "Nudging…" : "Nudge who is waiting"}</button><span>{said}</span></div>}
       <ol className="owes-list">
         {rows.map((r, i) => (
           <li key={`${r.who}-${i}`} className={`owes-${r.status.toLowerCase()}`}>

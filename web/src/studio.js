@@ -213,6 +213,8 @@ export const initialReport = {
       },
       widgetLayout: { chats: at(0, 0, 6, 7), kept: at(6, 0, 6, 7), money: at(12, 0, 6, 7), spend: at(18, 0, 6, 7), gap: at(0, 7, 24, 11), groups: at(0, 18, 24, 14), split: at(0, 32, 10, 15), daily: at(10, 32, 14, 15) },
     },
+    // a blank page for the owner, or Studio's agents, to build their own views on the same tables
+    { id: "mine", name: "Your page", widgets: {}, widgetLayout: {} },
   ],
 };
 
@@ -224,23 +226,37 @@ for (const pg of initialReport.pages) for (const w of Object.values(pg.widgets))
 const v = (name) => `var(--${name})`;
 // The "Ledger" look (Claude Design canvas https://claude.ai/artifact/BW1Dmbn5qtjd9KNfM1UHXP): warm account-book paper,
 // cream sheets with a warm rule, green ink for money kept. Only what Studio's theme can set; one family, tabular numbers.
-const L = { canvas: "#EFEBE0", sheet: "#FBFAF6", rule: "#D8D1BF", row: "#E7E1D2", head: "#F2EEE3", ink: "#1B1A17", label: "#6B6455", paid: "#0F7A43", claimed: "#CFC8B6" };
+const L = { canvas: "#ECE6D6", sheet: "#FFFDF7", rule: "#B9AE92", row: "#DDD4BF", head: "#EFE8D6", ink: "#14130F", label: "#5A5242", paid: "#0B6B3A", claimed: "#C4B99D" };
 const rule = (color) => ({ width: 1, color });
+// green ink for money kept, the ruled grey for what the ad report counts, then amber (held), slate, rust, olive, plum, teal, sand, ink
+const PALETTE = ["#0B6B3A", "#C4B99D", "#B7791F", "#3D5A80", "#9C4A2F", "#6B7B2C", "#6E4A7E", "#2F7C78", "#A88B5C", "#14130F"];
 export const theme = studioTheme.withParams({
   fontFamily: v("sans"), fontSize: 14, textColor: L.ink, foregroundColor: L.ink, subtleTextColor: L.label,
   backgroundColor: L.sheet, borderColor: L.rule, accentColor: L.paid, iconColor: L.label, rowHoverColor: L.head,
   studioWrapperBorder: false, studioWrapperBorderRadius: 0, studioWrapperSpacing: 0, studioWrapperBackgroundColor: "transparent",
   studioCanvasBorder: false, studioCanvasBorderRadius: 0, studioCanvasShadow: false, studioCanvasBackgroundColor: "transparent",
   studioCanvasPadding: 16, studioCanvasRowHeight: 18, studioCanvasFontFamily: v("sans"),
-  studioWidgetBackgroundColor: L.sheet, studioWidgetBorder: rule(L.rule), studioWidgetBorderRadius: 6, studioWidgetPadding: 14,
-  studioWidgetTitleFontFamily: v("sans"), studioWidgetTitleFontSize: 15, studioWidgetTitleFontWeight: 600, studioWidgetTitleTextColor: L.ink,
+  studioWidgetBackgroundColor: L.sheet, studioWidgetBorder: rule(L.rule), studioWidgetBorderRadius: 4, studioWidgetPadding: 14, studioValueWidgetFontSize: 36,
+  studioWidgetTitleFontFamily: v("sans"), studioWidgetTitleFontSize: 15, studioWidgetTitleFontWeight: 700, studioWidgetTitleTextColor: L.ink,
   studioWidgetCaptionFontFamily: v("sans"), studioWidgetCaptionFontSize: 13, studioWidgetCaptionTextColor: L.label,
   gridFontFamily: v("sans"), gridFontSize: 14, gridCellTextColor: L.ink, gridHeaderBackgroundColor: L.head, gridHeaderTextColor: L.label,
   gridHeaderFontWeight: 600, gridHeaderFontSize: 12, gridRowHeight: 40, gridRowBorder: rule(L.row), gridHeaderRowBorder: rule(L.rule), gridWrapperBorder: false,
   chartFontFamily: v("sans"), chartTextColor: L.ink, chartSubtleTextColor: L.label, chartAxisLineColor: L.rule, chartGridLineColor: L.row,
   chartPaletteFills1Color: L.paid, chartPaletteStrokes1Color: L.paid, chartPaletteFills2Color: L.claimed, chartPaletteStrokes2Color: L.claimed,
-  // a third and fourth series (the shop's three ad groups, a refunded line) get their own colours instead of Studio's defaults
-  chartPaletteFills3Color: "#b7791f", chartPaletteStrokes3Color: "#b7791f", chartPaletteFills4Color: "#3d5a80", chartPaletteStrokes4Color: "#3d5a80",
+  // ten ledger-ink series colours, so no chart falls back to Studio's defaults
+  ...Object.fromEntries(PALETTE.flatMap((c, i) => [[`chartPaletteFills${i + 1}Color`, c], [`chartPaletteStrokes${i + 1}Color`, c]])),
+  // the rest of Studio in the same ledger look: side panels, the assistant, menus, tooltips, buttons, inputs, toolbars, overlays
+  studioPanelContainerBackgroundColor: L.sheet, studioPanelContainerBorder: rule(L.rule), studioPanelGroupBackgroundColor: L.head, studioPanelGroupTitleBarTextColor: L.ink,
+  studioPanelSectionBorderColor: L.row, studioPanelDividerColor: L.rule, studioPanelDividerActiveColor: L.paid, studioPanelHeaderFontWeight: 700,
+  studioPanelChevronButtonHoverBackgroundColor: L.head, studioPanelChevronButtonHoverColor: L.ink,
+  studioAiPanelInputMessageBackgroundColor: L.head, studioAiPanelButtonHoverBackgroundColor: L.head, studioAiPanelRichTextAccentBackgroundColor: "#E4EFE6",
+  studioToggleButtonActiveBackgroundColor: L.ink, studioToggleButtonActiveBorderColor: L.ink, studioToggleButtonActiveColor: L.sheet,
+  menuBackgroundColor: L.sheet, menuTextColor: L.ink, menuSeparatorColor: L.row,
+  tooltipBackgroundColor: L.ink, tooltipTextColor: L.sheet, tooltipBorder: rule(L.ink),
+  buttonBackgroundColor: L.sheet, buttonTextColor: L.ink, buttonBorder: rule(L.rule), inputBackgroundColor: "#FFFFFF", inputBorder: rule(L.rule),
+  studioWidgetToolbarBackgroundColor: L.sheet, studioWidgetToolbarBorder: rule(L.rule), studioWidgetToolbarButtonColor: L.label, studioWidgetToolbarButtonHoverBackgroundColor: L.head,
+  studioWidgetLoadingOverlayBackgroundColor: "rgba(255,253,247,.7)", studioWidgetNoDataOverlayBackgroundColor: L.sheet,
+  studioCanvasGridLineColor: L.row,
 });
 
 // On a phone the 24-column canvas is narrow: two KPI tiles per row, charts and grids full width, taller rows.
@@ -254,6 +270,7 @@ export const phoneReport = {
       ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), claim: at(0, 14, 24, 16), table: at(0, 30, 24, 20), funnel: at(0, 50, 24, 16) }
       : pg.id === "ledger" ? { path: at(0, 0, 24, 20), ledger: at(0, 20, 24, 24) }
       : pg.id === "owes" ? { board: at(0, 0, 24, 34), list: at(0, 34, 24, 20) }
+      : pg.id === "mine" ? {}
       : pg.id === "shop" ? { chats: at(0, 0, 12, 7), kept: at(12, 0, 12, 7), money: at(0, 7, 12, 7), spend: at(12, 7, 12, 7), gap: at(0, 14, 24, 14), split: at(0, 28, 24, 16), groups: at(0, 44, 24, 18), daily: at(0, 62, 24, 16) }
       : { net: at(0, 0, 12, 7), refunded: at(12, 0, 12, 7), timeline: at(0, 7, 24, 16), list: at(0, 23, 24, 22) },
   })),
