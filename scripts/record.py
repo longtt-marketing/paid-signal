@@ -516,6 +516,9 @@ def studio26(pg):
     mark(pg, "kpis", ".studio [class*='widget'] >> nth=0"); pg.wait_for_timeout(1800)
     gap = pg.locator(".studio .claim.share"); mark(pg, "gap", ".studio .claim.share"); glide(pg, gap.locator(".claim-row").first, click=False); pg.wait_for_timeout(2600)
     glide(pg, gap.locator(".claim-row").nth(1), click=False); pg.wait_for_timeout(2000)
+    glide(pg, gap.locator(".claim-row").nth(2), click=False); pg.wait_for_timeout(4500)  # stay on the real shop while the narration quotes it
+    # the recorded budget run is about the Ads vs PayPal page: go back to it before opening the assistant
+    glide(pg, pg.locator(".studio-pages button", has_text="Ads vs PayPal")); pg.wait_for_timeout(2500)
     btn = pg.locator(".studio-card .btn.dark"); glide(pg, btn); pg.wait_for_timeout(3000)
     mark(pg, "chat", ".studio [class*='ai'] >> nth=0"); pg.wait_for_timeout(5500)
 

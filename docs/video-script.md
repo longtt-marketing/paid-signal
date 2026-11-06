@@ -1,6 +1,6 @@
 # Paid Signal demo video (V25)
 
-Video V26: https://youtu.be/UhxyhjTSxfk (2:42). Narration is synthetic; screens are the live demo after the 5 Nov redesign, recorded at 1920x1080, played faster in places; the AG Studio scene was re-shot on 6 Nov in the ledger theme, and its chat is a recorded run that replays without calling a model. The receipt in scene 04 is a recorded run by the author on 5 Nov (docs/proof/judge-undo-2026-11-05.json). The two-buyer scene uses a simulated refund tool.
+Video V27: https://youtu.be/SLZsHLpGzxw (2:42). Narration is synthetic; screens are the live demo after the 5 Nov redesign, recorded at 1920x1080, played faster in places; the AG Studio scene was re-shot on 6 Nov in the ledger theme, and its chat is a recorded run that replays without calling a model. The receipt in scene 04 is a recorded run by the author on 5 Nov (docs/proof/judge-undo-2026-11-05.json). The two-buyer scene uses a simulated refund tool.
 
 Built with `scripts/record.py` (home23 cust23 impact23 says23 buyers23 money23 trail23 shop23 chart), `scripts/cut-clip.py`, `scripts/film-plan-v23.py` and `scripts/build-film.py`.
 

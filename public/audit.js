@@ -156,6 +156,8 @@ $("shop-sample").onclick = async () => {
   } catch (e) { $("shop-msg").textContent = e.message; }
   button.disabled = false;
 };
+// /audit#shop opens with the published gift shop book already run, so one link shows the gap on real data
+if (location.hash === "#shop") { $("shop-title").scrollIntoView({ block: "start" }); $("shop-sample").click(); }
 function runShopBook(sample) {
   $("shop-msg").textContent = "";
   const orders = parseShopCsv(shopFiles.orders), payments = parseShopCsv(shopFiles.payments), refunds = parseShopCsv(shopFiles.refunds);

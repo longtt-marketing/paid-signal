@@ -13,15 +13,16 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 
 ## Paid Signal in brief
 
-**The ad report credits the free guide with 31 leads. PayPal confirms one paid order for it. Paid Signal makes AI agents act on the second number.**
+**The ad report credits the free guide with 31 leads. PayPal confirms one paid order. Paid Signal makes AI agents act on the second number.**
 
-For shops that close a sale in a chat or a lead form and bill by PayPal invoice (classes, tutors, coaches, small studios), Claude agents invoice the customer through PayPal's Agent Toolkit, refund a double payment, pay the ad's creator per paid order, and recommend ad budget moves only on what PayPal confirms. Code holds every price, recipient, amount and limit; a person approves every invoice, refund, payout and budget recommendation, and reminders stay within code limits.
+**One loop, on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) (sandbox, a few minutes):**
+1. **Claude says no.** The owner asks to raise the free guide; with 1 paid order, Claude refuses, and the rule in code refuses it too.
+2. **You pay.** Ask to book: Claude drafts a real PayPal invoice through the Agent Toolkit. Approve it and pay as the sandbox buyer: the testimonial ad gains your order (its count goes 4 → 5) and the budget rule re-runs.
+3. **Undo.** PayPal refunds it and the count goes back to 4.
 
-**Try it in a few minutes ([judge path](https://paid-signal.thelongmarketing.workers.dev/judge), sandbox, no real money):** ask to book and Claude drafts a real PayPal invoice; approve it and pay it as the sandbox buyer. Then see what your payment changed: the testimonial ad gains your order (its count goes 4 → 5), the budget rule re-runs, and the ad's creator can be paid $5 through PayPal Payouts. Undo refunds it through PayPal and the count goes back to 4.
+**Real data:** in a Vietnamese gift shop, the ad with 69% of the chats brought 19% of the money; its published book reruns through the same ledger code to the same 705 orders ([see it run](https://paid-signal.thelongmarketing.workers.dev/audit#shop)).
 
-**Claude says no:** the owner asks to raise the free guide. With 1 paid order, Claude refuses and recommends the testimonial ad (4 paid orders, $2.73 of paid revenue per $1 of ads); the same raise sent straight to the rule in code is refused too. Type your own request on /judge for a live answer.
-
-**Why it matters:** in a Vietnamese gift shop the author runs Meta ads for, the attention video brought 69% of the chats and 19% of the money kept after refunds. The shop's published book, run through Paid Signal's ledger code, gives the same 705 kept orders as its accountant's workbook and holds its 7 double payments. Split the same October spend by Paid Signal's rule and the shop's own numbers imply about 9% to 18% more revenue after refunds in one month: an estimate, see Limits.
+**Also:** double payments refunded, the ad's creator paid per paid order, Meta told only what PayPal confirms, /audit for your own files, and AG Studio where the agents act on PayPal. A person approves every money move; code holds every amount.
 
 **Links, no login:** [Judge path](https://paid-signal.thelongmarketing.workers.dev/judge) · [Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit) · [Dashboard](https://paid-signal.thelongmarketing.workers.dev) · [Proof](https://paid-signal.thelongmarketing.workers.dev/proof) · [Code](https://github.com/longtt-marketing/paid-signal)
 

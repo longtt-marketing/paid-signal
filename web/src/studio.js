@@ -19,6 +19,8 @@ const csvRows = (text) => {
   const keys = head ? head.split(",") : [];
   return lines.map((l) => Object.fromEntries(l.split(",").map((v, i) => [keys[i], v])));
 };
+// October weeks as labels that sort in order: "W1 · 1-7 Oct" ... "W5 · 29-31 Oct"
+const weekOf = (d) => { const day = Number(d.slice(8, 10)) || 1, w = Math.min(5, Math.ceil(day / 7)), a = (w - 1) * 7 + 1, b = Math.min(31, w * 7); return `W${w} · ${a}-${b} Oct`; };
 /** Two tables from the real shop: its three ad groups (from the ad account and the order book), and every payment in its book. */
 export function shopSources(read, paymentsCsv) {
   // Studio only takes data updates for tables it had from the start: the tables always exist, empty until the files load
@@ -28,7 +30,7 @@ export function shopSources(read, paymentsCsv) {
     back: Math.round(g.roas * 100) / 100, shareNow: Math.round((split[g.id]?.share_now ?? g.share_spend) * 1000) / 10, shareSplit: split[g.id] ? Math.round(split[g.id].share_proposed * 1000) / 10 : null }));
   const names = Object.fromEntries(groups.map((g) => [g.id, g.name]));
   const pays = csvRows(paymentsCsv).map((r) => ({ id: r["Mã giao dịch nội bộ"], order: r["Số đối chiếu"], group: r["Nhóm Ads"], groupName: names[r["Nhóm Ads"]] || r["Nhóm Ads"],
-    kind: r["Loại giao dịch"] === "Thu trùng" ? "Double payment" : "First payment", date: String(r["Ngày thu"] || "").slice(0, 10),
+    kind: r["Loại giao dịch"] === "Thu trùng" ? "Double payment" : "First payment", date: String(r["Ngày thu"] || "").slice(0, 10), week: weekOf(String(r["Ngày thu"] || "").slice(0, 10)),
     gross: Number(r["Số tiền thu"]) || 0, refunded: Number(r["Số tiền hoàn"]) || 0, net: Number(r["Số tiền ròng"]) || 0, kept: Number(r["Số tiền ròng"]) > 0 ? 1 : 0 }))
     .filter((p) => p.id);
   return {
@@ -38,7 +40,7 @@ export function shopSources(read, paymentsCsv) {
           fv("money", "Money kept after refunds"), f("back", "Money kept per 1 of ad spend", "decimalFormat"), f("shareNow", "Share of spend in October, %", "decimalFormat"), f("shareSplit", "Share under Paid Signal's rule, %", "decimalFormat")] },
       { id: "shopPayments", name: "Real shop: payments", description: "Every payment in the shop's published October book: 728 first payments and 7 double payments, each refunded; refunds come off.", data: pays,
         fields: [f("id", "Payment", "textFormat"), f("order", "Order", "textFormat"), f("group", "Group key", "textFormat", true), f("groupName", "Ad group", "textFormat"), f("kind", "Kind", "textFormat"),
-          f("date", "Paid on", "dateFormat"), fv("gross", "Paid"), fv("refunded", "Refunded"), fv("net", "Kept"), f("kept", "Is a kept order", "integerFormat")] },
+          f("date", "Paid on", "dateFormat"), f("week", "Week", "textFormat"), fv("gross", "Paid"), fv("refunded", "Refunded"), fv("net", "Kept"), f("kept", "Is a kept order", "integerFormat")] },
     ],
     relation: { id: "shop-pay-group", source: { tableId: "shopPayments", fieldId: "group" }, target: { tableId: "shopGroups", fieldId: "id" }, type: "many-to-one" },
     expressions: [
@@ -51,7 +53,7 @@ export function shopSources(read, paymentsCsv) {
       { id: "sNow", name: "October, %", format: "decimalFormat", isMeasure: true, expression: sum("shopGroups.shareNow") },
       { id: "sSplit", name: "Paid Signal's rule, %", format: "decimalFormat", isMeasure: true, expression: sum("shopGroups.shareSplit") },
       { id: "sBack", name: "Kept per 1 spent", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("shopGroups.money"), sum("shopGroups.spend")] } },
-      { id: "pKept", name: "Kept per day", format: "currencyFormat", formatOptions: VND, isMeasure: true, expression: sum("shopPayments.net") },
+      { id: "pKept", name: "Kept, VND", format: "currencyFormat", formatOptions: VND, isMeasure: true, expression: sum("shopPayments.net") },
     ],
     dates: pays.map((p) => p.date),
   };
@@ -206,8 +208,8 @@ export const initialReport = {
           format: { title: { enabled: true, text: "Share of spend, %: October vs Paid Signal's rule" }, style: { theme: { common: { legend: { enabled: true } } } } } },
         groups: { type: "grid", dataMapping: { cols: [{ id: "shopGroups.short" }, { id: "sSpendM" }, { id: "sChats" }, { id: "sKept" }, { id: "sMoneyM" }, { id: "sBack" }] },
           sort: [{ field: { id: "sChats" }, direction: "desc" }], format: { title: { enabled: true, text: "Per ad group" }, style: { headerRow: { wrapText: true } } } },
-        daily: { type: "line-chart", dataMapping: { categoryKey: [{ id: "shopPayments.date" }], valueKey: [{ id: "pKept" }], legendKey: [{ id: "shopPayments.groupName" }] },
-          format: { title: { enabled: true, text: "Money kept per day, by ad group" }, style: { theme: { common: { legend: { enabled: true } } } } } },
+        daily: { type: "line-chart", dataMapping: { categoryKey: [{ id: "shopPayments.week" }], valueKey: [{ id: "pKept" }], legendKey: [{ id: "shopPayments.groupName" }] },
+          format: { title: { enabled: true, text: "Money kept per week, by ad group" }, style: { theme: { common: { legend: { enabled: true } }, line: { series: { marker: { enabled: false } } } } } } },
       },
       widgetLayout: { chats: at(0, 0, 6, 7), kept: at(6, 0, 6, 7), money: at(12, 0, 6, 7), spend: at(18, 0, 6, 7), gap: at(0, 7, 24, 11), groups: at(0, 18, 24, 14), split: at(0, 32, 10, 15), daily: at(10, 32, 14, 15) },
     },

@@ -25,7 +25,8 @@ nothing is sent here: each draft waits in Approvals, and only after the shop own
 check_paypal_ledger compares the webhook ledger with PayPal's Transaction Search.
 For budget questions (which ads to cut, keep or grow), delegate to the budget agent; it checks its numbers in code.
 For invoices that were sent and not paid, delegate to the nudge agent: it sends friendly PayPal reminders within code limits.
-The tables "Real shop: ad groups" and "Real shop: payments" are a real Vietnamese gift shop's October book (VND, paid by bank transfer, not PayPal): the same gap between what the ad account counts and the money kept. Say so whenever you use them.`;
+The tables "Real shop: ad groups" and "Real shop: payments" are a real Vietnamese gift shop's October book (VND, paid by bank transfer, not PayPal): the same gap between what the ad account counts and the money kept. Say so whenever you use them.
+Answer the owner briefly: at most six short lines (for budgets: Grow, Keep, Cut, then one line on what the evidence gate decided). Never pass on widget health-check notes or layout chatter.`;
 
 // AG Grid's nudge-bot idea, built on the chase agent: who still owes, and kind reminders sent through PayPal's Agent Toolkit.
 const NUDGE = `You are the Paid Signal nudge agent. You help a small shop get paid for invoices it already sent, kindly: a heads-up, never a demand.
@@ -45,7 +46,7 @@ const BUDGET = `You are the Paid Signal budget agent for a small shop that sells
    If it comes back rejected, fix exactly the listed problems and submit again (one repair).
 3. Once accepted, delegate to the page agent once: ask it to add one grouped column chart titled "Paid revenue vs spend, by ad",
    with category field ads.name and two values, the measures mRevenue (Revenue) and mSpend (Spend). Name these field ids in your request.
-4. Finish with a two-sentence summary. Keep every step short: one read, one submit, one delegation. You never change budgets yourself: the owner approves in the approvals column.`;
+4. Finish with a short summary in three lines: Grow, Keep, Cut (name the ad and one PayPal number each), then whether the gate accepted it. Keep every step short: one read, one submit, one delegation. You never change budgets yourself: the owner approves in the approvals column.`;
 
 export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
   const adapter = claudeAdapter({ model: "claude-sonnet-5-5" });
@@ -53,14 +54,14 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
     const custom = [
       api.defineAiTool({
         name: "read_paid_signal",
-        description: "Per-ad spend, ad-reported leads, PayPal paid orders, refunds, net paid revenue and cost per paid order, plus totals. Computed in code from the ad export and PayPal captures.",
+        description: "Per-ad spend, ad-reported leads, PayPal paid orders, net paid revenue and cost per paid order, plus totals. other_payments_refunded_in_full counts separate payments refunded in full: they are not among paid_orders, and a paid order may still carry a partial refund. Computed in code from the ad export and PayPal captures.",
         params: (s) => s.object({}),
         execute: async (_args, ctx) => {
           const [d, l] = await Promise.all([post("/api/reconcile", { csv: getCsv() }, ctx.signal), get("/api/ledger", ctx.signal)]);
           const r = d.reconciliation, $ = (c) => (c / 100).toFixed(2);
           return ctx.success("Reconciliation loaded.", {
-            totals: { leads: r.totals.leads, paid_orders: r.totals.paid, fully_refunded: r.totals.refunded, spend_usd: $(r.totals.spend_cents), paid_revenue_usd: $(r.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: $(r.totals.spend_without_paid_cents) },
-            ads: r.ads.map((a) => ({ ad: a.ad, name: adName(a.ad), spend_usd: $(a.spend_cents), leads: a.leads, paid_orders: a.paid, fully_refunded: a.refunded, paid_revenue_usd: $(a.revenue_cents), cost_per_paid_order_usd: a.cost_per_paid_cents == null ? "none paid" : $(a.cost_per_paid_cents) })),
+            totals: { leads: r.totals.leads, paid_orders: r.totals.paid, other_payments_refunded_in_full: r.totals.refunded, spend_usd: $(r.totals.spend_cents), paid_revenue_usd: $(r.totals.revenue_cents), spend_on_ads_with_no_paid_order_usd: $(r.totals.spend_without_paid_cents) },
+            ads: r.ads.map((a) => ({ ad: a.ad, name: adName(a.ad), spend_usd: $(a.spend_cents), leads: a.leads, paid_orders: a.paid, other_payments_refunded_in_full: a.refunded, paid_revenue_usd: $(a.revenue_cents), cost_per_paid_order_usd: a.cost_per_paid_cents == null ? "none paid" : $(a.cost_per_paid_cents) })),
             // same payer, same ad, minutes apart: held out of paid orders until refunded, and the agent must say so
             possible_duplicates: l.duplicates.map((x) => ({ capture_id: x.capture_id, same_payer_and_ad_as: x.first, seconds_apart: x.seconds, ad: l.payments.find((p) => p.capture_id === x.capture_id)?.ad })),
           });

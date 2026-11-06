@@ -59,7 +59,7 @@ def cams():
             if sc["key"] == "chart": m = [x for x in m if x["name"] in ("kpis", "gap", "chat")]  # chat: the assistant panel (box set by hand, its selector has no size)
             first = min(x["t"] for x in m)
             sc["clip_from"] = round(max(0.0, first - 1.6), 2)
-            sc["clip_to"] = 9.3 if sc["key"] == "home" else 26.0 if sc["key"] == "chart" else round(max(x["t"] for x in m) + 3.2, 2)
+            sc["clip_to"] = 9.3 if sc["key"] == "home" else 33.0 if sc["key"] == "chart" else round(max(x["t"] for x in m) + 3.2, 2)
             plan(sc, m, secs[sc["key"]])
     FILM.write_text(json.dumps(f, ensure_ascii=False, indent=1), "utf8")
     print({x["key"]: (x.get("speed"), len(x.get("cam", []))) for x in f})

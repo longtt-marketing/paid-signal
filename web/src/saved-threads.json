@@ -318,14 +318,14 @@
   },
   {
    "summary": {
-    "threadId": "thread-a1b14761-853f-4e76-9c3c-804b2a3df5a0",
+    "threadId": "thread-6748c2ba-f0ab-42c8-8b7f-3671e8b314c8",
     "agentId": "lead",
-    "updatedAt": 11,
+    "updatedAt": 14,
     "title": "Budget agent: proposals through the evidence gate"
    },
    "messages": [
     {
-     "id": "msg-f3e65540-3dd4-42f7-a655-8a3fae094d6e",
+     "id": "msg-7d4b7312-fe5a-4ad4-9e29-7266b61539ee",
      "role": "user",
      "parts": [
       {
@@ -336,25 +336,25 @@
      "createdAt": 0
     },
     {
-     "id": "toolu_01UjUA6KJnr6ZKpzYM2XGCHH",
+     "id": "toolu_01Wi4rGSc3RPFyAVCnMMwmUN",
      "role": "assistant",
      "parts": [
       {
        "type": "tool_call",
        "toolCall": {
-        "toolCallId": "toolu_01UjUA6KJnr6ZKpzYM2XGCHH",
+        "toolCallId": "toolu_01Wi4rGSc3RPFyAVCnMMwmUN",
         "name": "delegate_to",
         "status": "complete",
         "args": {
          "type": {
           "id": "budget"
          },
-         "instructions": "Review PayPal-confirmed results per ad and propose which ads to cut, keep or grow. Ask the page agent to show the evidence on the current page."
+         "instructions": "Review PayPal-confirmed results per ad and propose which ads to cut, keep or grow. Have the evidence shown on the current page."
         },
-        "childThreadId": "toolu_01UjUA6KJnr6ZKpzYM2XGCHH-sub",
+        "childThreadId": "toolu_01Wi4rGSc3RPFyAVCnMMwmUN-sub",
         "result": {
          "success": true,
-         "response": "I proposed increasing Testimonial · carousel, which has the lowest cost per paid order at $17.98. I proposed keeping Trial class · video and Free guide · lead form. The owner still has to approve these changes. The page agent added an empty grouped column chart at the bottom of the page. It did not set the title, the ads.name category or the mRevenue and mSpend values. Those still need to be configured, so the evidence isn't showing yet."
+         "response": "Grow: Testimonial · carousel, 4 paid orders and $196.00 paid revenue on $71.90 spend.\nKeep: Trial class · video (3 paid orders, $147.00; one possible duplicate held out) and Free guide · lead form (1 paid order, $118.40 per paid order, needs more paid orders before any cut).\nCut: nothing. No ad had enough paid orders to justify a cut. Holiday camp · static has 1 paid order, so it was left out.\nGate: accepted. It now waits for the owner's approval.\nChart: a grouped column chart was added to the overview page, but it is empty. The page agent couldn't set the title \"Paid revenue vs spend, by ad\", the category ads.name, or the values mRevenue and mSpend. The widget still needs configuring, and the evidence isn't shown yet."
         }
        }
       }
@@ -362,13 +362,13 @@
      "createdAt": 1
     },
     {
-     "id": "toolu_01Kk27KWABv8t9yZoLTrHmNY",
+     "id": "toolu_01FTbS7j32LJ8ChjnGVHR34b",
      "role": "assistant",
      "parts": [
       {
        "type": "tool_call",
        "toolCall": {
-        "toolCallId": "toolu_01Kk27KWABv8t9yZoLTrHmNY",
+        "toolCallId": "toolu_01FTbS7j32LJ8ChjnGVHR34b",
         "name": "view_page",
         "status": "complete",
         "args": {},
@@ -382,28 +382,28 @@
      "createdAt": 2
     },
     {
-     "id": "toolu_011n8ABjar3PnJZteqkwmw3w",
+     "id": "toolu_01Wsno8RtmtfVZ5a8bwE6d9p",
      "role": "assistant",
      "parts": [
       {
        "type": "tool_call",
        "toolCall": {
-        "toolCallId": "toolu_011n8ABjar3PnJZteqkwmw3w",
+        "toolCallId": "toolu_01Wsno8RtmtfVZ5a8bwE6d9p",
         "name": "delegate_to",
         "status": "complete",
         "args": {
          "type": {
           "id": "widget",
           "widgetType": "column-chart-grouped",
-          "widgetId": "revenue-vs-spend",
+          "widgetId": "revenue_vs_spend",
           "pageId": "overview"
          },
-         "instructions": "Configure this chart to show evidence for the budget proposal: per ad (ads.name), net paid revenue (mRevenue) next to spend (mSpend). Give it a clear title like \"Net paid revenue vs spend per ad\"."
+         "instructions": "Configure this chart: title \"Paid revenue vs spend, by ad\", category = ad name, values = paid revenue and ad spend per ad."
         },
-        "childThreadId": "toolu_011n8ABjar3PnJZteqkwmw3w-sub",
+        "childThreadId": "toolu_01Wsno8RtmtfVZ5a8bwE6d9p-sub",
         "result": {
          "success": true,
-         "response": "Configured revenue-vs-spend as a grouped column chart: @field[ads.name] on the x-axis, with @field[mRevenue] and @field[mSpend] as side-by-side series. The title is \"Net paid revenue vs spend per ad\". I enabled a bottom legend, but the health check still says no legend is enabled, so check that it shows. It also notes that the 4 ads leave the bars a bit sparse."
+         "response": "Configured the chart \"Paid revenue vs spend, by ad\". It plots @field[ads.name] on the category axis and the pre-aggregated measures @field[mRevenue] and @field[mSpend] as the two series. I turned the legend on at the bottom, but the health check still reports no legend. The remaining density note (4 ads) is minor."
         }
        }
       }
@@ -411,18 +411,18 @@
      "createdAt": 3
     },
     {
-     "id": "msg_011Cgm4cEZAHt9kUFWkNcC5K-t0",
+     "id": "msg_011CgmGBcGLLnxUquAUToqHX-t0",
      "role": "assistant",
      "parts": [
       {
        "type": "text",
-       "text": "The budget agent recommends growing one ad and keeping two. The owner still has to approve these changes. I haven't checked the legend.\n\n- **Grow:** Testimonial · carousel. It has the lowest cost per paid order, at $17.98.\n- **Keep:** Trial class · video and Free guide · lead form.\n- **Cut:** The agent proposed no cuts.\n\nThe evidence is on the Overview page in the chart @widget[revenue-vs-spend], \"Net paid revenue vs spend per ad\". It shows net paid revenue next to spend for each ad. The chart was empty when the page agent placed it, so I had it configured.\n\nThe health check says the legend isn't enabled, although the widget agent set a bottom legend. Please check that it shows on the chart. The agent also noted that with only 4 ads the bars look a bit sparse."
+       "text": "**Grow:** Testimonial · carousel. It has 4 paid orders and $196.00 paid revenue on $71.90 spend.\n**Keep:** Trial class · video has 3 paid orders and $147.00, with one possible duplicate held out. Free guide · lead form has 1 paid order at $118.40 per paid order, so it needs more paid orders before any cut.\n**Cut:** Nothing. No ad had enough paid orders to justify a cut. Holiday camp · static has only 1 paid order, so the agent left it out.\n**Evidence gate:** Accepted. It now waits for your approval.\n**On the page:** The overview page has a \"Paid revenue vs spend, by ad\" chart. The budget agent added it empty, so I configured it. It plots paid revenue and ad spend for each ad. I didn't re-check the chart after configuring it."
       }
      ],
      "createdAt": 4
     },
     {
-     "id": "note-thread-a1b14761-853f-4e76-9c3c-804b2a3df5a0",
+     "id": "note-thread-6748c2ba-f0ab-42c8-8b7f-3671e8b314c8",
      "role": "assistant",
      "createdAt": 5,
      "parts": [
