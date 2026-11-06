@@ -7,6 +7,7 @@ import { buildData, initialReport, phoneReport, phoneTheme, shopSources, theme }
 import { shareGapWidgetDefinition } from "./ShareGapWidget.jsx";
 import { toolDisplay } from "./toolDisplay.jsx";
 import { claimWidgetDefinition } from "./ClaimWidget.jsx";
+import { moneyFlowWidgetDefinition } from "./MoneyFlowWidget.jsx";
 import { timelineWidgetDefinition } from "./TimelineWidget.jsx";
 import { funnelWidgetDefinition } from "./FunnelWidget.jsx";
 import { owesWidgetDefinition, DATA_EVENT } from "./OwesWidget.jsx";
@@ -31,7 +32,7 @@ const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, 
   const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() + (invoices || []).map((i) => i.id + i.status + (i.reminded_at || "")).join() + `|shop${shop.sources[1].data.length}` }), [state, invoices, shop]);
   // tell custom widgets the data changed, once Studio has taken the new data in
   useEffect(() => { if (!data) return; const t = setTimeout(() => dispatchEvent(new Event(DATA_EVENT)), 400); return () => clearTimeout(t); }, [data]);
-  const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition, funnelWidgetDefinition, owesWidgetDefinition, shareGapWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline", "lead-funnel", "who-still-owes", "share-gap"] }] }), []);
+  const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition, funnelWidgetDefinition, owesWidgetDefinition, shareGapWidgetDefinition, moneyFlowWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline", "lead-funnel", "who-still-owes", "share-gap", "money-flow"] }] }), []);
   useImperativeHandle(ref, () => ({
     openAssistant() { const a = studio.current?.api; if (!a) return false; const s = a.getState(); a.setState({ ...s, panels: { ...(s.panels || {}), ai: { collapsed: false } } }); return true; },
     selectPage(id) { const a = studio.current?.api; if (a) a.setState({ ...a.getState(), selectedPageId: id }); },

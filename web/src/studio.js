@@ -140,6 +140,7 @@ export const initialReport = {
         payers: kpi("Paid orders", sum("ads.payers")),
         rpd: kpi("Revenue per $1 of ads", { id: "revenuePerDollar" }),
         nopayer: kpi("Ad spend per paid order", { id: "costPerPayer" }),
+        flow: { type: "money-flow", dataMapping: { category: [{ id: "ads.name" }], reported: [sum("ads.leads")], money: [sum("ads.revenue")] }, format: { title: { enabled: true, text: "Leads in the ad report → money PayPal confirms" } } },
         claim: { type: "claim-vs-confirmed", dataMapping: { category: [{ id: "ads.name" }], claimed: [sum("ads.leads")], confirmed: [sum("ads.payers")] }, format: { title: { enabled: true, text: "What each ad claims vs what PayPal confirms" } } },
         table: {
           type: "grid",
@@ -149,7 +150,7 @@ export const initialReport = {
         },
         funnel: { type: "lead-funnel", dataMapping: { category: [{ id: "ads.name" }], leads: [sum("ads.leads")], invoiced: [sum("ads.invoiced")], paid: [sum("ads.payers")] }, format: { title: { enabled: true, text: "Leads, PayPal invoices and paid orders, per ad" } } },
       },
-      widgetLayout: { leads: at(0, 0, 6, 7), payers: at(6, 0, 6, 7), rpd: at(12, 0, 6, 7), nopayer: at(18, 0, 6, 7), claim: at(0, 7, 24, 13), table: at(0, 20, 24, 18), funnel: at(0, 38, 24, 13) },
+      widgetLayout: { leads: at(0, 0, 6, 7), payers: at(6, 0, 6, 7), rpd: at(12, 0, 6, 7), nopayer: at(18, 0, 6, 7), flow: at(0, 7, 24, 16), claim: at(0, 23, 24, 13), table: at(0, 36, 24, 18), funnel: at(0, 54, 24, 13) },
     },
     {
       id: "captures", name: "PayPal captures",
@@ -203,6 +204,7 @@ export const initialReport = {
         kept: kpi("Orders kept (book)", { id: "sKept" }),
         money: kpi("Money kept, million VND", { id: "sMoneyM" }),
         spend: kpi("Ad spend, million VND", { id: "sSpendM" }),
+        flow: { type: "money-flow", dataMapping: { category: [{ id: "shopGroups.name" }], reported: [sum("shopGroups.chats")], money: [sum("shopGroups.money")] }, format: { title: { enabled: true, text: "Chats in the ad account → money kept" }, style: { leftLabel: "Chats (ad account)", rightLabel: "Money kept (shop's book)" } } },
         gap: { type: "share-gap", dataMapping: { category: [{ id: "shopGroups.name" }], reported: [sum("shopGroups.chats")], money: [sum("shopGroups.money")] }, format: { title: { enabled: true, text: "Each ad group: share of chats vs share of the money kept" } } },
         split: { type: "column-chart-grouped", dataMapping: { categoryKey: [{ id: "shopGroups.short" }], valueKey: [{ id: "sNow" }, { id: "sSplit" }] },
           format: { title: { enabled: true, text: "Share of spend, %: October vs Paid Signal's rule" }, style: { theme: { common: { legend: { enabled: true } } } } } },
@@ -211,7 +213,7 @@ export const initialReport = {
         daily: { type: "line-chart", dataMapping: { categoryKey: [{ id: "shopPayments.week" }], valueKey: [{ id: "pKept" }], legendKey: [{ id: "shopPayments.groupName" }] },
           format: { title: { enabled: true, text: "Money kept per week, by ad group" }, style: { theme: { common: { legend: { enabled: true } }, line: { series: { marker: { enabled: false } } } } } } },
       },
-      widgetLayout: { chats: at(0, 0, 6, 7), kept: at(6, 0, 6, 7), money: at(12, 0, 6, 7), spend: at(18, 0, 6, 7), gap: at(0, 7, 24, 11), groups: at(0, 18, 24, 14), split: at(0, 32, 10, 15), daily: at(10, 32, 14, 15) },
+      widgetLayout: { chats: at(0, 0, 6, 7), kept: at(6, 0, 6, 7), money: at(12, 0, 6, 7), spend: at(18, 0, 6, 7), flow: at(0, 7, 24, 15), gap: at(0, 22, 24, 11), groups: at(0, 33, 24, 14), split: at(0, 47, 10, 15), daily: at(10, 47, 14, 15) },
     },
     // a blank page for the owner, or Studio's agents, to build their own views on the same tables
     { id: "mine", name: "Your page", widgets: {}, widgetLayout: {} },
@@ -220,7 +222,7 @@ export const initialReport = {
 
 // every widget takes part in cross-filtering: a click on an ad (or ad group) in a custom widget filters the rest of the page;
 // the clicked widget itself highlights its row instead of filtering it away
-const HIGHLIGHT = new Set(["claim-vs-confirmed", "share-gap"]);
+const HIGHLIGHT = new Set(["claim-vs-confirmed", "share-gap", "money-flow"]);
 for (const pg of initialReport.pages) for (const w of Object.values(pg.widgets)) w.format = { ...(w.format || {}), crossFilter: HIGHLIGHT.has(w.type) ? "highlight" : "filter" };
 
 const v = (name) => `var(--${name})`;
@@ -267,11 +269,11 @@ export const phoneReport = {
     ...(pg.id === "overview" ? { widgets: { ...pg.widgets, rpd: kpi("Revenue per $1", { id: "revenuePerDollar" }), nopayer: kpi("Per paid order", { id: "costPerPayer" }) } } : {}),
     ...(pg.id === "shop" ? { widgets: { ...pg.widgets, chats: kpi("Chats", { id: "sChats" }), kept: kpi("Orders kept", { id: "sKept" }), money: kpi("Kept, M VND", { id: "sMoneyM" }), spend: kpi("Spend, M VND", { id: "sSpendM" }) } } : {}),
     widgetLayout: pg.id === "overview"
-      ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), claim: at(0, 14, 24, 16), table: at(0, 30, 24, 20), funnel: at(0, 50, 24, 16) }
+      ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), flow: at(0, 14, 24, 16), claim: at(0, 30, 24, 16), table: at(0, 46, 24, 20), funnel: at(0, 66, 24, 16) }
       : pg.id === "ledger" ? { path: at(0, 0, 24, 20), ledger: at(0, 20, 24, 24) }
       : pg.id === "owes" ? { board: at(0, 0, 24, 34), list: at(0, 34, 24, 20) }
       : pg.id === "mine" ? {}
-      : pg.id === "shop" ? { chats: at(0, 0, 12, 7), kept: at(12, 0, 12, 7), money: at(0, 7, 12, 7), spend: at(12, 7, 12, 7), gap: at(0, 14, 24, 14), split: at(0, 28, 24, 16), groups: at(0, 44, 24, 18), daily: at(0, 62, 24, 16) }
+      : pg.id === "shop" ? { chats: at(0, 0, 12, 7), kept: at(12, 0, 12, 7), money: at(0, 7, 12, 7), spend: at(12, 7, 12, 7), flow: at(0, 14, 24, 16), gap: at(0, 30, 24, 14), split: at(0, 44, 24, 16), groups: at(0, 60, 24, 18), daily: at(0, 78, 24, 16) }
       : { net: at(0, 0, 12, 7), refunded: at(12, 0, 12, 7), timeline: at(0, 7, 24, 16), list: at(0, 23, 24, 22) },
   })),
 };

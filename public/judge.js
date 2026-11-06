@@ -33,10 +33,14 @@ for (const b of document.querySelectorAll("[data-example]")) b.onclick = () => {
   box("try-message").value = tryExamples[b.dataset.example];
   for (const x of document.querySelectorAll("[data-example]")) x.setAttribute("aria-pressed", String(x === b));
 };
-// "try to trick Claude" (intro link, or /judge#trick): load the planted-instruction message, ready to send
-const trick = () => { document.querySelector('[data-example="injection"]')?.click(); box("try-message").focus(); };
-document.getElementById("trick-link")?.addEventListener("click", () => setTimeout(trick, 60));
-if (location.hash === "#trick") { box("customer")?.scrollIntoView(); trick(); }
+// "try to trick Claude" (card, or /judge#trick): load the planted-instruction message; the card's Send it also sends it
+const trick = () => { document.querySelector('[data-example="injection"]')?.click(); box("customer")?.scrollIntoView({ behavior: "smooth" }); };
+box("trick-send").onclick = () => { trick(); box("try-run").click(); };
+if (location.hash === "#trick") trick();
+// a link to a folded section opens it
+const openFold = (hash) => { const t = hash && hash.length > 1 && document.getElementById(hash.slice(1)); const f = t && t.closest("details.fold"); if (f) { f.open = true; setTimeout(() => t.scrollIntoView({ behavior: "smooth" }), 30); } };
+document.addEventListener("click", (e) => { const a = e.target.closest('a[href^="#"]'); if (a) openFold(a.getAttribute("href")); });
+openFold(location.hash);
 // Verify with PayPal: the whole evidence ledger read back from PayPal at click time, N of N
 box("verify-run").onclick = async () => {
   const b = box("verify-run"), head = box("verify-head"), out = box("verify-out");
@@ -44,7 +48,8 @@ box("verify-run").onclick = async () => {
   try {
     const d = await getJSON("/api/verify");
     if (d.error) throw new Error(d.error);
-    head.textContent = `${d.matched} of ${d.total} payments match PayPal.`;
+    box("verify-big").textContent = `${d.matched} / ${d.total}`;
+    head.textContent = `${d.matched} of ${d.total} ledger payments match PayPal.`;
     box("verify-note").textContent = `Read from PayPal ${when(d.checked_at)}${d.cached ? " (cached, refreshed every 10 minutes)" : ""}.`;
     out.replaceChildren(details("Each payment, as PayPal reports it", [$("div", { className: "rows" }, d.items.map((i) =>
       row(`${i.ad ? name(i.ad) : "No ad"} · ${i.kind}`, `${i.id} · $${Number(i.amount).toFixed(2)} · ledger ${i.ledger}, PayPal ${i.paypal || i.error || "?"}`, chip(i.match ? "Match" : "Differs", i.match ? "ok" : "no2"))))]));
@@ -52,6 +57,8 @@ box("verify-run").onclick = async () => {
   } catch (e) { head.textContent = `PayPal could not be read just now: ${e.message}`; b.textContent = "Verify with PayPal"; }
   b.disabled = false;
 };
+// the big number on load (the server caches the read-back for 10 minutes); the button shows each payment
+getJSON("/api/verify").then((d) => { if (!d.error) box("verify-big").textContent = `${d.matched} / ${d.total}`; }).catch(() => {});
 box("try-run").onclick = async () => {
   const run = box("try-run"), result = box("try-result");
   run.disabled = true; run.textContent = "Claude is reading…";

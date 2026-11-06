@@ -42,7 +42,7 @@ test("the judge page carries the shop section as static HTML, matching the curre
   const c = JSON.parse(readFileSync(new URL("../docs/proof/merchant-case-2026-10.json", import.meta.url), "utf8"));
   assert.ok(html.includes(`<!--gap:start-->${gapHTML(r, c)}<!--gap:end-->`));
   assert.ok(html.includes("69.4%") && html.includes("VietQR"));
-  assert.ok(html.includes(`<!--hook:start-->${hookHTML(r)}<!--hook:end-->`) && hookHTML(r).includes("19.3% of the money"));
+  assert.ok(html.includes(`<!--hook:start-->${hookHTML(r)}<!--hook:end-->`) && hookHTML(r).includes("69% of chats, 19% of money"));
   assert.ok(html.indexOf('id="hook"') < html.indexOf('id="customer"') && html.indexOf('id="customer"') < html.indexOf('id="gap"'));
 });
 

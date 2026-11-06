@@ -39,6 +39,7 @@ All read through Studio's widget API (`widgetApi.getData`), so page filters and 
 
 | Widget | File | What it shows | Acts |
 |---|---|---|---|
+| Ad report → PayPal money flow | `MoneyFlowWidget.jsx` | one band per ad from its share of leads (left) to its share of PayPal-confirmed revenue (right); on the shop page, chats to money kept | a click on a band filters the page; edit panel: right-side order and both headings; its own phone layout |
 | Claimed vs confirmed | `ClaimWidget.jsx` | per ad, leads against PayPal paid orders | a click filters the page to that ad; edit panel: the budget floor (ads below it are marked) |
 | Reported share vs money share | `ShareGapWidget.jsx` | each ad's share of what the report counts against its share of the money | a click filters the page; edit panel: when to flag an overrated ad |
 | Payment timeline | `TimelineWidget.jsx` | every capture on a time line per ad: paid, partly refunded, refunded | |
