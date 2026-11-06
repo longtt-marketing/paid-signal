@@ -3,10 +3,13 @@
 // one it underrates widens. Shares come from the two sums Studio returns, so page filters and cross-filters apply.
 import { useEffect, useRef, useState } from "react";
 import { widgetFormat, withSection } from "./widgetForm.js";
-import { stack } from "./flowLayout.js";
+import { stack, firstSentence } from "./flowLayout.js";
+import { AD_NAMES } from "./names.js";
 
 const pick = (row, field, i) => row[field?.key] ?? row[field?.id] ?? Object.values(row)[i];
 const pct = (x) => `${Math.round(x * 100)}%`;
+const KEY_OF = Object.fromEntries(Object.entries(AD_NAMES).map(([k, v]) => [v, k]));
+const CHANGE = { increase: "Raise", reduce: "Cut", pause: "Pause", keep: "Keep", fix_tracking: "Fix tracking" };
 const PAID = "#0B6B3A", CLAIMED = "#C4B99D", FADED = "#9C8F70", INK = "#14130F", LABEL = "#5A5242", SHEET = "#FFFDF7";
 
 export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
@@ -16,6 +19,9 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
   const [rows, setRows] = useState([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const ref = useRef(null);
+  // the budget agent's latest checked recommendation, so a click on an ad's band shows its verdict for the owner to decide
+  const [rec, setRec] = useState(null);
+  const [decided, setDecided] = useState({});
   const cat = dataMapping?.category?.[0], reported = dataMapping?.reported?.[0], money = dataMapping?.money?.[0];
 
   useEffect(() => {
@@ -33,6 +39,12 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
     return () => { live = false; };
   }, [cat, reported, money, widgetApi, context?.dataVersion]);
 
+  const hasAds = rows.some((r) => KEY_OF[r.name]);
+  useEffect(() => {
+    if (!hasAds || rec) return;
+    fetch("/api/recommendation").then((r) => r.json()).then((d) => d.latest && setRec(d.latest)).catch(() => {});
+  }, [hasAds, rec]);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -44,7 +56,24 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
   const selected = new Set((widgetApi.getCrossFilterSelections?.() || []).flatMap((s) => (s.type === "value" ? s.values : [])));
   const choose = (r) => (e) => { widgetApi.toggleCrossFilter({ type: "value", value: r.value, field: cat, group: 0, reset: !(e.metaKey || e.ctrlKey) }); e.stopPropagation(); };
 
-  const { w, h } = size;
+  const one = selected.size === 1 ? rows.find((r) => selected.has(r.value)) : null;
+  const key = one && KEY_OF[one.name];
+  const actions = rec?.recommendation?.actions || [];
+  const index = key ? actions.findIndex((a) => a.ad === key) : -1;
+  const act = index >= 0 ? actions[index] : null;
+  const decide = (verdict) => async (e) => {
+    e.stopPropagation();
+    setDecided((m) => ({ ...m, [key]: { busy: true } }));
+    try {
+      const r = await fetch("/api/decisions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ad: key, verdict, rec_id: rec.id, index, reason: act.reason, evidence: act.evidence, change: act.change }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+      setDecided((m) => ({ ...m, [key]: { verdict, id: d.id } }));
+    } catch (err) { setDecided((m) => ({ ...m, [key]: { error: err.message } })); }
+  };
+  const { w, h: fullH } = size;
+  const stripH = key && rec ? (fullH < 300 || w < 520 ? 84 : 58) : 0;
+  const h = Math.max(60, fullH - stripH);
   const narrow = w < 520;
   const colW = narrow ? Math.max(96, Math.round(w * 0.36)) : Math.min(190, Math.max(80, w * 0.28));
   const fs = narrow ? 11 : 12.5;
@@ -86,6 +115,19 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
           })}
         </svg>
       )}
+      {stripH > 0 && (() => {
+        const dd = decided[key] || {};
+        return (
+          <div className="flow-verdict" style={{ height: stripH }} onClick={(e) => e.stopPropagation()}>
+            <div className="fv-text"><span className="fv-k">Budget agent, checked by the rule in code</span>
+              {act ? <span><b className={act.change === "increase" ? "fv-up" : act.change === "keep" ? "" : "fv-down"}>{CHANGE[act.change] || act.change}</b> {firstSentence(act.reason)}</span>
+                : <span>No move for this ad in the latest checked run: fewer than 3 PayPal-confirmed paid orders, or nothing to change.</span>}</div>
+            {act && <div className="fv-acts">{dd.id ? <span className="fv-done">{dd.verdict === "approved" ? "Approved" : "Dismissed"} · {dd.id}</span>
+              : <><button type="button" className="fv-btn go" disabled={dd.busy} onClick={decide("approved")}>Approve</button><button type="button" className="fv-btn" disabled={dd.busy} onClick={decide("dismissed")}>Dismiss</button></>}
+              {dd.error && <span className="fv-err">{dd.error}</span>}</div>}
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -106,7 +148,7 @@ export const moneyFlowWidgetDefinition = {
   formatShape: widgetFormat((s) => s.object({ rightOrder: s.enum(["money", "same"], { description: "Order of the right side: 'money' puts the ad with the most money at the top so bands cross when the report's ranking is wrong; 'same' keeps the left order. Default 'money'." }).optional(), leftLabel: s.string({ description: "Heading over the left side. Default 'Ad report counts'." }).optional(), rightLabel: s.string({ description: "Heading over the right side. Default 'PayPal confirms'." }).optional() })),
   comp: MoneyFlowWidget,
   featureConfig: { crossFilter: { supportsHighlight: true } },
-  ai: { label: "Ad report → PayPal money flow", description: "One band per ad from its share of what the ad report counts (left) to its share of the money PayPal confirms (right); green bands earn more than the report credits them; clicking a band filters the page to that ad.", usage: "Map category to the ad or group name, reported to leads or chats, money to paid revenue or money kept." },
+  ai: { label: "Ad report → PayPal money flow", description: "One band per ad from its share of what the ad report counts (left) to its share of the money PayPal confirms (right); green bands earn more than the report credits them; clicking a band filters the page to that ad and shows the budget agent's checked verdict for it, which the owner approves or dismisses (the decision is recorded; no live ad budget changes).", usage: "Map category to the ad or group name, reported to leads or chats, money to paid revenue or money kept." },
   defaultSize: { width: 800, height: 300 },
   minSize: { width: 300, height: 180 },
 };

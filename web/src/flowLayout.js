@@ -9,3 +9,13 @@ export function stack(items, key, height, gap, minH) {
   items.forEach((it, i) => { const h = raw[i] * scale; out[it.name] = { y, h }; y += h + gap; });
   return out;
 }
+
+// the first sentence of an agent's reason, for a one-line verdict ("$2.73" and "Testimonial · carousel" stay whole)
+export function firstSentence(text, max = 170) {
+  const t = String(text || "").trim();
+  const m = t.match(/^.*?[.!?](?=\s+[A-Z]|$)/);
+  const s = m ? m[0] : t;
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max - 1), sp = cut.lastIndexOf(" ");
+  return `${(sp > max * 0.6 ? cut.slice(0, sp) : cut).replace(/[,;:]$/, "").trimEnd()}…`;
+}

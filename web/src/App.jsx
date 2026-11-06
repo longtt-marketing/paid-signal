@@ -1,5 +1,8 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+// the PayPal ledger as an AG Grid table, loaded only when the dashboard shows it
+const LedgerGrid = lazy(() => import("./LedgerGrid.jsx"));
+
 // If AG Studio cannot run (its trial key lapses, or the bundle fails to load), the report shows a recent picture of
 // itself and says why, instead of an empty frame. Every number on it is also on the dashboard tab.
 class StudioGuard extends Component {
@@ -179,7 +182,6 @@ export default function App({ first = null }) {
   }, []);
   const [studioPage, setStudioPage] = useState("overview");
   const [layoutNote, setLayoutNote] = useState("");
-  const [allPays, setAllPays] = useState(false);
   const [allInv, setAllInv] = useState(false);
   const [allAct, setAllAct] = useState(false);
   // sent but unpaid: the chase agent reads each with PayPal's Agent Toolkit, picks whom to remind and writes the note
@@ -377,17 +379,10 @@ export default function App({ first = null }) {
             </section>
 
             <PhoneDisclosure id="payments" title="Payments" className="card" summaryText={state ? `${state.payments.length} in the ledger` : ""}>
-              <div className="card-head phone-section-head"><h2>Payments</h2>{state && <span className="pill good">{state.payments.length} in the ledger</span>}</div>
-              <div id="captures" className="list">
-                {(state?.payments || []).slice().reverse().slice(0, allPays ? undefined : 5).map((p) => (
-                  <div key={p.capture_id} className="cap">
-                    <span title={`${p.capture_id}${dup[p.capture_id] ? ` · possible duplicate of ${dup[p.capture_id]}` : ""}`}><b>{p.ad && p.ad !== "direct" ? adName(p.ad) : "No ad click"}</b><small>{money(p.amount)}{p.via === "invoice" ? " · invoice" : ""}{metaSent[p.capture_id]?.ok ? " · Meta received" : ""}{Number(p.refunded_amount) > 0 && p.status !== "REFUNDED" ? ` · refunded ${money(p.refunded_amount)}` : ""}</small>{dup[p.capture_id] && <button type="button" className="dup-btn" onClick={() => markDistinct(p.capture_id)}>Separate order? Count it</button>}</span>
-                    <span className="pill-wrap">{dup[p.capture_id] ? <span className="pill warn">Held</span> : p.status === "REFUNDED" ? <span className="pill">Refunded</span> : <span className="pill good">Paid</span>}</span>
-                    {p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED" ? <button className="mini" onClick={() => refund(p)}>Refund</button> : <span />}
-                  </div>
-                ))}
+              <div className="card-head phone-section-head"><h2>PayPal ledger</h2>{state && <span className="pill good">{state.payments.length} in the ledger</span>}</div>
+              <div id="captures">
+                {state && <Suspense fallback={<p className="muted">Loading the ledger…</p>}><LedgerGrid payments={state.payments || []} dup={dup} metaSent={metaSent} adName={adName} onRefund={refund} onCount={markDistinct} /></Suspense>}
               </div>
-              {(state?.payments || []).length > 5 && <button type="button" className="more-row" onClick={() => setAllPays((v) => !v)}>{allPays ? "Show fewer" : `All ${state.payments.length} payments`}<span>{allPays ? "−" : "+"}</span></button>}
             </PhoneDisclosure>
 
             <PhoneDisclosure id="signal" title="Ad platform signal" className="card" summaryText={state ? `${state.meta.events.length} Meta events` : ""}>

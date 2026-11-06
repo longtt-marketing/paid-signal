@@ -2,7 +2,7 @@
 // and a tiny share still gets a visible band.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { stack } from "../web/src/flowLayout.js";
+import { stack, firstSentence } from "../web/src/flowLayout.js";
 
 const ads = [{ name: "Free guide", sa: 31 / 62, sb: 49 / 432 }, { name: "Trial", sa: 14 / 62, sb: 147 / 432 }, { name: "Testimonial", sa: 11 / 62, sb: 196 / 432 }, { name: "Holiday", sa: 6 / 62, sb: 40 / 432 }];
 
@@ -22,4 +22,11 @@ test("heights follow the shares", () => {
 test("a tiny share keeps a minimum band", () => {
   const out = stack([{ name: "big", s: 0.999 }, { name: "tiny", s: 0.001 }], "s", 200, 4, 3);
   assert.ok(out.tiny.h >= 2.9);
+});
+
+test("the verdict line keeps the agent's first sentence whole, money and ad names included", () => {
+  assert.equal(firstSentence("Testimonial · carousel has 4 paid orders and returns $2.73 per $1 of ad spend. After costs it keeps $1.80."),
+    "Testimonial · carousel has 4 paid orders and returns $2.73 per $1 of ad spend.");
+  const long = firstSentence(`${"word ".repeat(60)}end.`);
+  assert.ok(long.length <= 170 && long.endsWith("…") && !long.includes("wor…"));
 });
