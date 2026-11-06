@@ -11,5 +11,6 @@ test("Claude proxy: empty text blocks are dropped and a trailing assistant text 
   ]);
   assert.deepEqual(out[1].content.map((c) => c.type), ["tool_use"]);
   assert.equal(out[3].content[0].text, "Done.");
+  assert.deepEqual(out[4], { role: "user", content: "Continue." }); // no assistant prefill on this model
   assert.equal(cleanTurns([{ role: "user", content: "  " }])[0].content, "(no text)");
 });

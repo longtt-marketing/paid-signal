@@ -3,6 +3,7 @@
 import { claudeAdapter } from "./claudeAdapter.js";
 import { createAiHarness, directLlmRunner } from "ag-studio";
 import { adName } from "./names.js";
+import { seededHistory } from "./history.js";
 
 const get = async (path, signal) => { const r = await fetch(path, { signal }); const d = await r.json(); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; };
 const post = async (path, body, signal) => { const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal }); const d = await r.json(); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; };
@@ -42,8 +43,8 @@ const BUDGET = `You are the Paid Signal budget agent for a small shop that sells
    Call it "paid revenue minus ad spend"; do not use the word "profit" (product cost is unknown). Write money with a dollar sign ($118.40; a shortfall as "$41.50 below ad spend").
 2. Call submit_budget_recommendation once with 1 to 3 actions. Evidence is "row:<ad key>" for an ad's row. An ad with fewer than 3 paid orders gets "keep" (or "fix_tracking"), never pause, reduce or increase; say it needs more paid orders. Say when an ad has a possible duplicate held out of its paid orders (if it is a real second purchase, its paid count is one higher).
    If it comes back rejected, fix exactly the listed problems and submit again (one repair).
-3. Once accepted, delegate to the page agent: ask it to add one bar chart that shows the evidence behind your main action
-   (for example paid revenue against spend by ad), using the fields already on the page.
+3. Once accepted, delegate to the page agent once: ask it to add one grouped column chart titled "Paid revenue vs spend, by ad",
+   with category field ads.name and two values, the measures mRevenue (Revenue) and mSpend (Spend). Name these field ids in your request.
 4. Finish with a two-sentence summary. Keep every step short: one read, one submit, one delegation. You never change budgets yourself: the owner approves in the approvals column.`;
 
 export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
@@ -158,6 +159,7 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
       ],
       primary: "lead",
       promptStarters: PROMPT_STARTERS,
+      history: seededHistory(),
     }));
   };
 }

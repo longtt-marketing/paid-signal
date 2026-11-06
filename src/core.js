@@ -282,6 +282,9 @@ export function cleanTurns(messages) {
   if (last?.role === "assistant") {
     if (typeof last.content === "string") last.content = last.content.trimEnd();
     else { const t = [...last.content].reverse().find((c) => c.type === "text"); if (t && last.content.at(-1) === t) t.text = t.text.trimEnd(); }
+    // the model behind Studio takes no assistant prefill: a turn that ends on the assistant's own words asks it to go on
+    const hasToolUse = Array.isArray(last.content) && last.content.some((c) => c?.type === "tool_use");
+    if (!hasToolUse) out.push({ role: "user", content: "Continue." });
   }
   return out;
 }

@@ -22,7 +22,8 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const sys = String(b.system || "");
       const tools = b.tools.map((t, i) => (i === b.tools.length - 1 ? { ...t, cache_control: { type: "ephemeral" } } : t));
       const body = JSON.stringify({ model, max_tokens: Math.min(Number(b.max_tokens) || 3000, 4000), ...(sys ? { system: [{ type: "text", text: sys, cache_control: { type: "ephemeral" } }] } : {}),
-        messages: cleanTurns(b.messages), tools, ...(b.tool_choice ? { tool_choice: b.tool_choice } : {}) });
+        // this model refuses a forced tool_choice ("tool" or "any"); Studio asks for one on some steps, so those run as auto
+        messages: cleanTurns(b.messages), tools, ...(b.tool_choice && !["tool", "any"].includes(b.tool_choice.type) ? { tool_choice: b.tool_choice } : {}) });
       const ask = () => fetch("https://api.anthropic.com/v1/messages", {
         method: "POST", body,
         headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json", ...(env.ANTHROPIC_WORKSPACE_ID ? { "anthropic-workspace-id": env.ANTHROPIC_WORKSPACE_ID } : {}) },
