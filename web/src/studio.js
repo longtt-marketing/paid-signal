@@ -216,6 +216,11 @@ export const initialReport = {
   ],
 };
 
+// every widget takes part in cross-filtering: a click on an ad (or ad group) in a custom widget filters the rest of the page;
+// the clicked widget itself highlights its row instead of filtering it away
+const HIGHLIGHT = new Set(["claim-vs-confirmed", "share-gap"]);
+for (const pg of initialReport.pages) for (const w of Object.values(pg.widgets)) w.format = { ...(w.format || {}), crossFilter: HIGHLIGHT.has(w.type) ? "highlight" : "filter" };
+
 const v = (name) => `var(--${name})`;
 // The "Ledger" look (Claude Design canvas https://claude.ai/artifact/BW1Dmbn5qtjd9KNfM1UHXP): warm account-book paper,
 // cream sheets with a warm rule, green ink for money kept. Only what Studio's theme can set; one family, tabular numbers.

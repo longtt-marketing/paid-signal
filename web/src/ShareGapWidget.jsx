@@ -15,20 +15,23 @@ export function ShareGapWidget({ dataMapping, widgetApi, context }) {
     widgetApi.setDisplayState("loading");
     widgetApi.getData({ fields: [cat, reported, money], sort: [{ field: reported, direction: "desc" }] }).then((res) => {
       if (!live) return;
-      const raw = (res.results?.rows || []).map((r) => ({ name: String(pick(r, cat, 0)), a: Number(pick(r, reported, 1)) || 0, b: Number(pick(r, money, 2)) || 0 }));
+      const raw = (res.results?.rows || []).map((r) => ({ value: pick(r, cat, 0), name: String(pick(r, cat, 0)), a: Number(pick(r, reported, 1)) || 0, b: Number(pick(r, money, 2)) || 0 }));
       const ta = raw.reduce((n, r) => n + r.a, 0) || 1, tb = raw.reduce((n, r) => n + r.b, 0) || 1;
-      const out = raw.map((r) => ({ name: r.name, a: r.a / ta, b: r.b / tb }));
+      const out = raw.map((r) => ({ value: r.value, name: r.name, a: r.a / ta, b: r.b / tb }));
       setRows(out);
       widgetApi.setDisplayState(out.length ? "displayed" : "noData");
     }).catch(() => live && widgetApi.setDisplayState("noData"));
     return () => { live = false; };
   }, [cat, reported, money, widgetApi, context?.dataVersion]);
 
+  // a click on an ad group cross-filters the rest of the page to it (ctrl or cmd adds to the selection)
+  const selected = new Set((widgetApi.getCrossFilterSelections?.() || []).flatMap((s) => (s.type === "value" ? s.values : [])));
+  const choose = (r) => (e) => { widgetApi.toggleCrossFilter({ type: "value", value: r.value, field: cat, group: 0, reset: !(e.metaKey || e.ctrlKey) }); e.stopPropagation(); };
   return (
-    <div className="claim share">
+    <div className="claim share" onClick={(e) => { if (e.target === e.currentTarget) widgetApi.resetCrossFilter(); }}>
       {rows.map((r) => (
-        <div className="claim-row" key={r.name}>
-          <span className="claim-name">{r.name}</span>
+        <div className={`claim-row${selected.has(r.value) ? " on" : selected.size ? " dim" : ""}`} key={r.name}>
+          <button type="button" className="claim-name" onClick={choose(r)} aria-pressed={selected.has(r.value)} title="Filter the page to this group">{r.name}</button>
           <div className="claim-bars" role="img" aria-label={`${r.name}: ${pct(r.a)} of what the ad report counts, ${pct(r.b)} of the money kept`}>
             <i className="claim-claimed" style={{ width: `${r.a * 100}%` }} />
             <i className="claim-confirmed" style={{ width: `${Math.max(0.8, r.b * 100)}%` }} />
@@ -52,6 +55,8 @@ export const shareGapWidgetDefinition = {
   },
   form: (params) => params.createDefaults({ dataMappingItems: [{ key: "category", label: "Ad" }, { key: "reported", label: "Counted by the ad report" }, { key: "money", label: "Money kept" }] }),
   comp: ShareGapWidget,
+  featureConfig: { crossFilter: { supportsHighlight: true } },
+  ai: { label: "Reported share vs money share", description: "Each ad or ad group: its share of what the ad report counts against its share of the money kept; clicking one filters the page to it.", usage: "Map category to the ad or group name, reported to leads or chats, money to money kept." },
   defaultSize: { width: 800, height: 240 },
   minSize: { width: 320, height: 140 },
 };

@@ -6,6 +6,7 @@ import { buildAi } from "./agentTools.js";
 import { buildData, initialReport, phoneReport, phoneTheme, shopSources, theme } from "./studio.js";
 import { shareGapWidgetDefinition } from "./ShareGapWidget.jsx";
 import { toolDisplay } from "./toolDisplay.jsx";
+import { REPLAY_EVENT } from "./history.js";
 import { claimWidgetDefinition } from "./ClaimWidget.jsx";
 import { timelineWidgetDefinition } from "./TimelineWidget.jsx";
 import { funnelWidgetDefinition } from "./FunnelWidget.jsx";
@@ -26,6 +27,28 @@ const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, 
     .then(([c, csv]) => setShop(shopSources(c.read, csv))).catch(() => {}); }, []);
   const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments, invoices, state.duplicates, state.metaSends, shop) : undefined), [state, invoices, shop]);
   const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() + (invoices || []).map((i) => i.id + i.status + (i.reminded_at || "")).join() + `|shop${shop.sources[1].data.length}` }), [state, invoices, shop]);
+  // a recorded budget run, when opened, adds back the chart it asked Studio's page agent for (same fields as in the run)
+  useEffect(() => {
+    const onOpen = (e) => {
+      if (!/^Budget agent/.test(e.detail?.title || "")) return;
+      const a = studio.current?.api;
+      // the panel can open the saved thread while Studio is still starting: try again shortly
+      if (!a || !a.getState()?.pages?.length) { if ((e.tries || 0) < 20) setTimeout(() => onOpen({ detail: e.detail, tries: (e.tries || 0) + 1 }), 500); return; }
+      const s = a.getState(), pages = s.pages.map((pg) => {
+        if (pg.id !== "overview" || pg.widgets["revenue-vs-spend"]) return pg;
+        const y = Math.max(...Object.values(pg.widgetLayout).map((l) => l.yTrack + l.ySpan));
+        return { ...pg, widgets: { ...pg.widgets, "revenue-vs-spend": { type: "column-chart-grouped", dataMapping: { categoryKey: [{ id: "ads.name" }], valueKey: [{ id: "mRevenue" }, { id: "mSpend" }] },
+          format: { title: { enabled: true, text: "Paid revenue vs spend, by ad (from the recorded budget run)" }, crossFilter: "filter", style: { theme: { common: { legend: { enabled: true } } } } } } },
+          widgetLayout: { ...pg.widgetLayout, "revenue-vs-spend": { xTrack: 0, yTrack: y, xSpan: 24, ySpan: 14 } } };
+      });
+      a.setState({ ...s, pages });
+    };
+    addEventListener(REPLAY_EVENT, onOpen);
+    // Studio may open the saved thread while it is still starting, and its first state can replace ours: for the first
+    // 20 s, put the chart back whenever the budget run is the open recording and the chart is missing
+    let n = 0; const tick = setInterval(() => { if (++n > 20) clearInterval(tick); if (window.__psLastOpened) onOpen({ detail: { title: window.__psLastOpened }, tries: 99 }); }, 1000);
+    return () => { removeEventListener(REPLAY_EVENT, onOpen); clearInterval(tick); };
+  }, []);
   // tell custom widgets the data changed, once Studio has taken the new data in
   useEffect(() => { if (!data) return; const t = setTimeout(() => dispatchEvent(new Event(DATA_EVENT)), 400); return () => clearTimeout(t); }, [data]);
   const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition, funnelWidgetDefinition, owesWidgetDefinition, shareGapWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline", "lead-funnel", "who-still-owes", "share-gap"] }] }), []);

@@ -197,6 +197,8 @@ code{font-family:var(--code);font-size:12px}
 .studio{background:linear-gradient(90deg,transparent 22px,rgba(176,74,58,.28) 22px,rgba(176,74,58,.28) 23px,transparent 23px),repeating-linear-gradient(180deg,#EFEBE0 0,#EFEBE0 27px,#E2DCCB 27px,#E2DCCB 28px)}.claim-none{background:var(--gap-line)}
 .claim-v{font:500 13px var(--mono);text-align:right}.claim-v.gap{color:var(--gap)}
 .tool-d{display:flex;flex-direction:column;gap:4px;padding:6px 0 2px;font-size:13px}.tool-r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:baseline}.tool-r span{color:var(--mute);overflow:hidden;text-overflow:ellipsis}.tool-r b{font-weight:500;text-align:right;max-width:62%}.tool-r b.ok{color:var(--paid)}.tool-r b.gap{color:var(--gap)}
+button.claim-name{all:unset;cursor:pointer;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:4px}button.claim-name:hover{text-decoration:underline}button.claim-name:focus-visible{outline:2px solid #0F7A43;outline-offset:2px}
+.claim-row.on button.claim-name{color:#0F7A43}.claim-row.on{background:rgba(15,122,67,.07);border-radius:6px}.claim-row.dim{opacity:.55}
 .claim.share .claim-row{grid-template-columns:minmax(120px,240px) minmax(0,1fr) 128px}.claim.share .claim-v{white-space:nowrap}
 @media(max-width:760px){.claim.share .claim-row{grid-template-columns:1fr 120px}}
 .claim-key{margin-top:auto;display:flex;gap:16px;font-size:12px;color:var(--faint)}.claim-key i{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:middle;margin-right:4px}
