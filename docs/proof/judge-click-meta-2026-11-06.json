@@ -1,0 +1,9 @@
+{
+  "what": "A judge-path run by the author on the live demo after the test ad click was added: ask, approve, pay as the sandbox buyer, Undo.",
+  "checked_at": "2026-11-06T08:08:33Z",
+  "read_from": "/api/trail?capture=3VM63133MA553335T (same browser as the run)",
+  "click": { "ad": "parent_carousel", "ad_name": "Testimonial · carousel", "source": "fb", "click_id": "judgemw4oxngsa2m7b6", "clicked_at": 1793952390412, "kind": "test click made in the judge's browser" },
+  "paypal": { "read": "Invoicing v2: GET /v2/invoicing/invoices/{id}", "invoice_id": "INV2-R9YL-EU6K-EKVL-WLYK", "payment_id": "3VM63133MA553335T", "amount": "49.00", "currency": "USD", "status": "REFUNDED", "paid_at": "2026-11-06" },
+  "meta": { "ok": true, "event_id": "paypal:3VM63133MA553335T", "value": 49, "events_received": 1, "test_event": true, "fbtrace_id": "AKpzyGXgElpfuGKDDNNtE3f", "at": "2026-11-06T08:07:38.071Z" },
+  "receipt_on_judge_path": { "testimonial_ad_paid_orders": "4 → 5 → 4", "meta_row": "Purchase test event received; already sent; Meta has no retraction, so it is subtracted here", "undo": "Refunded $49.00, REFUNDED" }
+}

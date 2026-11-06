@@ -58,7 +58,7 @@ Studio's agents here act on PayPal, not only read: from Studio's assistant the r
 - Meta accepted a lead-form Purchase for one Meta test lead; a Messenger Purchase has not been accepted with a real chat id yet.
 - Gift shop: paid by bank transfer, not PayPal; it is why Paid Signal exists, not a result of it. Chat counts are reported from the ad account, whose exports are no longer available; its order, payment and refund book is published. "Money" is revenue after refunds, before costs.
 - The 9% to 18% (about $4,625 to $8,960) assumes returns flatten as an ad gets more spend; if they did not, 48% is the upper bound (`whatIf`, src/merchantCase.js). One month, three ad groups, spend moved beyond what October tested: not a measured lift.
-- Judge path: your ad click is a test click made in your browser, and Meta gets test events only; only your view changes; the creator payout runs once per browser, up to 15 judges a day. A live Undo on 5 Nov ended REFUNDED (docs/proof/judge-undo-2026-11-05.json).
+- Judge path: your ad click is a test click made in your browser, and Meta gets test events only; only your view changes; the creator payout runs once per browser, up to 15 judges a day. A live run on 6 Nov: Meta received the Purchase test event (events_received 1), then Undo ended REFUNDED (docs/proof/judge-click-meta-2026-11-06.json).
 - Approve records a decision; it does not change a live Meta budget. Whether a live campaign then spends better is not measured.
 - Approve buttons are open in the demo; a real shop puts them behind its own login.
 - Meta has no retraction: a refund after the send is subtracted here, not at Meta.
