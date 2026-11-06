@@ -55,6 +55,8 @@ const app = {
 
       if (url.pathname.startsWith("/api/")) return json({ error: "Not found" }, 404);
       if (url.pathname === "/" && request.method === "GET") return withPageHeaders(await firstPaint(env, url, await env.ASSETS.fetch(request)));
+      // /studio: the same app opened straight on the AG Studio report, for judges; it reads only (no invoice sync on open)
+      if (url.pathname === "/studio" && request.method === "GET") return withPageHeaders(await firstPaint(env, url, await env.ASSETS.fetch(new Request(new URL("/", url), request))));
       return env.ASSETS.fetch(request);
     } catch (e) {
       // a client error says what PayPal objected to; a server error says only that it failed (details stay in the logs)

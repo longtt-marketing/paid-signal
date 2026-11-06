@@ -1,5 +1,8 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+// /studio opens the app straight on the AG Studio report (the judges' link) and skips the invoice sync on open
+const STUDIO_PAGE = typeof location !== "undefined" && location.pathname === "/studio";
+
 // the PayPal ledger as an AG Grid table, loaded only when the dashboard shows it
 const LedgerGrid = lazy(() => import("./LedgerGrid.jsx"));
 
@@ -72,13 +75,13 @@ export default function App({ first = null }) {
   const [sending, setSending] = useState({});
   const [studioOn, setStudioOn] = useState(() => /[?&](film|studio)=1/.test(location.search));
   const [toast, setToast] = useState("");
-  const [view, setView] = useState(() => (location.hash === "#report" ? "report" : "desk"));
+  const [view, setView] = useState(() => (STUDIO_PAGE || location.hash === "#report" ? "report" : "desk"));
   useEffect(() => {
-    const on = () => setView(location.hash === "#report" ? "report" : "desk");
+    const on = () => setView(STUDIO_PAGE || location.hash === "#report" ? "report" : "desk");
     addEventListener("hashchange", on); return () => removeEventListener("hashchange", on);
   }, []);
   useEffect(() => { if (view === "report") { setStudioOn(true); scrollTo(0, 0); requestAnimationFrame(() => dispatchEvent(new Event("resize"))); } }, [view]);
-  const goDesk = (id) => { if (location.hash === "#report") history.pushState(null, "", location.pathname + location.search); setView("desk"); if (id) setTimeout(() => scrollToId(id), 60); };
+  const goDesk = (id) => { if (STUDIO_PAGE) { location.href = `/${id ? `#${id}` : ""}`; return; } if (location.hash === "#report") history.pushState(null, "", location.pathname + location.search); setView("desk"); if (id) setTimeout(() => scrollToId(id), 60); };
   const csvRef = useRef("");
   csvRef.current = csv;
 
@@ -135,7 +138,8 @@ export default function App({ first = null }) {
   // a custom Studio widget that acted (the Nudge button) asks for fresh invoices, so the board shows the new reminders
   useEffect(() => { const on = () => loadInvoices(); addEventListener("paid-signal:refresh", on); return () => removeEventListener("paid-signal:refresh", on); }, [loadInvoices]);
   const syncInvoices = useCallback(async () => { setSyncNote(""); try { const d = await api("/api/invoices/sync", {}); if (d.paid && csvRef.current) load(csvRef.current); } catch (e) { setSyncNote(e.message); } loadInvoices(); }, [load, loadInvoices]);
-  useEffect(() => { syncInvoices(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // the dashboard asks PayPal for newly paid invoices on open; /studio only reads
+  useEffect(() => { if (!STUDIO_PAGE) syncInvoices(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useLayoutEffect(() => {
     if (studioTop.current == null || !studioBox.current) return;
@@ -290,6 +294,7 @@ export default function App({ first = null }) {
           <a className="brand" href="/"><span className="mark"><i /></span>Paid Signal</a>
           <nav className="tabs" aria-label="Sections">
             <a href="/" className={view === "desk" ? "on" : ""}>Dashboard</a>
+            <a href="/studio" className={view === "report" ? "on" : ""}>AG Studio</a>
             <a href="/judge">Judge path</a>
             <a href="/audit">Audit</a>
             <a href="/proof">Proof</a>
@@ -381,7 +386,7 @@ export default function App({ first = null }) {
             <PhoneDisclosure id="payments" title="Payments" className="card" summaryText={state ? `${state.payments.length} in the ledger` : ""}>
               <div className="card-head phone-section-head"><h2>PayPal ledger</h2>{state && <span className="pill good">{state.payments.length} in the ledger</span>}</div>
               <div id="captures">
-                {state && <Suspense fallback={<p className="muted">Loading the ledger…</p>}><LedgerGrid payments={state.payments || []} dup={dup} metaSent={metaSent} adName={adName} onRefund={refund} onCount={markDistinct} /></Suspense>}
+                {state && <Suspense fallback={<p className="muted">Loading the ledger…</p>}><LedgerGrid payments={state.payments || []} dup={Object.fromEntries((state.duplicates || []).map((d) => [d.capture_id, d]))} metaSent={metaSent} adName={adName} onRefund={refund} onCount={markDistinct} /></Suspense>}
               </div>
             </PhoneDisclosure>
 
@@ -511,7 +516,7 @@ export default function App({ first = null }) {
 
         <section id="studio" className="card studio-card" ref={studioBox} aria-label="AG Studio">
           <div className="card-head">
-            <div><h2>{view === "report" ? "Report · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2><p className="muted">Six custom widgets, a real shop's book, cross-filters, Claude in the assistant.{layoutNote ? ` ${layoutNote}.` : ""}</p></div>
+            <div><h2>{view === "report" ? "Report · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2><p className="muted">{STUDIO_PAGE ? "Click a band in the money flow to filter the page and see the budget agent's verdict, then Approve. Open the assistant for Replay a budget run." : "Six custom widgets, a real shop's book, cross-filters, Claude in the assistant."}{layoutNote ? ` ${layoutNote}.` : ""}</p></div>
             <div className="row">
               {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {myDecisionCount > 0 && <span className="count">{myDecisionCount}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
               <button className="btn" onClick={() => setLayoutNote(studio.current?.saveLayout() ? "Saved in this browser" : "Could not save")}>Save layout</button>

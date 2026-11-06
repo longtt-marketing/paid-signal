@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
+import { totalsOf } from "./gridTotals.js";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -15,18 +16,22 @@ const theme = themeQuartz.withParams({
 });
 const money = (v) => `$${Number(v || 0).toFixed(2)}`;
 
-function StatusCell({ data }) {
+function StatusCell({ data, node }) {
+  if (node.rowPinned) return <b className="grid-total">{data.status}</b>;
   const cls = data.status === "Paid" ? "pill good" : data.status.startsWith("Held") ? "pill warn" : "pill";
   return <span className={cls}>{data.status}</span>;
 }
-function CaptureCell({ value }) {
+function CaptureCell({ value, node }) {
+  if (node.rowPinned) return null;
   return <a className="grid-id" href={`/trail?capture=${encodeURIComponent(value)}`} title="Open its money trail">{value}</a>;
 }
-function AdCell({ data, context }) {
+function AdCell({ data, context, node }) {
+  if (node.rowPinned) return <b className="grid-total">{data.ad}</b>;
   // in a narrow frame the capture column is hidden: the ad name opens the money trail instead
   return context.narrow ? <a className="grid-ad" href={`/trail?capture=${encodeURIComponent(data.capture_id)}`} title={`PayPal capture ${data.capture_id}: open its money trail`}>{data.ad}</a> : <span title={data.capture_id}>{data.ad}</span>;
 }
-function ActionCell({ data, context }) {
+function ActionCell({ data, context, node }) {
+  if (node.rowPinned) return null;
   if (data.held) return <button type="button" className="mini" onClick={() => context.onCount(data.capture_id)}>Count it</button>;
   if (data.refundable) return <button type="button" className="mini" onClick={() => context.onRefund(data.raw)}>Refund</button>;
   return null;
@@ -40,6 +45,7 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
     const ro = new ResizeObserver(([e]) => setWidth(Math.round(e.contentRect.width)));
     ro.observe(el); return () => ro.disconnect();
   }, []);
+  const [total, setTotal] = useState(null);
   const narrow = width > 0 && width < 760, tiny = width > 0 && width < 420;
   const rows = useMemo(() => payments.slice().reverse().map((p) => {
     const held = Boolean(dup[p.capture_id]);
@@ -49,28 +55,35 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
       via: p.via === "invoice" ? "invoice" : "checkout",
       status: held ? "Held: double?" : p.status === "REFUNDED" ? "Refunded" : part ? `Paid, ${money(p.refunded_amount)} back` : "Paid",
       meta: metaSent[p.capture_id]?.ok ? "Received" : p.status === "REFUNDED" ? "No purchase" : "Not sent",
-      held, refundable: !held && (p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED"),
+      held, why: held ? `Held out of paid orders: same payer and ad as ${dup[p.capture_id].first}, ${dup[p.capture_id].seconds} s apart. Count it if it is a separate order.` : "", refundable: !held && (p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED"),
     };
   }), [payments, dup, metaSent, adName]);
   const cols = useMemo(() => [
-    { field: "ad", headerName: "Ad", flex: 1.4, minWidth: 110, cellRenderer: AdCell },
-    { field: "amount", headerName: "Amount", width: 92, valueFormatter: (p) => money(p.value), type: "rightAligned" },
-    { field: "via", headerName: "Via", width: 100, hide: narrow },
-    { field: "status", headerName: "Status", width: 150, cellRenderer: StatusCell },
-    { field: "meta", headerName: "Meta", width: 120, hide: narrow },
-    { field: "capture_id", headerName: "PayPal capture", flex: 1, minWidth: 170, cellRenderer: CaptureCell, hide: narrow },
-    { headerName: "", colId: "act", width: 100, sortable: false, filter: false, cellRenderer: ActionCell, hide: tiny, suppressHeaderMenuButton: true },
+    { headerName: "Ad click", children: [{ field: "ad", headerName: "Ad", flex: 1.4, minWidth: 100, cellRenderer: AdCell }] },
+    { headerName: "PayPal", children: [
+      { field: "amount", headerName: "Amount", width: 92, valueFormatter: (p) => money(p.value), type: "rightAligned" },
+      { field: "via", headerName: "Via", width: 100, hide: narrow },
+      { field: "capture_id", headerName: "Capture", flex: 1, minWidth: 170, cellRenderer: CaptureCell, hide: narrow },
+    ] },
+    { headerName: "Ledger", children: [
+      { field: "status", headerName: "Status", width: narrow ? 140 : 210, cellRenderer: StatusCell, tooltipValueGetter: (p) => p.data?.why || null },
+    ] },
+    { headerName: "Meta", children: [{ field: "meta", headerName: "Purchase event", width: 140, hide: narrow }] },
+    { headerName: "", colId: "act", width: 104, minWidth: 104, pinned: "right", cellStyle: { paddingLeft: 6, paddingRight: 8 }, sortable: false, filter: false, cellRenderer: ActionCell, hide: tiny, suppressHeaderMenuButton: true },
   ], [narrow, tiny]);
+  const retotal = (api) => { const list = []; api.forEachNodeAfterFilter((n) => n.data && list.push(n.data)); setTotal(totalsOf(list, narrow)); };
   const exportCsv = () => grid.current?.api?.exportDataAsCsv({ fileName: "paypal-ledger.csv", columnKeys: ["ad", "amount", "via", "status", "meta", "capture_id"] });
   return (
     <div className="ledger-grid" ref={box}>
-      <div style={{ height: rows.length > 8 ? 420 : undefined }}>
+      <div style={{ height: rows.length > 8 ? 470 : undefined }}>
         <AgGridReact ref={grid} theme={theme} rowData={rows} columnDefs={cols} context={{ onRefund, onCount, narrow }}
           defaultColDef={{ sortable: true, filter: true, resizable: true, suppressMovable: true }}
           domLayout={rows.length > 8 ? "normal" : "autoHeight"} getRowId={(p) => p.data.capture_id} rowHeight={44}
-          getRowClass={(p) => (p.data.held ? "row-held" : "")} />
+          getRowClass={(p) => (p.node.rowPinned ? "row-total" : p.data.held ? "row-held" : "")}
+          pinnedBottomRowData={total ? [total] : []} tooltipShowDelay={200}
+          onFirstDataRendered={(e) => retotal(e.api)} onGridSizeChanged={(e) => retotal(e.api)} onFilterChanged={(e) => retotal(e.api)} onRowDataUpdated={(e) => retotal(e.api)} />
       </div>
-      <div className="ledger-foot"><span className="muted">Sort or filter any column; {narrow ? "an ad name" : "a capture id"} opens that payment's money trail.</span><button type="button" className="btn ghost" onClick={exportCsv}>Export CSV</button></div>
+      <div className="ledger-foot"><span className="muted">Sort or filter any column, and the total row follows; {narrow ? "an ad name" : "a capture id"} opens that payment's money trail; hover a held row for why.</span><button type="button" className="btn ghost" onClick={exportCsv}>Export CSV</button></div>
     </div>
   );
 }

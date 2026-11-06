@@ -1,9 +1,40 @@
 # AG Studio in Paid Signal: how it is built
 
-Open it: [Report · AG Studio](https://paid-signal.thelongmarketing.workers.dev/#report) (no login). Code: `web/src/`.
+Open it: [paid-signal.thelongmarketing.workers.dev/studio](https://paid-signal.thelongmarketing.workers.dev/studio) (no login; this link opens the report straight away and only reads). Code: `web/src/`.
 
 The report answers one question for a small shop: what each ad *claims* (leads, chats) against what PayPal *confirms*
 (paid orders, money kept after refunds). Studio's agents work in it, and they act on PayPal, not only read.
+
+## What it looks like
+
+A click on the testimonial ad's band filters the page and shows the budget agent's checked verdict, to approve or dismiss:
+
+![Money flow with the budget verdict](img/studio-flow-verdict.png)
+
+The same widget on the real gift shop's October book: 69% of the chats, 19% of the money kept.
+
+![Money flow on the real shop's book](img/studio-shop-flow.png)
+
+Who still owes, with the Nudge button that sends PayPal reminders through the chase agent:
+
+![Who still owes](img/studio-who-still-owes.png)
+
+And on the dashboard, the PayPal ledger as an AG Grid table, with column groups, a total row that follows the filters,
+CSV export and an action on each row:
+
+![PayPal ledger in AG Grid](img/dashboard-ledger-grid.png)
+
+## What the agents write, and what stops them
+
+The agents in Studio and the app do not only read: they write to PayPal. Code sets the limits, not the prompt.
+
+| Agent | Writes | Limit in code |
+|---|---|---|
+| Revenue agent (Studio tool "draft invoices") | PayPal invoice drafts through the Agent Toolkit | price and recipient set in code inside the call; a draft waits for a person; the send agent sends it only after approval |
+| Nudge agent (Studio) and the Nudge button | PayPal invoice reminders through the chase agent | the owner's click or request; unpaid invoices only, at most three per run |
+| Budget agent (Studio) | a budget recommendation, then the owner's decision | the evidence gate checks every number and capture id against the ledger; no move on fewer than 3 paid orders; a decision is recorded, no live Meta budget changes |
+| Refund agent (app) | a PayPal refund | only the flagged second capture, its full amount, once per approval |
+| Commission agent (app) | a PayPal Payouts payment to the ad's creator | recipient fixed in code; $5 per PayPal-confirmed paid order not refunded, disputed, held or already paid |
 
 ## Data
 

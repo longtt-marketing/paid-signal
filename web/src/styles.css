@@ -326,3 +326,4 @@ details.ev summary{cursor:pointer;font-size:12px;color:var(--mute);list-style:no
 .ledger-grid{display:flex;flex-direction:column;gap:10px}.ledger-foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}.ledger-foot .btn{margin-top:0;min-height:36px;font-size:13px}
 .ledger-grid .grid-id{font:500 12.5px var(--mono);color:var(--ink)}.ledger-grid .row-held{background:#FFF8EC}.ledger-grid .pill{display:inline-flex;line-height:1.6}
 .ledger-grid .grid-ad{color:var(--ink);text-decoration:underline;text-decoration-color:#CFCFCA;text-underline-offset:3px}
+.ledger-grid .row-total{background:#F7F7F5;font-weight:600}.ledger-grid .grid-total{font-weight:700;font-size:12.5px}

@@ -86,7 +86,10 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
     const s = side === "l" ? r.sa : r.sb;
     const short = r.name.split(" · ")[0];
     const nm = short.length > 2 ? short : r.name;
-    return narrow ? `${nm.split(" ")[0].slice(0, 12)} ${pct(s)}` : `${nm} · ${pct(s)}`;
+    if (narrow) return `${nm.split(" ")[0].slice(0, 12)} ${pct(s)}`;
+    // keep the share whole and shorten the name to fit the column (about 6.2 px a character at this size)
+    const room = Math.floor((colW - 16) / 6.2) - pct(s).length - 3;
+    return `${nm.length > room ? `${nm.slice(0, Math.max(1, room - 1)).trimEnd()}…` : nm} · ${pct(s)}`;
   };
 
   return (
