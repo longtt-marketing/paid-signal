@@ -193,7 +193,8 @@ code{font-family:var(--code);font-size:12px}
 .claim-claimed{background:var(--claimed)}.claim-confirmed{background:var(--paid)}
 /* inside AG Studio the custom widgets follow the Ledger theme (studio.js) */
 .studio .claim-claimed{background:#CFC8B6}.studio .claim-confirmed{background:#0F7A43}.studio .claim-name{color:#1B1A17}.studio .claim-key{color:#6B6455}
-.studio{background:#EFEBE0}.claim-none{background:var(--gap-line)}
+/* account-book paper behind the report: faint ruled lines every 28 px and a red margin rule, as in a ledger */
+.studio{background:linear-gradient(90deg,transparent 22px,rgba(176,74,58,.28) 22px,rgba(176,74,58,.28) 23px,transparent 23px),repeating-linear-gradient(180deg,#EFEBE0 0,#EFEBE0 27px,#E2DCCB 27px,#E2DCCB 28px)}.claim-none{background:var(--gap-line)}
 .claim-v{font:500 13px var(--mono);text-align:right}.claim-v.gap{color:var(--gap)}
 .tool-d{display:flex;flex-direction:column;gap:4px;padding:6px 0 2px;font-size:13px}.tool-r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:baseline}.tool-r span{color:var(--mute);overflow:hidden;text-overflow:ellipsis}.tool-r b{font-weight:500;text-align:right;max-width:62%}.tool-r b.ok{color:var(--paid)}.tool-r b.gap{color:var(--gap)}
 .claim.share .claim-row{grid-template-columns:minmax(120px,240px) minmax(0,1fr) 128px}.claim.share .claim-v{white-space:nowrap}

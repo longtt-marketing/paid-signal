@@ -1,6 +1,6 @@
 // Invoices (draft, approve, send, sync), the judge path's try-it flow, the revenue and chase agents, double-payment refunds.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
-import { createDraftInvoice, isEvidence, sendToMeta, guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS, CREATOR, heldDuplicates, disputeState, commissionOrders, runPayoutAgent, PAYOUT_SYSTEM, PAYOUT_TOOLS, quota, adName, parseAdCsv } from "../core.js";
+import { CLICK_ID, createDraftInvoice, isEvidence, sendToMeta, guard, toolkitTools, utc, json, visitorId, sha, publicInvoice, cachedList, forget, revenueDrafts, listPayments, applyRefund, listPrefix, demoLeads, recordInvoicePayment, tryPaid, publicTry, syncInvoices, CLAUDE_DAILY, claudeGuard, revenueFallback, revenueUnavailable, paypal, possibleDuplicates, anthropicLLM, runSendAgent, SEND_SYSTEM, SEND_TOOLS, runRefundAgent, REFUND_SYSTEM, REFUND_TOOLS, runRevenueAgent, REVENUE_SYSTEM, REVENUE_TOOLS, runChaseAgent, eligibleForReminder, CHASE_SYSTEM, CHASE_TOOLS, CREATOR, heldDuplicates, disputeState, commissionOrders, runPayoutAgent, PAYOUT_SYSTEM, PAYOUT_TOOLS, quota, adName, parseAdCsv } from "../core.js";
 import { tryImpact } from "../tryImpact.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
@@ -126,7 +126,10 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const stop = await claudeGuard(env, request, "judge try runs", 12, CLAUDE_DAILY);
       // a judge who used up today's live runs gets a plain answer, not an unrelated saved batch summary
       if (stop) return json({ error: "Today's live Claude runs for this network are used up. The recorded runs on /proof show the same agent; try again tomorrow.", limited: true }, 429);
-      const t0 = Date.now(), lead = { lead: "Judge lead", ad: "parent_carousel", source: "other", click_id: "", channel: "web", email: "judge-lead@example.com", message: body.message.trim() };
+      // the judge arrives as if from the testimonial ad: a test Meta click made in the browser, so the paid invoice reaches
+      // Meta as a Purchase test event and the whole loop (ad click, PayPal, Meta) runs on the judge's own payment
+      const ck = body.click && CLICK_ID.test(String(body.click.click_id || "")) ? { source: "fb", click_id: String(body.click.click_id), clicked_at: Math.min(Date.now(), Number(body.click.clicked_at) || Date.now()) } : null;
+      const t0 = Date.now(), lead = { lead: "Judge lead", ad: "parent_carousel", source: ck ? "fb" : "other", click_id: ck ? ck.click_id : "", channel: "web", email: "judge-lead@example.com", message: body.message.trim() };
       try {
         const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: REVENUE_SYSTEM, tools: REVENUE_TOOLS });
         const toolkit = toolkitTools(tryEnv, { invoices: { create: true } });
@@ -134,7 +137,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
           const id = await createDraftInvoice(toolkit, lead, p);
           if (!id) return { error: "PayPal returned no invoice id" };
           await env.LEDGER.put(`try:${id}`, JSON.stringify({ id, vid: visitorId(request), lead: lead.lead, ad: lead.ad, email: lead.email, channel: lead.channel,
-            amount: p.total, lines: p.lines, note: p.note, reason: p.reason, status: "DRAFT", drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() }));
+            amount: p.total, lines: p.lines, note: p.note, reason: p.reason, ...(ck ? { click: ck } : {}), status: "DRAFT", drafted_by: "revenue agent (Claude) via PayPal Agent Toolkit", created_at: new Date().toISOString() }));
           return { id };
         };
         const run = await runRevenueAgent({ llm, leads: [lead], invoices: [], createDraft });

@@ -17,7 +17,7 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 
 **One loop, on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) (sandbox, a few minutes):**
 1. **Claude says no.** The owner asks to raise the free guide; with 1 paid order, Claude refuses, and the rule in code refuses it too.
-2. **You pay.** Ask to book: Claude drafts a real PayPal invoice through the Agent Toolkit. Approve it and pay as the sandbox buyer: the testimonial ad gains your order (its count goes 4 → 5) and the budget rule re-runs.
+2. **You pay.** Ask to book: Claude drafts a real PayPal invoice through the Agent Toolkit. You came in from the testimonial ad (a test click), so when you pay as the sandbox buyer the ad gains your order (its count goes 4 → 5), the budget rule re-runs and Meta gets a Purchase test event.
 3. **Undo.** PayPal refunds it and the count goes back to 4.
 
 **Real data:** in a Vietnamese gift shop, the ad with 69% of the chats brought 19% of the money; its published book reruns through the same ledger code to the same 705 orders ([see it run](https://paid-signal.thelongmarketing.workers.dev/audit#shop)).
@@ -58,7 +58,7 @@ Studio's agents here act on PayPal, not only read: from Studio's assistant the r
 - Meta accepted a lead-form Purchase for one Meta test lead; a Messenger Purchase has not been accepted with a real chat id yet.
 - Gift shop: paid by bank transfer, not PayPal; it is why Paid Signal exists, not a result of it. Chat counts are reported from the ad account, whose exports are no longer available; its order, payment and refund book is published. "Money" is revenue after refunds, before costs.
 - The 9% to 18% (about $4,625 to $8,960) assumes returns flatten as an ad gets more spend; if they did not, 48% is the upper bound (`whatIf`, src/merchantCase.js). One month, three ad groups, spend moved beyond what October tested: not a measured lift.
-- Judge path: your payment has no ad click, so Meta is not told; only your view changes; the creator payout runs once per browser, up to 15 judges a day. A live Undo on 5 Nov ended REFUNDED (docs/proof/judge-undo-2026-11-05.json).
+- Judge path: your ad click is a test click made in your browser, and Meta gets test events only; only your view changes; the creator payout runs once per browser, up to 15 judges a day. A live Undo on 5 Nov ended REFUNDED (docs/proof/judge-undo-2026-11-05.json).
 - Approve records a decision; it does not change a live Meta budget. Whether a live campaign then spends better is not measured.
 - Approve buttons are open in the demo; a real shop puts them behind its own login.
 - Meta has no retraction: a refund after the send is subtracted here, not at Meta.

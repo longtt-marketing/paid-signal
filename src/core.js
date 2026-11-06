@@ -434,7 +434,7 @@ export async function tryPaid(env, invoice, url = new URL("https://paid-signal.t
     if (!payment) {
       const now = new Date().toISOString();
       payment = { capture_id: t.payment_id, order_id: invoice.id, status: "COMPLETED", amount: t.amount?.value || rec.amount,
-        currency: t.amount?.currency_code || "USD", ad: rec.ad || "parent_carousel", source: "other", click_id: "", clicked_at: 0,
+        currency: t.amount?.currency_code || "USD", ad: rec.ad || "parent_carousel", source: rec.click?.source || "other", click_id: rec.click?.click_id || "", clicked_at: rec.click?.clicked_at || 0,
         channel: rec.channel || "web", captured_at: now, payment_seen_at: now, paypal_payment_date: t.payment_date_time || t.payment_date || null,
         refunded_amount: "0.00", payer_email_sha256: rec.email ? await sha(String(rec.email).trim().toLowerCase()) : null,
         via: "invoice", ...(rec.message ? { buyer_message: rec.message } : {}), visitor: rec.vid, try_invoice: invoice.id };

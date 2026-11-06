@@ -76,6 +76,22 @@ test("PayPal PAID writes one invoice-shaped visitor payment and a retry never ov
   assert.equal(kv.get("pay:TRY-PAY"), original);
 });
 
+test("a judge who came through the test ad click: the paid invoice carries the click, so Meta gets a Purchase", async () => {
+  const { metaEvents } = await import("../src/ledger.js");
+  const clickedAt = Date.parse("2026-11-05T10:58:00Z");
+  const record = { id: invoiceId, vid: VID, email: "judge-lead@example.com", ad: "parent_carousel", channel: "web", amount: "49.00", status: "SENT", click: { source: "fb", click_id: "judgeabc123", clicked_at: clickedAt } };
+  const { env, kv } = kvEnv([[`try:${invoiceId}`, record]]);
+  const invoice = { id: invoiceId, status: "PAID", payments: { transactions: [{ payment_id: "TRY-CLICK", amount: { value: "49.00", currency_code: "USD" }, payment_date_time: "2026-11-05T11:00:00Z" }] } };
+  await tryPaid(env, invoice);
+  const saved = JSON.parse(kv.get("pay:TRY-CLICK"));
+  assert.equal(saved.source, "fb");
+  assert.equal(saved.click_id, "judgeabc123");
+  assert.equal(saved.clicked_at, clickedAt);
+  const { events } = await metaEvents([{ ...saved, captured_at: "2026-11-05T11:00:00Z" }]);
+  assert.equal(events.length, 1);
+  assert.match(events[0].user_data.fbc, /judgeabc123$/);
+});
+
 test("the impact endpoint returns only this browser's paid invoice and payment data", async () => {
   const { route } = await import("../src/routes/invoices.js");
   const ownInvoice = { id: invoiceId, vid: VID, email: "private@example.test", status: "PAID", paid: { payment_id: "MINE" } };

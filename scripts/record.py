@@ -520,7 +520,11 @@ def studio26(pg):
     # the recorded budget run is about the Ads vs PayPal page: go back to it before opening the assistant
     glide(pg, pg.locator(".studio-pages button", has_text="Ads vs PayPal")); pg.wait_for_timeout(2500)
     btn = pg.locator(".studio-card .btn.dark"); glide(pg, btn); pg.wait_for_timeout(3000)
-    mark(pg, "chat", ".studio [class*='ai'] >> nth=0"); pg.wait_for_timeout(5500)
+    mark(pg, "chat", ".studio [class*='ai'] >> nth=0"); pg.wait_for_timeout(6500)
+    # a second recorded run, where an agent writes to PayPal: the nudge agent's reminders
+    glide(pg, pg.locator("#studio button", has_text="Budget agent: proposals")); pg.wait_for_timeout(1200)
+    glide(pg, pg.get_by_text("Nudge agent: PayPal reminders", exact=True)); pg.wait_for_timeout(1500)
+    mark(pg, "nudge", ".studio [class*='ai'] >> nth=0"); pg.wait_for_timeout(7000)
 
 
 SEGMENTS = {"studio26": studio26, "home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}

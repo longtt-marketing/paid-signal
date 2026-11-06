@@ -224,8 +224,8 @@ const rule = (color) => ({ width: 1, color });
 export const theme = studioTheme.withParams({
   fontFamily: v("sans"), fontSize: 14, textColor: L.ink, foregroundColor: L.ink, subtleTextColor: L.label,
   backgroundColor: L.sheet, borderColor: L.rule, accentColor: L.paid, iconColor: L.label, rowHoverColor: L.head,
-  studioWrapperBorder: false, studioWrapperBorderRadius: 0, studioWrapperSpacing: 0, studioWrapperBackgroundColor: L.canvas,
-  studioCanvasBorder: false, studioCanvasBorderRadius: 0, studioCanvasShadow: false, studioCanvasBackgroundColor: L.canvas,
+  studioWrapperBorder: false, studioWrapperBorderRadius: 0, studioWrapperSpacing: 0, studioWrapperBackgroundColor: "transparent",
+  studioCanvasBorder: false, studioCanvasBorderRadius: 0, studioCanvasShadow: false, studioCanvasBackgroundColor: "transparent",
   studioCanvasPadding: 16, studioCanvasRowHeight: 18, studioCanvasFontFamily: v("sans"),
   studioWidgetBackgroundColor: L.sheet, studioWidgetBorder: rule(L.rule), studioWidgetBorderRadius: 6, studioWidgetPadding: 14,
   studioWidgetTitleFontFamily: v("sans"), studioWidgetTitleFontSize: 15, studioWidgetTitleFontWeight: 600, studioWidgetTitleTextColor: L.ink,

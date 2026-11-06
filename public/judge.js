@@ -37,7 +37,11 @@ box("try-run").onclick = async () => {
   const run = box("try-run"), result = box("try-result");
   run.disabled = true; run.textContent = "Claude is reading…";
   result.replaceChildren();
-  try { showTryResult(await post("/api/judge/try", { message: box("try-message").value })); }
+  // a test Meta click for this browser, as if the judge came from the testimonial ad: the paid invoice then reaches Meta
+  let click = null;
+  try { click = JSON.parse(sessionStorage.getItem("ps-judge-click") || "null"); } catch {}
+  if (!click) { click = { click_id: `judge${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, clicked_at: Date.now() }; try { sessionStorage.setItem("ps-judge-click", JSON.stringify(click)); } catch {} }
+  try { showTryResult(await post("/api/judge/try", { message: box("try-message").value, click })); }
   catch (e) { result.replaceChildren(row("Claude", e.message, chip("Not run", "no2"))); }
   finally { run.disabled = false; run.textContent = "Ask Claude"; }
 };
