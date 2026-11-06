@@ -38,7 +38,7 @@ def texts():
          {"key": "money", "chip": "07 · Real refund, real payout", "text": "With real sandbox money, the refund agent returned a double payment, and PayPal says completed. The ad's creator is paid per paid order through PayPal Payouts: fifteen dollars for three paid orders. Paid per lead, the free guide alone would have cost one fifty five, for one paid order."},
          {"key": "trail", "chip": "08 · The money trail", "text": "Every payment has a money trail: the ad click, PayPal's own record read live, Meta's reply, and what it changes for the budget."},
          {"key": "shop", "chip": "09 · A real shop", "text": "And the problem is real. In a gift shop the author runs ads for, the attention video brought sixty nine percent of the chats, but nineteen percent of the money. Its own book, run through Paid Signal's ledger, gives the same seven hundred and five orders, and holds all seven double payments."},
-         {"key": "chart", "chip": "10 · AG Studio", "text": "AG Studio holds the report, and the agents work there too. The real shop's book is a page of it: the attention video had sixty nine percent of the chats and nineteen percent of the money. The assistant opens on a recorded run: the budget agent's proposals pass the evidence gate, and it asks Studio's own page agent for the chart. In another run, the nudge agent sends three kind reminders through PayPal, inside limits set in code."},
+         {"key": "chart", "chip": "10 · AG Studio", "text": "AG Studio holds the report, and the agents work there too. The real shop's book is a page of it: the attention video had sixty nine percent of the chats and nineteen percent of the money. One click on it filters the whole page. The assistant opens on a recorded run: the budget agent's proposals pass the evidence gate, and it asks Studio's own page agent for the chart. In another run, the nudge agent sends three kind reminders through PayPal, inside limits set in code."},
          dict(v18["close"])]
     for sc in s:
         if sc["key"] in CLIPS:
@@ -56,7 +56,7 @@ def cams():
         if sc["key"] in CLIPS:
             m = marks(sc["clip"])
             if sc["key"] == "home": m = [x for x in m if x["name"] in ("hero", "byad")]  # the page scrolls away at 9.6 s: end before it
-            if sc["key"] == "chart": m = [x for x in m if x["name"] in ("kpis", "gap", "chat", "nudge")]  # chat: the assistant panel (box set by hand, its selector has no size)
+            if sc["key"] == "chart": m = [x for x in m if x["name"] in ("kpis", "gap", "filtered", "chat", "nudge")]  # chat: the assistant panel (box set by hand, its selector has no size)
             first = min(x["t"] for x in m)
             sc["clip_from"] = round(max(0.0, first - 1.6), 2)
             sc["clip_to"] = 9.3 if sc["key"] == "home" else round(max(x["t"] for x in m) + 6.5, 2) if sc["key"] == "chart" else round(max(x["t"] for x in m) + 3.2, 2)
