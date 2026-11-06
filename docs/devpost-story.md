@@ -28,7 +28,7 @@ Agent Toolkit (`create_invoice`, `get_invoice`, `send_invoice`, `send_invoice_re
 
 ## AG Grid: AG Studio as the agent workspace
 
-Three data sources (captures joined to ads on the ad key, plus sent invoices), four custom widgets with cross-filters (claimed vs confirmed, payment timeline, leads to invoices to paid orders, who still owes), and Claude running Studio's agent framework through a custom `AgLlmAdapter`. The budget agent's Studio recommendation passes the same evidence gate; the chase agent, as Studio's nudge agent, sends PayPal reminders within code limits. Dashboard → Report · AG Studio → Studio assistant.
+Studio's agents here act on PayPal, not only read: from Studio's assistant the revenue agent drafts real PayPal sandbox invoices (each waits for approval) and the nudge agent sends PayPal reminders within code limits. Two custom agents (budget, nudge) run on Studio's Agent Framework with Claude through a custom `AgLlmAdapter`, delegate to Studio's page agent, and the budget agent's recommendation passes the same evidence gate as the app. Five custom widgets with cross-filters (claimed vs confirmed, payment timeline, leads to invoices to paid orders, who still owes, reported share vs money share), five report pages, a theme from the app's design tokens and a phone layout. Every Paid Signal tool has its own chat card, so a judge sees the invoices drafted, the reminders sent and what the gate decided. One page runs on the real gift shop's book (two more tables: its three ad groups and 735 payments), so Studio shows the same gap on real data. Dashboard → Report · AG Studio → Studio assistant.
 
 ## How we tested it
 
