@@ -50,7 +50,7 @@ export function shopSources(read, paymentsCsv) {
       { id: "sSpendM", name: "Spend, M VND", format: "integerFormat", isMeasure: true, expression: sum("shopGroups.spendM") },
       { id: "sNow", name: "October, %", format: "decimalFormat", isMeasure: true, expression: sum("shopGroups.shareNow") },
       { id: "sSplit", name: "Paid Signal's rule, %", format: "decimalFormat", isMeasure: true, expression: sum("shopGroups.shareSplit") },
-      { id: "sBack", name: "Kept per 1 spent", format: "decimalFormat", isMeasure: true, expression: { id: "shopGroups.back", aggregation: "max" } },
+      { id: "sBack", name: "Kept per 1 spent", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("shopGroups.money"), sum("shopGroups.spend")] } },
       { id: "pKept", name: "Kept per day", format: "currencyFormat", formatOptions: VND, isMeasure: true, expression: sum("shopPayments.net") },
     ],
     dates: pays.map((p) => p.date),
@@ -203,13 +203,13 @@ export const initialReport = {
         spend: kpi("Ad spend, million VND", { id: "sSpendM" }),
         gap: { type: "share-gap", dataMapping: { category: [{ id: "shopGroups.name" }], reported: [sum("shopGroups.chats")], money: [sum("shopGroups.money")] }, format: { title: { enabled: true, text: "Each ad group: share of chats vs share of the money kept" } } },
         split: { type: "column-chart-grouped", dataMapping: { categoryKey: [{ id: "shopGroups.short" }], valueKey: [{ id: "sNow" }, { id: "sSplit" }] },
-          format: { title: { enabled: true, text: "Share of ad spend, %: October vs Paid Signal's rule (illustration)" }, style: { theme: { common: { legend: { enabled: true } } } } } },
+          format: { title: { enabled: true, text: "Share of spend, %: October vs Paid Signal's rule" }, style: { theme: { common: { legend: { enabled: true } } } } } },
         groups: { type: "grid", dataMapping: { cols: [{ id: "shopGroups.short" }, { id: "sSpendM" }, { id: "sChats" }, { id: "sKept" }, { id: "sMoneyM" }, { id: "sBack" }] },
           sort: [{ field: { id: "sChats" }, direction: "desc" }], format: { title: { enabled: true, text: "Per ad group" }, style: { headerRow: { wrapText: true } } } },
         daily: { type: "line-chart", dataMapping: { categoryKey: [{ id: "shopPayments.date" }], valueKey: [{ id: "pKept" }], legendKey: [{ id: "shopPayments.groupName" }] },
-          format: { title: { enabled: true, text: "Money kept per day, by ad group (735 payments, 7 double payments refunded)" }, style: { theme: { common: { legend: { enabled: true } } } } } },
+          format: { title: { enabled: true, text: "Money kept per day, by ad group" }, style: { theme: { common: { legend: { enabled: true } } } } } },
       },
-      widgetLayout: { chats: at(0, 0, 6, 7), kept: at(6, 0, 6, 7), money: at(12, 0, 6, 7), spend: at(18, 0, 6, 7), gap: at(0, 7, 24, 11), groups: at(0, 18, 24, 12), split: at(0, 30, 10, 15), daily: at(10, 30, 14, 15) },
+      widgetLayout: { chats: at(0, 0, 6, 7), kept: at(6, 0, 6, 7), money: at(12, 0, 6, 7), spend: at(18, 0, 6, 7), gap: at(0, 7, 24, 11), groups: at(0, 18, 24, 14), split: at(0, 32, 10, 15), daily: at(10, 32, 14, 15) },
     },
   ],
 };
@@ -237,6 +237,7 @@ export const phoneReport = {
   pages: initialReport.pages.map((pg) => ({
     ...pg,
     ...(pg.id === "overview" ? { widgets: { ...pg.widgets, rpd: kpi("Revenue per $1", { id: "revenuePerDollar" }), nopayer: kpi("Per paid order", { id: "costPerPayer" }) } } : {}),
+    ...(pg.id === "shop" ? { widgets: { ...pg.widgets, chats: kpi("Chats", { id: "sChats" }), kept: kpi("Orders kept", { id: "sKept" }), money: kpi("Kept, M VND", { id: "sMoneyM" }), spend: kpi("Spend, M VND", { id: "sSpendM" }) } } : {}),
     widgetLayout: pg.id === "overview"
       ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), claim: at(0, 14, 24, 16), table: at(0, 30, 24, 20), funnel: at(0, 50, 24, 16) }
       : pg.id === "ledger" ? { path: at(0, 0, 24, 20), ledger: at(0, 20, 24, 24) }
