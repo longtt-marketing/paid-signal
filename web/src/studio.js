@@ -54,6 +54,7 @@ export function shopSources(read, paymentsCsv) {
       { id: "sSplit", name: "Paid Signal's rule, %", format: "decimalFormat", isMeasure: true, expression: sum("shopGroups.shareSplit") },
       { id: "sBack", name: "Kept per 1 spent", format: "decimalFormat", isMeasure: true, expression: { operator: "divide", inputs: [sum("shopGroups.money"), sum("shopGroups.spend")] } },
       { id: "pKept", name: "Kept, VND", format: "currencyFormat", formatOptions: VND, isMeasure: true, expression: sum("shopPayments.net") },
+      { id: "pOrders", name: "Kept orders", format: "integerFormat", isMeasure: true, expression: sum("shopPayments.kept") },
     ],
     dates: pays.map((p) => p.date),
   };
@@ -212,8 +213,11 @@ export const initialReport = {
           sort: [{ field: { id: "sChats" }, direction: "desc" }], format: { title: { enabled: true, text: "Per ad group" }, style: { headerRow: { wrapText: true } } } },
         daily: { type: "line-chart", dataMapping: { categoryKey: [{ id: "shopPayments.week" }], valueKey: [{ id: "pKept" }], legendKey: [{ id: "shopPayments.groupName" }] },
           format: { title: { enabled: true, text: "Money kept per week, by ad group" }, style: { theme: { common: { legend: { enabled: true } }, line: { series: { marker: { enabled: false } } } } } } },
+        // the shop's whole published book (735 payments) in an AG Grid pivot: ad group and kind of payment by week
+        book: { type: "pivot-grid", dataMapping: { rows: [{ id: "shopPayments.groupName" }, { id: "shopPayments.kind" }], columns: [{ id: "shopPayments.week" }], values: [{ id: "pOrders" }, { id: "pKept" }] },
+          format: { title: { enabled: true, text: "The shop's book, 735 payments: kept orders and money kept per week" } } },
       },
-      widgetLayout: { chats: at(0, 0, 6, 7), kept: at(6, 0, 6, 7), money: at(12, 0, 6, 7), spend: at(18, 0, 6, 7), flow: at(0, 7, 24, 15), gap: at(0, 22, 24, 11), groups: at(0, 33, 24, 14), split: at(0, 47, 10, 15), daily: at(10, 47, 14, 15) },
+      widgetLayout: { chats: at(0, 0, 6, 7), kept: at(6, 0, 6, 7), money: at(12, 0, 6, 7), spend: at(18, 0, 6, 7), flow: at(0, 7, 24, 15), gap: at(0, 22, 24, 11), groups: at(0, 33, 24, 14), split: at(0, 47, 10, 15), daily: at(10, 47, 14, 15), book: at(0, 62, 24, 14) },
     },
     // a blank page for the owner, or Studio's agents, to build their own views on the same tables
     { id: "mine", name: "Your page", widgets: {}, widgetLayout: {} },
@@ -273,7 +277,7 @@ export const phoneReport = {
       : pg.id === "ledger" ? { path: at(0, 0, 24, 20), ledger: at(0, 20, 24, 24) }
       : pg.id === "owes" ? { board: at(0, 0, 24, 34), list: at(0, 34, 24, 20) }
       : pg.id === "mine" ? {}
-      : pg.id === "shop" ? { chats: at(0, 0, 12, 7), kept: at(12, 0, 12, 7), money: at(0, 7, 12, 7), spend: at(12, 7, 12, 7), flow: at(0, 14, 24, 16), gap: at(0, 30, 24, 14), split: at(0, 44, 24, 16), groups: at(0, 60, 24, 18), daily: at(0, 78, 24, 16) }
+      : pg.id === "shop" ? { chats: at(0, 0, 12, 7), kept: at(12, 0, 12, 7), money: at(0, 7, 12, 7), spend: at(12, 7, 12, 7), flow: at(0, 14, 24, 16), gap: at(0, 30, 24, 14), split: at(0, 44, 24, 16), groups: at(0, 60, 24, 18), daily: at(0, 78, 24, 16), book: at(0, 94, 24, 18) }
       : { net: at(0, 0, 12, 7), refunded: at(12, 0, 12, 7), timeline: at(0, 7, 24, 16), list: at(0, 23, 24, 22) },
   })),
 };

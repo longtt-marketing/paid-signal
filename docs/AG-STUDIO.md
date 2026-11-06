@@ -19,8 +19,12 @@ Who still owes, with the Nudge button that sends PayPal reminders through the ch
 
 ![Who still owes](img/studio-who-still-owes.png)
 
-And on the dashboard, the PayPal ledger as an AG Grid table, with column groups, a total row that follows the filters,
-CSV export and an action on each row:
+The real shop's whole book (735 payments) as an AG Grid pivot in Studio: ad group and kind of payment by week:
+
+![The shop's book as a pivot](img/studio-shop-book.png)
+
+And on the dashboard, the PayPal ledger as an AG Grid table (Community): grouped by ad with a subtotal row per ad, a
+pinned total row that follows the filters, CSV export, and an action on each payment row:
 
 ![PayPal ledger in AG Grid](img/dashboard-ledger-grid.png)
 

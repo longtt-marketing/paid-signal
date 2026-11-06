@@ -8,6 +8,14 @@ const LedgerGrid = lazy(() => import("./LedgerGrid.jsx"));
 
 // If AG Studio cannot run (its trial key lapses, or the bundle fails to load), the report shows a recent picture of
 // itself and says why, instead of an empty frame. Every number on it is also on the dashboard tab.
+// a fault in the ledger table shows a note, never a blank dashboard
+class GridGuard extends Component {
+  constructor(props) { super(props); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(e) { console.error("Ledger table failed", e); }
+  render() { return this.state.failed ? <p className="muted">The ledger table could not load here; the same payments are on the money trail and in the report.</p> : this.props.children; }
+}
+
 class StudioGuard extends Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
@@ -386,7 +394,7 @@ export default function App({ first = null }) {
             <PhoneDisclosure id="payments" title="Payments" className="card" summaryText={state ? `${state.payments.length} in the ledger` : ""}>
               <div className="card-head phone-section-head"><h2>PayPal ledger</h2>{state && <span className="pill good">{state.payments.length} in the ledger</span>}</div>
               <div id="captures">
-                {state && <Suspense fallback={<p className="muted">Loading the ledger…</p>}><LedgerGrid payments={state.payments || []} dup={Object.fromEntries((state.duplicates || []).map((d) => [d.capture_id, d]))} metaSent={metaSent} adName={adName} onRefund={refund} onCount={markDistinct} /></Suspense>}
+                {state && <GridGuard><Suspense fallback={<p className="muted">Loading the ledger…</p>}><LedgerGrid payments={state.payments || []} dup={Object.fromEntries((state.duplicates || []).map((d) => [d.capture_id, d]))} metaSent={metaSent} adName={adName} onRefund={refund} onCount={markDistinct} /></Suspense></GridGuard>}
               </div>
             </PhoneDisclosure>
 
