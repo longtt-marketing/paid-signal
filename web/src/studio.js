@@ -215,20 +215,23 @@ export const initialReport = {
 };
 
 const v = (name) => `var(--${name})`;
-const line = (name) => ({ width: 1, color: v(name) });
+// The "Ledger" look (Claude Design canvas https://claude.ai/artifact/BW1Dmbn5qtjd9KNfM1UHXP): warm account-book paper,
+// cream sheets with a warm rule, green ink for money kept. Only what Studio's theme can set; one family, tabular numbers.
+const L = { canvas: "#EFEBE0", sheet: "#FBFAF6", rule: "#D8D1BF", row: "#E7E1D2", head: "#F2EEE3", ink: "#1B1A17", label: "#6B6455", paid: "#0F7A43", claimed: "#CFC8B6" };
+const rule = (color) => ({ width: 1, color });
 export const theme = studioTheme.withParams({
-  fontFamily: v("sans"), fontSize: 14, textColor: v("ink"), foregroundColor: v("ink"), subtleTextColor: v("faint"),
-  backgroundColor: v("card"), borderColor: v("line"), accentColor: v("paid"), iconColor: v("mute"), rowHoverColor: v("head"),
-  studioWrapperBorder: false, studioWrapperBorderRadius: 0, studioWrapperSpacing: 0, studioWrapperBackgroundColor: v("paper"),
-  studioCanvasBorder: false, studioCanvasBorderRadius: 0, studioCanvasShadow: false, studioCanvasBackgroundColor: v("paper"),
+  fontFamily: v("sans"), fontSize: 14, textColor: L.ink, foregroundColor: L.ink, subtleTextColor: L.label,
+  backgroundColor: L.sheet, borderColor: L.rule, accentColor: L.paid, iconColor: L.label, rowHoverColor: L.head,
+  studioWrapperBorder: false, studioWrapperBorderRadius: 0, studioWrapperSpacing: 0, studioWrapperBackgroundColor: L.canvas,
+  studioCanvasBorder: false, studioCanvasBorderRadius: 0, studioCanvasShadow: false, studioCanvasBackgroundColor: L.canvas,
   studioCanvasPadding: 16, studioCanvasRowHeight: 18, studioCanvasFontFamily: v("sans"),
-  studioWidgetBackgroundColor: v("card"), studioWidgetBorder: line("line"), studioWidgetBorderRadius: 12, studioWidgetPadding: 12,
-  studioWidgetTitleFontFamily: v("sans"), studioWidgetTitleFontSize: 15, studioWidgetTitleFontWeight: 600, studioWidgetTitleTextColor: v("ink"),
-  studioWidgetCaptionFontFamily: v("sans"), studioWidgetCaptionFontSize: 13, studioWidgetCaptionTextColor: v("faint"),
-  gridFontFamily: v("sans"), gridFontSize: 14, gridCellTextColor: v("ink"), gridHeaderBackgroundColor: v("head"), gridHeaderTextColor: v("mute"),
-  gridHeaderFontWeight: 600, gridHeaderFontSize: 12, gridRowHeight: 40, gridRowBorder: line("line2"), gridHeaderRowBorder: line("line"), gridWrapperBorder: false,
-  chartFontFamily: v("sans"), chartTextColor: v("ink"), chartSubtleTextColor: v("faint"), chartAxisLineColor: v("line"), chartGridLineColor: v("line2"),
-  chartPaletteFills1Color: "#1a7a48", chartPaletteStrokes1Color: "#1a7a48", chartPaletteFills2Color: "#c9cbd2", chartPaletteStrokes2Color: "#c9cbd2",
+  studioWidgetBackgroundColor: L.sheet, studioWidgetBorder: rule(L.rule), studioWidgetBorderRadius: 6, studioWidgetPadding: 14,
+  studioWidgetTitleFontFamily: v("sans"), studioWidgetTitleFontSize: 15, studioWidgetTitleFontWeight: 600, studioWidgetTitleTextColor: L.ink,
+  studioWidgetCaptionFontFamily: v("sans"), studioWidgetCaptionFontSize: 13, studioWidgetCaptionTextColor: L.label,
+  gridFontFamily: v("sans"), gridFontSize: 14, gridCellTextColor: L.ink, gridHeaderBackgroundColor: L.head, gridHeaderTextColor: L.label,
+  gridHeaderFontWeight: 600, gridHeaderFontSize: 12, gridRowHeight: 40, gridRowBorder: rule(L.row), gridHeaderRowBorder: rule(L.rule), gridWrapperBorder: false,
+  chartFontFamily: v("sans"), chartTextColor: L.ink, chartSubtleTextColor: L.label, chartAxisLineColor: L.rule, chartGridLineColor: L.row,
+  chartPaletteFills1Color: L.paid, chartPaletteStrokes1Color: L.paid, chartPaletteFills2Color: L.claimed, chartPaletteStrokes2Color: L.claimed,
   // a third and fourth series (the shop's three ad groups, a refunded line) get their own colours instead of Studio's defaults
   chartPaletteFills3Color: "#b7791f", chartPaletteStrokes3Color: "#b7791f", chartPaletteFills4Color: "#3d5a80", chartPaletteStrokes4Color: "#3d5a80",
 });
