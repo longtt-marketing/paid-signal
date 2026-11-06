@@ -2,6 +2,164 @@
  "threads": [
   {
    "summary": {
+    "threadId": "saved-real-shop-october",
+    "agentId": "lead",
+    "updatedAt": 6,
+    "title": "The real shop's October"
+   },
+   "messages": [
+    {
+     "id": "msg-6739fb33-80f8-4be7-bbc6-af9fc332910f",
+     "role": "user",
+     "parts": [
+      {
+       "type": "text",
+       "text": "Open the Real shop: October page. Using its tables (Real shop: ad groups, Real shop: payments), explain in three sentences which ad group the ad account overrated: its share of chats against its share of the money kept. Quote the numbers exactly and say the shop was paid by bank transfer."
+      }
+     ],
+     "createdAt": 6
+    },
+    {
+     "id": "toolu_01AeA2TsyGRmhnopGPoBUFon",
+     "role": "assistant",
+     "parts": [
+      {
+       "type": "tool_call",
+       "toolCall": {
+        "toolCallId": "toolu_01AeA2TsyGRmhnopGPoBUFon",
+        "name": "view_report",
+        "status": "complete",
+        "args": {},
+        "result": {
+         "success": true,
+         "response": "overview (selected): 7 widget(s), 0 page filter(s)\ncaptures: 4 widget(s), 0 page filter(s)\nledger: 2 widget(s), 0 page filter(s)\nowes: 2 widget(s), 0 page filter(s)\nshop: 8 widget(s), 0 page filter(s)",
+         "data": {
+          "selectedPageId": "overview",
+          "pages": [
+           {
+            "pageId": "overview",
+            "selected": true,
+            "widgetCount": 7,
+            "widgetTypes": [
+             "value",
+             "value",
+             "value",
+             "value",
+             "claim-vs-confirmed",
+             "grid",
+             "lead-funnel"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "captures",
+            "selected": false,
+            "widgetCount": 4,
+            "widgetTypes": [
+             "value",
+             "value",
+             "payment-timeline",
+             "grid"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "ledger",
+            "selected": false,
+            "widgetCount": 2,
+            "widgetTypes": [
+             "pivot-grid",
+             "grid"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "owes",
+            "selected": false,
+            "widgetCount": 2,
+            "widgetTypes": [
+             "who-still-owes",
+             "grid"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "shop",
+            "selected": false,
+            "widgetCount": 8,
+            "widgetTypes": [
+             "value",
+             "value",
+             "value",
+             "value",
+             "share-gap",
+             "column-chart-grouped",
+             "grid",
+             "line-chart"
+            ],
+            "pageFilterCount": 0
+           }
+          ]
+         }
+        }
+       }
+      }
+     ],
+     "createdAt": 7
+    },
+    {
+     "id": "toolu_01LxCtkgeD7YoKs7BeVyJXUT",
+     "role": "assistant",
+     "parts": [
+      {
+       "type": "tool_call",
+       "toolCall": {
+        "toolCallId": "toolu_01LxCtkgeD7YoKs7BeVyJXUT",
+        "name": "delegate_to",
+        "status": "complete",
+        "args": {
+         "type": {
+          "id": "data"
+         },
+         "instructions": "Using the tables \"Real shop: ad groups\" and \"Real shop: payments\" (a real Vietnamese gift shop's October, VND, paid by bank transfer), report per ad group: chats reported by the ad account, share of total chats, money kept after refunds, and share of total money kept. Give exact numbers and say which group is most overrated (chat share minus money share)."
+        },
+        "childThreadId": "toolu_01LxCtkgeD7YoKs7BeVyJXUT-sub",
+        "result": {
+         "success": true,
+         "response": "**Most overrated group: A · Attention video.** It has 69.42% of reported chats but only 19.29% of money kept, a gap of +50.14 percentage points.\n\nChats come from @field[shopGroups.chats]. Money kept is @field[shopPayments.net] (paid minus refunded), summed per @field[shopPayments.groupName]. It matches @field[shopGroups.money] exactly for each group. Total chats are 12,100 and total money kept is 1,317,000,000 VND.\n\n| Ad group | Chats | Chat share | Money kept (VND) | Money share | Chat share minus money share |\n|---|---|---|---|---|---|\n| A · Attention video | 8,400 | 69.42% | 254,000,000 | 19.29% | **+50.14 pts** |\n| B · Customer reviews | 2,500 | 20.66% | 741,000,000 | 56.26% | −35.60 pts |\n| C · Personalised for an occasion | 1,200 | 9.92% | 322,000,000 | 24.45% | −14.53 pts |\n\n- **Orders kept** (@field[shopGroups.kept]): A 145, B 390, C 170, total 705.\n- **Ad spend** (@field[shopGroups.spend]): A 140M, B 75M, C 45M VND.\n- **Money kept per 1 VND spent** (@field[shopGroups.back]): A 1.81, B 9.88, C 7.16.\n- **Refunds:** total 54.7M VND (A 14.2M, B 26.0M, C 14.5M).\n  - The 7 double payments are refunded in full: A 2 (3.6M), B 4 (7.0M), C 1 (1.5M).\n  - First-payment refunds are A 10.6M, B 19.0M, C 13.0M.\n- **Payment rows:** 735 in total (728 first payments plus 7 double payments). Gross paid is 1,371.7M VND, so kept money is 1,317.0M.\n- **Underrated groups:** B and C are both underrated, with B the most. B gets 20.7% of chats but 56.3% of the money."
+        }
+       }
+      }
+     ],
+     "createdAt": 8
+    },
+    {
+     "id": "msg_011CgmAFFEx5N7DthsbUM7qo-t1",
+     "role": "assistant",
+     "parts": [
+      {
+       "type": "text",
+       "text": "This uses the Real shop tables, a real Vietnamese gift shop's October book. The shop was paid by bank transfer, not PayPal, and all money is in VND. The page is the \"shop\" page in your report. I can't switch your view, so please open it yourself.\n\nThe ad account overrated **A · Attention video**. It reported 8,400 of 12,100 chats, a 69.42% share, but only 254,000,000 of the 1,317,000,000 VND kept after refunds, a 19.29% share, so its chat share is 50.14 percentage points higher than its money share. By contrast, **B · Customer reviews** had 2,500 chats (20.66%) but kept 741,000,000 VND (56.26%), and **C · Personalised for an occasion** had 1,200 chats (9.92%) but kept 322,000,000 VND (24.45%). A earned 1.81 VND kept per 1 VND of ad spend, against 9.88 for B and 7.16 for C."
+      }
+     ],
+     "createdAt": 9
+    },
+    {
+     "id": "note-thread-a1b14761-853f-4e76-9c3c-804b2a3df5a0",
+     "role": "assistant",
+     "createdAt": 10,
+     "parts": [
+      {
+       "type": "text",
+       "text": "_Recorded from the live app on 2026-11-06; opening it calls no model. Anything it added to the report is not saved with it: ask again to watch it happen live._"
+      }
+     ]
+    }
+   ],
+   "artifacts": []
+  },
+  {
+   "summary": {
     "threadId": "thread-9e56b3c0-ed88-41f0-9b1c-cb5702402c55",
     "agentId": "lead",
     "updatedAt": 7,

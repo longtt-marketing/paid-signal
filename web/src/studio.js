@@ -229,6 +229,8 @@ export const theme = studioTheme.withParams({
   gridHeaderFontWeight: 600, gridHeaderFontSize: 12, gridRowHeight: 40, gridRowBorder: line("line2"), gridHeaderRowBorder: line("line"), gridWrapperBorder: false,
   chartFontFamily: v("sans"), chartTextColor: v("ink"), chartSubtleTextColor: v("faint"), chartAxisLineColor: v("line"), chartGridLineColor: v("line2"),
   chartPaletteFills1Color: "#1a7a48", chartPaletteStrokes1Color: "#1a7a48", chartPaletteFills2Color: "#c9cbd2", chartPaletteStrokes2Color: "#c9cbd2",
+  // a third and fourth series (the shop's three ad groups, a refunded line) get their own colours instead of Studio's defaults
+  chartPaletteFills3Color: "#b7791f", chartPaletteStrokes3Color: "#b7791f", chartPaletteFills4Color: "#3d5a80", chartPaletteStrokes4Color: "#3d5a80",
 });
 
 // On a phone the 24-column canvas is narrow: two KPI tiles per row, charts and grids full width, taller rows.

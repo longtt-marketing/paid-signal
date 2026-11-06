@@ -26,13 +26,17 @@ def slim(thread):
 
 def record(pw, label):
     b = pw.chromium.launch(channel="msedge")
-    pg = b.new_page(viewport={"width": 1440, "height": 1000})
+    # on a local wrangler dev, PS_IP stands in for the visitor address the per-visitor caps count (Cloudflare sets it in production)
+    pg = b.new_page(viewport={"width": 1440, "height": 1000}, extra_http_headers={"cf-connecting-ip": os.environ["PS_IP"]} if os.environ.get("PS_IP") else None)
     pg.goto(BASE + "/", wait_until="domcontentloaded"); pg.wait_for_timeout(4000)
     pg.evaluate("() => { location.hash = 'report'; }")  # opens the Report tab, which loads Studio
     pg.wait_for_function("() => window.__studio && window.__psThreads", timeout=90000); pg.wait_for_timeout(3000)
     # the assistant rail may be collapsed in a fresh page: open it, then press the starter
     pg.evaluate("() => { const a = window.__studio, s = a.getState(); a.setState({ ...s, panels: { ...(s.panels || {}), ai: { collapsed: false } } }); }")
     pg.wait_for_timeout(2500)
+    # the panel opens on the newest saved thread: start a fresh one so the run is recorded on its own
+    pg.evaluate("() => { const n = [...document.querySelectorAll('#studio button')].find((x) => /^New( chat)?$/.test(x.textContent.trim())); if (n) n.click(); }")
+    pg.wait_for_timeout(2000)
     ok = pg.evaluate("(l) => { const b = [...document.querySelectorAll('#studio button')].find((x) => x.textContent.trim() === l); if (b) b.click(); return !!b; }", label)
     if not ok: raise SystemExit(f"starter not found: {label}")
     start, last, still = time.time(), "", 0
