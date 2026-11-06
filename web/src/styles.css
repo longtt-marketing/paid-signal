@@ -192,6 +192,9 @@ code{font-family:var(--code);font-size:12px}
 .claim-bars{display:flex;flex-direction:column;gap:4px}.claim-bars i{display:block;height:10px;border-radius:4px}
 .claim-claimed{background:var(--claimed)}.claim-confirmed{background:var(--paid)}.claim-none{background:var(--gap-line)}
 .claim-v{font:500 13px var(--mono);text-align:right}.claim-v.gap{color:var(--gap)}
+.tool-d{display:flex;flex-direction:column;gap:4px;padding:6px 0 2px;font-size:13px}.tool-r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:baseline}.tool-r span{color:var(--mute);overflow:hidden;text-overflow:ellipsis}.tool-r b{font-weight:500;text-align:right;max-width:62%}.tool-r b.ok{color:var(--paid)}.tool-r b.gap{color:var(--gap)}
+.claim.share .claim-row{grid-template-columns:minmax(120px,240px) minmax(0,1fr) 128px}.claim.share .claim-v{white-space:nowrap}
+@media(max-width:760px){.claim.share .claim-row{grid-template-columns:1fr 120px}}
 .claim-key{margin-top:auto;display:flex;gap:16px;font-size:12px;color:var(--faint)}.claim-key i{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:middle;margin-right:4px}
 .timeline{display:flex;flex-direction:column;gap:8px;height:100%;font-family:var(--sans)}.timeline svg{width:100%;flex:1;min-height:0}
 .tl-name{font:600 14px var(--sans);fill:var(--ink)}.tl-lane{stroke:var(--line);stroke-width:2}.tl-axis{font:400 12px var(--sans);fill:var(--faint)}

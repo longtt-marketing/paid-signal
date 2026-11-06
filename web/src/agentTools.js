@@ -13,6 +13,7 @@ export const PROMPT_STARTERS = [
   { label: "Review ad budgets", prompt: "Ask the budget agent which ads to cut or grow, and have it show the evidence on this page." },
   { label: "Chart paid revenue by ad", prompt: "Add a bar chart of paid revenue by ad to this page." },
   { label: "Nudge who still owes", prompt: "Ask the nudge agent to remind, kindly, the people who still owe us for a sent invoice, and show who still owes on the Who still owes page." },
+  { label: "Explain the real shop", prompt: "Open the Real shop: October page. Using its tables (Real shop: ad groups, Real shop: payments), explain in three sentences which ad group the ad account overrated: its share of chats against its share of the money kept. Quote the numbers exactly and say the shop was paid by bank transfer." },
   { label: "Check against PayPal", prompt: "Check the webhook ledger against PayPal's own transaction history and tell me if anything is missing." },
 ];
 
@@ -22,7 +23,8 @@ Use list_unpaid_leads to see leads with no PayPal payment. draft_paypal_invoices
 nothing is sent here: each draft waits in Approvals, and only after the shop owner approves it does the send agent send it. Draft only for leads who showed buying intent, and say why.
 check_paypal_ledger compares the webhook ledger with PayPal's Transaction Search.
 For budget questions (which ads to cut, keep or grow), delegate to the budget agent; it checks its numbers in code.
-For invoices that were sent and not paid, delegate to the nudge agent: it sends friendly PayPal reminders within code limits.`;
+For invoices that were sent and not paid, delegate to the nudge agent: it sends friendly PayPal reminders within code limits.
+The tables "Real shop: ad groups" and "Real shop: payments" are a real Vietnamese gift shop's October book (VND, paid by bank transfer, not PayPal): the same gap between what the ad account counts and the money kept. Say so whenever you use them.`;
 
 // AG Grid's nudge-bot idea, built on the chase agent: who still owes, and kind reminders sent through PayPal's Agent Toolkit.
 const NUDGE = `You are the Paid Signal nudge agent. You help a small shop get paid for invoices it already sent, kindly: a heads-up, never a demand.

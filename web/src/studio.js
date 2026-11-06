@@ -11,8 +11,54 @@ const USD = { format: new Intl.NumberFormat("en-US", { style: "currency", curren
 const f = (id, name, format, hide) => ({ id, name, format, ...(format === "currencyFormat" ? { formatOptions: USD } : {}), ...(hide ? { hide } : {}) });
 const sum = (id) => ({ id, aggregation: "sum" });
 
+// The real gift shop's October (public/data/merchant-case.json and its published payment book): Vietnamese dong.
+const VND = { format: new Intl.NumberFormat("en-US", { style: "currency", currency: "VND", maximumFractionDigits: 0 }) };
+const fv = (id, name) => ({ id, name, format: "currencyFormat", formatOptions: VND });
+const csvRows = (text) => {
+  const [head, ...lines] = String(text || "").replace(/^﻿/, "").replace(/\r/g, "").split("\n").filter(Boolean);
+  const keys = head ? head.split(",") : [];
+  return lines.map((l) => Object.fromEntries(l.split(",").map((v, i) => [keys[i], v])));
+};
+/** Two tables from the real shop: its three ad groups (from the ad account and the order book), and every payment in its book. */
+export function shopSources(read, paymentsCsv) {
+  // Studio only takes data updates for tables it had from the start: the tables always exist, empty until the files load
+  const split = Object.fromEntries((read?.paid_signal_split || []).map((x) => [x.id, x]));
+  const SHORT = { A: "A · Video", B: "B · Reviews", C: "C · Occasion" };
+  const groups = (read?.groups || []).map((g) => ({ id: g.id, name: `${g.id} · ${g.name}`, short: SHORT[g.id] || g.id, spendM: Math.round(g.spend / 1e6), moneyM: Math.round(g.net / 1e6), spend: g.spend, chats: g.conversations, kept: g.paid, money: g.net,
+    back: Math.round(g.roas * 100) / 100, shareNow: Math.round((split[g.id]?.share_now ?? g.share_spend) * 1000) / 10, shareSplit: split[g.id] ? Math.round(split[g.id].share_proposed * 1000) / 10 : null }));
+  const names = Object.fromEntries(groups.map((g) => [g.id, g.name]));
+  const pays = csvRows(paymentsCsv).map((r) => ({ id: r["Mã giao dịch nội bộ"], order: r["Số đối chiếu"], group: r["Nhóm Ads"], groupName: names[r["Nhóm Ads"]] || r["Nhóm Ads"],
+    kind: r["Loại giao dịch"] === "Thu trùng" ? "Double payment" : "First payment", date: String(r["Ngày thu"] || "").slice(0, 10),
+    gross: Number(r["Số tiền thu"]) || 0, refunded: Number(r["Số tiền hoàn"]) || 0, net: Number(r["Số tiền ròng"]) || 0, kept: Number(r["Số tiền ròng"]) > 0 ? 1 : 0 }))
+    .filter((p) => p.id);
+  return {
+    sources: [
+      { id: "shopGroups", name: "Real shop: ad groups", description: "A Vietnamese gift shop's October 2026: three Meta ad groups, the chats the ad account reported, and the orders paid and kept after refunds from its own book (paid by bank transfer, not PayPal). Money in VND.", data: groups,
+        fields: [f("id", "Group key", "textFormat", true), f("name", "Ad group", "textFormat"), f("short", "Ad group (short)", "textFormat"), f("spendM", "Ad spend, million VND", "integerFormat"), f("moneyM", "Money kept, million VND", "integerFormat"), fv("spend", "Ad spend"), f("chats", "Chats (ad account)", "integerFormat"), f("kept", "Orders kept (book)", "integerFormat"),
+          fv("money", "Money kept after refunds"), f("back", "Money kept per 1 of ad spend", "decimalFormat"), f("shareNow", "Share of spend in October, %", "decimalFormat"), f("shareSplit", "Share under Paid Signal's rule, %", "decimalFormat")] },
+      { id: "shopPayments", name: "Real shop: payments", description: "Every payment in the shop's published October book: 728 first payments and 7 double payments, each refunded; refunds come off.", data: pays,
+        fields: [f("id", "Payment", "textFormat"), f("order", "Order", "textFormat"), f("group", "Group key", "textFormat", true), f("groupName", "Ad group", "textFormat"), f("kind", "Kind", "textFormat"),
+          f("date", "Paid on", "dateFormat"), fv("gross", "Paid"), fv("refunded", "Refunded"), fv("net", "Kept"), f("kept", "Is a kept order", "integerFormat")] },
+    ],
+    relation: { id: "shop-pay-group", source: { tableId: "shopPayments", fieldId: "group" }, target: { tableId: "shopGroups", fieldId: "id" }, type: "many-to-one" },
+    expressions: [
+      { id: "sChats", name: "Chats", format: "integerFormat", isMeasure: true, expression: sum("shopGroups.chats") },
+      { id: "sKept", name: "Orders kept", format: "integerFormat", isMeasure: true, expression: sum("shopGroups.kept") },
+      { id: "sMoney", name: "Money kept", format: "currencyFormat", formatOptions: VND, isMeasure: true, expression: sum("shopGroups.money") },
+      { id: "sSpend", name: "Ad spend", format: "currencyFormat", formatOptions: VND, isMeasure: true, expression: sum("shopGroups.spend") },
+      { id: "sMoneyM", name: "Kept, M VND", format: "integerFormat", isMeasure: true, expression: sum("shopGroups.moneyM") },
+      { id: "sSpendM", name: "Spend, M VND", format: "integerFormat", isMeasure: true, expression: sum("shopGroups.spendM") },
+      { id: "sNow", name: "October, %", format: "decimalFormat", isMeasure: true, expression: sum("shopGroups.shareNow") },
+      { id: "sSplit", name: "Paid Signal's rule, %", format: "decimalFormat", isMeasure: true, expression: sum("shopGroups.shareSplit") },
+      { id: "sBack", name: "Kept per 1 spent", format: "decimalFormat", isMeasure: true, expression: { id: "shopGroups.back", aggregation: "max" } },
+      { id: "pKept", name: "Kept per day", format: "currencyFormat", formatOptions: VND, isMeasure: true, expression: sum("shopPayments.net") },
+    ],
+    dates: pays.map((p) => p.date),
+  };
+}
+
 /** Two tables joined on the ad key: what each ad claims, and what PayPal captured for it and Meta received. */
-export function buildData(rec, payments, invoices = [], duplicates = [], metaSends = []) {
+export function buildData(rec, payments, invoices = [], duplicates = [], metaSends = [], shop = shopSources(null, "")) {
   const ads = rec.ads.map((r) => ({
     ad: r.ad, name: adName(r.ad), spend: r.spend_cents / 100, leads: r.leads, payers: r.paid, refunds: r.refunded,
     revenue: r.revenue_cents / 100, noPayer: r.paid === 0 ? r.spend_cents / 100 : 0,
@@ -41,7 +87,7 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
     days: i.status === "PAID" || !i.sent_at ? 0 : Math.max(0, Math.round(((Date.now() - Date.parse(i.sent_at)) / DAY) * 10) / 10),
     nudge: i.status !== "PAID" && i.reminder?.note ? i.reminder.note : "",
   }));
-  const dates = caps.map((c) => c.date).sort();
+  const dates = [...caps.map((c) => c.date), ...(shop?.dates || []), "2026-10-01"].filter(Boolean).sort(); // the shop's October is in range from the first render
   const today = new Date().toISOString().slice(0, 10);
   return {
     description: "A small shop's ad export (spend and leads the ad platform reports per ad) joined to PayPal sandbox captures attributed to those ads by the click id stored in each order's custom_id. Paid orders counts captures not fully refunded; a possible duplicate (same payer, same ad, minutes apart) is held: not a paid order and not net revenue until it is refunded.",
@@ -61,8 +107,9 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
         id: "invoices", name: "Invoices sent", description: "One row per PayPal invoice the shop sent: who, how much, whether it is paid, how long it has waited, and the last friendly reminder the chase agent wrote.", data: owed,
         fields: [f("id", "Invoice", "textFormat"), f("who", "Who", "textFormat"), f("adName", "Ad", "textFormat"), f("amount", "Amount", "currencyFormat"), f("status", "Status", "textFormat"), f("days", "Days waiting", "decimalFormat"), f("nudge", "Last nudge", "textFormat")],
       },
+      ...(shop ? shop.sources : []),
     ],
-    relations: [{ id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],
+    relations: [...(shop ? [shop.relation] : []), { id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],
     calendars: [{ id: "calendar", label: "Calendar", range: { from: { type: "date", value: dates[0] || today }, to: { type: "date", value: dates.at(-1) || today } }, fragments: ["month", "week", "day"] }],
     expressions: [
       // named measures, so the grid shows "Spend" rather than "Spend (sum)"
@@ -71,6 +118,7 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
         ["cPaid", "Paid orders", "captures.paid", "integerFormat"], ["cNet", "Net paid", "captures.net", "currencyFormat"], ["cRefunded", "Refunded", "captures.refunded", "currencyFormat"]]
         .map(([id, name, field, format]) => ({ id, name, format, ...(format === "currencyFormat" ? { formatOptions: USD } : {}), isMeasure: true, expression: sum(field) })),
       { id: "costPerPayer", name: "Cost / paid order", description: "Ad spend divided by PayPal paid orders.", format: "currencyFormat", formatOptions: USD, isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.spend"), sum("ads.payers")] } },
+      ...(shop ? shop.expressions : []),
       { id: "revenuePerDollar", name: "Paid revenue per $1 of ads", description: "PayPal net revenue divided by ad spend.", format: "currencyFormat", formatOptions: USD, isMeasure: true, expression: { operator: "divide", inputs: [sum("ads.revenue"), sum("ads.spend")] } },
     ],
   };
@@ -145,6 +193,24 @@ export const initialReport = {
       },
       widgetLayout: { board: at(0, 0, 24, 24), list: at(0, 24, 24, 18) },
     },
+    {
+      // the same question on a real shop's October book: what the ad account counted against the money kept
+      id: "shop", name: "Real shop: October",
+      widgets: {
+        chats: kpi("Chats (ad account)", { id: "sChats" }),
+        kept: kpi("Orders kept (book)", { id: "sKept" }),
+        money: kpi("Money kept, million VND", { id: "sMoneyM" }),
+        spend: kpi("Ad spend, million VND", { id: "sSpendM" }),
+        gap: { type: "share-gap", dataMapping: { category: [{ id: "shopGroups.name" }], reported: [sum("shopGroups.chats")], money: [sum("shopGroups.money")] }, format: { title: { enabled: true, text: "Each ad group: share of chats vs share of the money kept" } } },
+        split: { type: "column-chart-grouped", dataMapping: { categoryKey: [{ id: "shopGroups.short" }], valueKey: [{ id: "sNow" }, { id: "sSplit" }] },
+          format: { title: { enabled: true, text: "Share of ad spend, %: October vs Paid Signal's rule (illustration)" }, style: { theme: { common: { legend: { enabled: true } } } } } },
+        groups: { type: "grid", dataMapping: { cols: [{ id: "shopGroups.short" }, { id: "sSpendM" }, { id: "sChats" }, { id: "sKept" }, { id: "sMoneyM" }, { id: "sBack" }] },
+          sort: [{ field: { id: "sChats" }, direction: "desc" }], format: { title: { enabled: true, text: "Per ad group" }, style: { headerRow: { wrapText: true } } } },
+        daily: { type: "line-chart", dataMapping: { categoryKey: [{ id: "shopPayments.date" }], valueKey: [{ id: "pKept" }], legendKey: [{ id: "shopPayments.groupName" }] },
+          format: { title: { enabled: true, text: "Money kept per day, by ad group (735 payments, 7 double payments refunded)" }, style: { theme: { common: { legend: { enabled: true } } } } } },
+      },
+      widgetLayout: { chats: at(0, 0, 6, 7), kept: at(6, 0, 6, 7), money: at(12, 0, 6, 7), spend: at(18, 0, 6, 7), gap: at(0, 7, 24, 11), groups: at(0, 18, 24, 12), split: at(0, 30, 10, 15), daily: at(10, 30, 14, 15) },
+    },
   ],
 };
 
@@ -175,6 +241,7 @@ export const phoneReport = {
       ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), claim: at(0, 14, 24, 16), table: at(0, 30, 24, 20), funnel: at(0, 50, 24, 16) }
       : pg.id === "ledger" ? { path: at(0, 0, 24, 20), ledger: at(0, 20, 24, 24) }
       : pg.id === "owes" ? { board: at(0, 0, 24, 34), list: at(0, 34, 24, 20) }
+      : pg.id === "shop" ? { chats: at(0, 0, 12, 7), kept: at(12, 0, 12, 7), money: at(0, 7, 12, 7), spend: at(12, 7, 12, 7), gap: at(0, 14, 24, 14), split: at(0, 28, 24, 16), groups: at(0, 44, 24, 18), daily: at(0, 62, 24, 16) }
       : { net: at(0, 0, 12, 7), refunded: at(12, 0, 12, 7), timeline: at(0, 7, 24, 16), list: at(0, 23, 24, 22) },
   })),
 };
