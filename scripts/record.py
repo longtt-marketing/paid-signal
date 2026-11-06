@@ -505,7 +505,22 @@ def shop23(pg):
         mark(pg, f"r{i}", f"#replay .row >> nth={i}"); glide(pg, rows.nth(i).locator(".v"), click=False); pg.wait_for_timeout(2600)
 
 
-SEGMENTS = {"home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
+# ---- V26: AG Studio in the Ledger theme ----
+def studio26(pg):
+    """AG Studio: the real shop's October page (share of chats vs share of money), then the assistant opening on the
+    recorded budget-agent run (proposals through the evidence gate, the chart asked of Studio's page agent)."""
+    pg.evaluate("() => { location.hash = 'report'; }")
+    pg.wait_for_function("() => window.__studio", timeout=90000); pg.wait_for_timeout(2500)
+    shop = pg.locator(".studio-pages button", has_text="Real shop"); glide(pg, shop); pg.wait_for_timeout(3500)
+    scroll_to(pg, "#studio")
+    mark(pg, "kpis", ".studio [class*='widget'] >> nth=0"); pg.wait_for_timeout(1800)
+    gap = pg.locator(".studio .claim.share"); mark(pg, "gap", ".studio .claim.share"); glide(pg, gap.locator(".claim-row").first, click=False); pg.wait_for_timeout(2600)
+    glide(pg, gap.locator(".claim-row").nth(1), click=False); pg.wait_for_timeout(2000)
+    btn = pg.locator(".studio-card .btn.dark"); glide(pg, btn); pg.wait_for_timeout(3000)
+    mark(pg, "chat", ".studio [class*='ai'] >> nth=0"); pg.wait_for_timeout(5500)
+
+
+SEGMENTS = {"studio26": studio26, "home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
 
 with sync_playwright() as p:
     b = p.chromium.launch(channel=os.environ.get("PS_CHANNEL") or None, args=["--mute-audio", "--disable-sync", "--no-first-run", "--no-default-browser-check"])
