@@ -1,7 +1,31 @@
 // How Paid Signal's own tools read in AG Studio's chat panel: a plain row naming the work, a pill with the count, and a
 // small body showing what the tool returned (PayPal invoices drafted, reminders sent, what the evidence gate decided).
 // Without these, a custom tool shows only its name. Keyed by tool name, so a replayed chat renders the same way.
+import { useState } from "react";
 import { adName } from "./names.js";
+
+// one draft waiting for the owner: Approve calls the same endpoint as the Approvals panel, where the server checks the
+// draft is still a draft and the send agent sends only that invoice for its own amount; the chat agent cannot press it
+function DraftCard({ d }) {
+  const [state, setState] = useState({});
+  const approve = async () => {
+    setState({ busy: true });
+    try {
+      const r = await fetch("/api/invoices/approve", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: d.id }) });
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(out.error || `HTTP ${r.status}`);
+      setState({ done: out.invoice?.status || (out.agent?.sent ? "SENT" : "not sent"), note: out.agent?.summary });
+    } catch (e) { setState({ error: e.message }); }
+  };
+  return (
+    <div className="tool-card">
+      <div className="tool-card-t"><b>{String(d.who).replace(" (fictional)", "")}</b><span>${Number(d.amount_usd).toFixed(2)} · {d.ad_name || adName(d.ad) || "no ad"}</span><code>{d.id}</code></div>
+      {state.done ? <span className={`tool-card-s ${state.done === "DRAFT" || state.done === "not sent" ? "" : "ok"}`}>PayPal says: {state.done}</span>
+        : <button type="button" className="tool-card-b" disabled={state.busy} onClick={approve}>{state.busy ? "Send agent checking…" : "Approve and send"}</button>}
+      {state.error && <span className="tool-card-s gap">{state.error}</span>}
+    </div>
+  );
+}
 
 const data = (p) => (p.result?.success ? p.result.data || {} : {});
 const failed = (p) => p.status === "done" && p.result && !p.result.success;
@@ -27,6 +51,15 @@ export const toolDisplay = {
       ...(d.drafted || []).map((x) => [String(x.lead).replace(" (fictional)", ""), x.error ? x.error : `${usd(x.total_usd)} · draft, waits for approval`, x.error ? "gap" : "ok"]),
       ...(d.skipped || []).slice(0, 5).map((s) => [String(s.lead || "").replace(" (fictional)", ""), `skipped: ${s.reason || s.flag || "not ready"}`]),
     ]),
+  },
+  show_drafts_for_approval: {
+    label: (p) => ({ text: "Drafts waiting for your approval (open to approve)", pill: data(p).drafts ? `${data(p).drafts.length} drafts` : undefined }),
+    detail: function Drafts(p) {
+      if (failed(p)) return <Err p={p} />;
+      if (p.status !== "done") return null;
+      const list = data(p).drafts || [];
+      return <div className="tool-d">{list.length ? list.map((d) => <DraftCard key={d.id} d={d} />) : <div className="tool-r"><span>No draft waits for approval.</span></div>}</div>;
+    },
   },
   who_still_owes: {
     label: (p) => ({ text: "Read who still owes for a sent invoice", pill: data(p).invoices ? `${data(p).invoices.filter((i) => i.status !== "paid").length} waiting` : undefined }),

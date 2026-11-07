@@ -111,7 +111,7 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
     { headerName: "Decision", colId: "decision", width: narrow ? 108 : 132, sortable: false, suppressHeaderMenuButton: true,
       valueGetter: (p) => (p.data && !p.data.isGroup && !p.node.rowPinned ? decisionOf(p.data).value : ""), cellRenderer: DecisionCell,
       editable: (p) => Boolean(p.data && !p.data.isGroup && !p.node.rowPinned && decisionOf(p.data).options.length), singleClickEdit: true,
-      cellEditor: DecisionEditor, cellEditorPopup: true, cellEditorPopupPosition: "under", cellEditorParams: { act }, valueSetter: () => false },
+      cellEditor: DecisionEditor, cellEditorPopup: true, cellEditorPopupPosition: "over", cellEditorParams: { act }, valueSetter: () => false },
     // not shown, exported: the CSV carries the capture date, click source, refunded amount and why a payment is held
     { field: "date", headerName: "Captured (UTC date)", hide: true }, { field: "source", headerName: "Click source", hide: true },
     { field: "back", headerName: "Refunded", hide: true, valueFormatter: (p) => money(p.value) }, { field: "why", headerName: "Why held", hide: true },

@@ -243,8 +243,31 @@ export default function App({ first = null }) {
     }
     catch (e) { setAgent({ status: "error", error: e.message }); }
   };
+  // a step in the judge strip: go to the first page, bring the widget it names into view, flash it and put focus on the
+  // control to press (a band, the first ▸, the Nudge button), so the judge sees where to click instead of reading prose
+  const pointTo = (title, control) => {
+    setStudioPage("overview"); studio.current?.selectPage("overview");
+    const go = (n) => {
+      // Studio may keep a hidden copy of a widget: take a visible one, and the one holding the control when there is one
+      const all = [...document.querySelectorAll(".ag-studio-layout-widget")].filter((x) => x.offsetHeight > 0 && x.textContent.includes(title));
+      const w = all.find((x) => control && x.querySelector(control)) || all[0];
+      if (!w) { if (n > 0) setTimeout(() => go(n - 1), 300); return; }
+      w.scrollIntoView({ behavior: "smooth", block: "center" });
+      w.classList.add("ps-flash"); setTimeout(() => w.classList.remove("ps-flash"), 4200);
+      // Studio draws a widget once it is in view: look for the control again until it is there
+      const mark = (k) => {
+        const c = control && [...document.querySelectorAll(".ag-studio-layout-widget")].filter((x) => x.offsetHeight > 0 && x.textContent.includes(title)).map((x) => x.querySelector(control)).find(Boolean);
+        if (c) { c.focus({ preventScroll: true }); c.classList.add("ps-point"); setTimeout(() => c.classList.remove("ps-point"), 4200); }
+        else if (control && k > 0) setTimeout(() => mark(k - 1), 250);
+      };
+      setTimeout(() => mark(30), 400);
+    };
+    go(20);
+  };
   // the strip's link: open the assistant on a new chat, so its starters (Replay a budget run first) are in view
   const openReplay = () => {
+    // the recorded run is about the first page: go there first, so the chart it adds lands where the judge is looking
+    setStudioPage("overview"); studio.current?.selectPage("overview");
     openAssistant();
     const tryNew = (n) => { const b = [...document.querySelectorAll("#studio button")].find((x) => /^New( chat)?$/.test(x.textContent.trim())); if (b) b.click(); else if (n > 0) setTimeout(() => tryNew(n - 1), 400); };
     setTimeout(() => tryNew(20), 600);
@@ -551,9 +574,9 @@ export default function App({ first = null }) {
           {STUDIO_PAGE && <ol className="judge-strip" aria-label="For AG Grid judges: three clicks">
             <li className="js-k">For AG Grid judges</li>
             {readBack && <li><button type="button" className="js-link js-count" onClick={() => { setStudioPage("agents"); studio.current?.selectPage("agents"); }}>{readBack.read_back}/{readBack.total} agent writes found in PayPal</button>{readBack.checked_at && <span className="js-at"> · read {String(readBack.checked_at).slice(11, 16)} UTC{readBack.stale ? ", limit reached: older read" : ""}</span>}</li>}
-            <li><b>1</b> Click a band, approve the verdict</li>
-            <li><b>2</b> ▸ a payment's trail, decide it</li>
-            <li><b>3</b> Nudge: PayPal confirms beside it</li>
+            <li><button type="button" className="js-link" onClick={() => pointTo("1 · Leads", "[role=button][aria-label^='Testimonial']")}><b>1</b>Click a band</button></li>
+            <li><button type="button" className="js-link" onClick={() => pointTo("2 · PayPal ledger", ".trail-toggle, button[aria-expanded]")}><b>2</b>Open a payment's trail</button></li>
+            <li><button type="button" className="js-link" onClick={() => pointTo("3 · Who still owes", ".owes-act button")}><b>3</b>Nudge, PayPal confirms</button></li>
             <li><button type="button" className="js-link" onClick={openReplay}>Assistant: replay a run</button></li>
           </ol>}
           <div className="studio-pages" role="group" aria-label="Report pages">

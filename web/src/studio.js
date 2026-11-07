@@ -62,11 +62,11 @@ export function shopSources(read, paymentsCsv) {
 
 // the limit in code each agent works under (src/revenue.js, sendAgent.js, chaseAgent.js, refundAgent.js, payoutAgent.js)
 const LIMITS = {
-  "Revenue agent": "price and recipient set in code; a draft waits for approval",
-  "Send agent": "only the approved draft, its own amount in USD",
-  "Chase agent": "unpaid invoices only, at most 3 a run, no other amount",
-  "Refund agent": "only the flagged second capture, in full, once",
-  "Commission agent": "recipient fixed; per paid order; total checked",
+  "Revenue agent": "fixed price and payee; draft waits for OK",
+  "Send agent": "only the approved draft, its own amount",
+  "Chase agent": "unpaid only, at most 3 a run",
+  "Refund agent": "flagged double charge only, once",
+  "Commission agent": "fixed payee, per paid order",
 };
 /** Two tables joined on the ad key: what each ad claims, and what PayPal captured for it and Meta received. */
 export function buildData(rec, payments, invoices = [], duplicates = [], metaSends = [], shop = shopSources(null, ""), actions = []) {
@@ -176,10 +176,13 @@ export const initialReport = {
         acts: kpi("Things the agents wrote to PayPal", sum("actions.one")),
         reads: kpi("Read back from PayPal now", sum("actions.read")),
         moved: kpi("Money moved: refunds, payouts", sum("actions.moved")),
-        list: { type: "grid", dataMapping: { cols: [{ id: "actions.when" }, { id: "actions.agent" }, { id: "actions.did" }, { id: "actions.kind" }, { id: "actions.id" }, { id: "actions.amount" }, { id: "actions.paypal" }, { id: "actions.through" }, { id: "actions.limit" }] },
-          sort: [{ field: { id: "actions.when" }, direction: "desc" }], format: { title: { enabled: true, text: "Agent actions, newest first (up to 40), and what PayPal says about each now" }, style: { headerRow: { wrapText: true } } } },
+        // how many writes each agent made and what PayPal says about them now; a click on a bar filters the list below
+        byAgent: { type: "bar-chart-stacked", dataMapping: { categoryKey: [{ id: "actions.agent" }], valueKey: [sum("actions.one")], legendKey: [{ id: "actions.paypal" }] },
+          format: { title: { enabled: true, text: "Writes per agent, by what PayPal says now (click a bar to filter)" }, style: { theme: { common: { legend: { enabled: true, position: "right" } } } } } },
+        list: { type: "grid", dataMapping: { cols: [{ id: "actions.whenShort" }, { id: "actions.agent" }, { id: "actions.did" }, { id: "actions.id" }, { id: "actions.amount" }, { id: "actions.paypal" }, { id: "actions.through" }, { id: "actions.limit" }] },
+          sort: [{ field: { id: "actions.whenShort" }, direction: "desc" }], format: { title: { enabled: true, text: "Agent actions, newest first (up to 40), and what PayPal says about each now" }, style: { headerRow: { wrapText: true } } } },
       },
-      widgetLayout: { acts: at(0, 0, 8, 7), reads: at(8, 0, 8, 7), moved: at(16, 0, 8, 7), list: at(0, 7, 24, 30) },
+      widgetLayout: { acts: at(0, 0, 8, 7), reads: at(8, 0, 8, 7), moved: at(16, 0, 8, 7), byAgent: at(0, 7, 24, 11), list: at(0, 18, 24, 30) },
     },
     {
       id: "perad", name: "Per ad",

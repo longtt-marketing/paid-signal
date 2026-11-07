@@ -179,7 +179,7 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
       valueGetter: (p) => (p.data && !p.data.isGroup && !p.node.rowPinned ? decisionOf(p.data).value : ""), cellRenderer: DecisionCell,
       editable: (p) => Boolean(p.data && !p.data.isGroup && !p.node.rowPinned && decisionOf(p.data).options.length), singleClickEdit: true,
       // the cell never stores the choice: it calls the same server routes as before, and the reloaded ledger shows the result
-      cellEditor: DecisionEditor, cellEditorPopup: true, cellEditorPopupPosition: "under",
+      cellEditor: DecisionEditor, cellEditorPopup: true, cellEditorPopupPosition: "over",
       cellEditorParams: { act: (choice, row) => (choice === "Refund…" ? onRefund(row.raw) : choice === "Separate order…" ? onCount(row.capture_id) : null) },
       valueSetter: () => false },
     // not shown, exported: the CSV carries the capture date, click source, refunded amount and why a payment is held

@@ -13,7 +13,7 @@ export const PROMPT_STARTERS = [
   // shown only once a recorded run is bundled (web/src/replay-budget.json)
   ...(HAS_REPLAY ? [{ label: "Replay a budget run (no model call)", prompt: `${REPLAY_PROMPT}: ask the budget agent which ads to cut or grow, and have it show the evidence on this page.` }] : []),
   { label: "Which ads bring paid orders?", prompt: "Using the Paid Signal tools, which ads bring paying customers and which only bring leads? Quote the numbers exactly." },
-  { label: "Invoice warm leads", prompt: "Have the revenue agent read what the unpaid leads wrote and draft PayPal invoices for the ones ready to pay. Tell me who it invoiced, for how much, and who it skipped or flagged and why." },
+  { label: "Invoice warm leads", prompt: "Have the revenue agent read what the unpaid leads wrote and draft PayPal invoices for the ones ready to pay. Tell me who it invoiced, for how much, and who it skipped or flagged and why, then show me the drafts here to approve." },
   { label: "Review ad budgets", prompt: "Ask the budget agent which ads to cut or grow, and have it show the evidence on this page." },
   { label: "Chart paid revenue by ad", prompt: "Add a bar chart of paid revenue by ad to this page." },
   { label: "Nudge who still owes", prompt: "Ask the nudge agent to remind, kindly, the people who still owe us for a sent invoice, and show who still owes on the Who still owes page." },
@@ -26,6 +26,7 @@ const EXTRA = `You also act for a small shop that sells through PayPal. Ad platf
 Use read_paid_signal for per-ad spend, leads, paid orders and revenue (computed in code; quote numbers exactly, never invent or forecast).
 Use list_unpaid_leads to see leads with no PayPal payment. draft_paypal_invoices creates PayPal DRAFT invoices tagged with each lead's ad click;
 nothing is sent here: each draft waits in Approvals, and only after the shop owner approves it does the send agent send it. Draft only for leads who showed buying intent, and say why.
+After drafting, or when the owner asks what waits for approval, call show_drafts_for_approval: it puts each draft in this chat as a card with an Approve button. You cannot approve or send; only the owner's click does, and the send agent checks the draft again first.
 check_paypal_ledger compares the webhook ledger with PayPal's Transaction Search.
 For budget questions (which ads to cut, keep or grow), delegate to the budget agent; it checks its numbers in code.
 For invoices that were sent and not paid, delegate to the nudge agent: it sends friendly PayPal reminders within code limits.
@@ -93,6 +94,16 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           return ctx.success(`${d.drafts.filter((x) => x.id).length} draft(s) created; ${d.skips.length} lead(s) skipped.`, {
             drafted: d.drafts.map((x) => ({ lead: x.lead, total_usd: x.amount, lines: (x.lines || []).map((l) => l.name), reason: x.reason, error: x.error })),
             skipped: d.skips, refused_by_code: d.refusals, agent_summary: d.summary });
+        },
+      }),
+      api.defineAiTool({
+        name: "show_drafts_for_approval",
+        description: "Show the PayPal DRAFT invoices that wait for the owner, as cards with Approve buttons in this chat. Read only: it approves and sends nothing. Only the owner's click on Approve sends a draft, through the send agent, which checks it against what was approved.",
+        params: (s) => s.object({}),
+        execute: async (_args, ctx) => {
+          const { invoices } = await get("/api/invoices", ctx.signal);
+          const drafts = invoices.filter((i) => i.status === "DRAFT").slice(0, 6);
+          return ctx.success(`${drafts.length} draft(s) wait for the owner's approval.`, { drafts: drafts.map((i) => ({ id: i.id, who: i.lead, amount_usd: i.amount, ad_name: adName(i.ad) || "no ad" })) });
         },
       }),
       api.defineAiTool({

@@ -43,6 +43,29 @@ const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, 
   // tell custom widgets the data changed, once Studio has taken the new data in
   useEffect(() => { if (!data) return; const t = setTimeout(() => dispatchEvent(new Event(DATA_EVENT)), 400); return () => clearTimeout(t); }, [data]);
   const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition, funnelWidgetDefinition, owesWidgetDefinition, shareGapWidgetDefinition, moneyFlowWidgetDefinition, ledgerWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline", "lead-funnel", "who-still-owes", "share-gap", "money-flow", "paypal-ledger"] }] }), []);
+  // a widget an agent adds to the page in view (the replayed run's chart, a chart asked of the page agent) is scrolled into
+  // view and its border flashes, so nobody has to hunt for it below the fold
+  useEffect(() => {
+    let page = "", seen = new Set();
+    const t = setInterval(() => {
+      const a = studio.current?.api; if (!a) return;
+      const s = a.getState(), pg = s.pages.find((p) => p.id === s.selectedPageId); if (!pg) return;
+      const ids = Object.keys(pg.widgets || {});
+      if (pg.id !== page) { page = pg.id; seen = new Set(ids); return; }
+      const added = ids.filter((id) => !seen.has(id)); ids.forEach((id) => seen.add(id));
+      for (const id of added) {
+        // the agent often adds the widget first and titles it a moment later: read the title again on every try
+        const find = (n) => {
+          const now = a.getState().pages.find((p) => p.id === pg.id), title = now?.widgets?.[id]?.format?.title?.text;
+          const el = [...document.querySelectorAll(".ag-studio-layout-widget")].find((w) => title && w.textContent.includes(title)) || null;
+          if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("ps-flash"); setTimeout(() => el.classList.remove("ps-flash"), 4200); }
+          else if (n > 0) setTimeout(() => find(n - 1), 700);
+        };
+        find(40);
+      }
+    }, 900);
+    return () => clearInterval(t);
+  }, []);
   useImperativeHandle(ref, () => ({
     openAssistant() { const a = studio.current?.api; if (!a) return false; const s = a.getState(); a.setState({ ...s, panels: { ...(s.panels || {}), ai: { collapsed: false } } }); return true; },
     selectPage(id) { const a = studio.current?.api; if (a) a.setState({ ...a.getState(), selectedPageId: id }); },

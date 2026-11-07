@@ -1,15 +1,20 @@
 ## Paid Signal in brief
 
-**The ad report says the free guide wins (31 leads). PayPal says the testimonial ad makes the money (4 paid orders against 1). Paid Signal's AI agents act only on what PayPal confirms.**
+**Your ad report says the free guide brought 31 leads. PayPal says 1 paid order. Paid Signal's AI agents act on PayPal's number, inside AG Studio, and write to PayPal only within limits set in code.**
+
+**For AG Grid judges, 90 seconds** ([/studio](https://paid-signal.thelongmarketing.workers.dev/studio), no login):
+1. Click the Testimonial band: the page filters, the PayPal ledger (an AG Grid widget) narrows to that ad, and the budget agent's checked verdict waits for Approve.
+2. Press ▸ on a payment: its trail opens inside the grid, from the ad click to PayPal to what Meta heard.
+3. Open **Agents → PayPal**: the invoices, reminders, refund and payout the agents made, each with the status PayPal returns for it, read back when the page loads.
 
 **One loop, on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) (sandbox, a few minutes):**
 1. **Claude says no.** The owner asks to raise the free guide; with 1 paid order, Claude refuses, and the rule in code refuses it too.
 2. **You pay.** Ask to book: Claude drafts a real PayPal invoice through the Agent Toolkit. You came in from the testimonial ad (a test click), so when you pay as the sandbox buyer the ad gains your order (its count goes 4 → 5), the budget rule re-runs and Meta gets a Purchase test event.
 3. **Undo.** PayPal refunds it and the count goes back to 4.
 
-**Agents that write, checked by PayPal:** 36 of 36 agent writes in the shared demo ledger (invoice drafts, sends, reminders (the latest per invoice; each one kept for reminders sent after the 7 Nov 10:40 UTC update), a refund, a payout; judges' Try runs not included) point to PayPal objects that PayPal returned on 2026-11-07: 15 invoices with their current status, the refund COMPLETED and the payout SUCCESS: [live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions), Studio page Agents → PayPal.
+**Agents that write, checked by PayPal:** invoice drafts, sends, reminders, a refund and a payout made by the agents, each read back from PayPal ([live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions); what is counted: docs/AG-STUDIO.md).
 
-**Real data:** in a Vietnamese gift shop, the ad with 69% of the chats brought 19% of the money; its published book reruns through the same ledger code to the same 705 orders ([see it run](https://paid-signal.thelongmarketing.workers.dev/audit#shop)).
+**Real data:** in a Vietnamese gift shop with about $10,000 of October ads, the ad with 69% of the chats brought 19% of the money. The shop is paid by bank transfer, not PayPal; its published book reruns through the same ledger code to the same 705 orders ([see it run](https://paid-signal.thelongmarketing.workers.dev/audit#shop)).
 
 **Also:** double payments refunded, the ad's creator paid per paid order, Meta told only what PayPal confirms, /audit for your own files, AG Studio where the agents act on PayPal, and a Verify with PayPal button that reads every ledger payment back from PayPal at click time. A person approves every money move; code holds every amount.
 
@@ -31,7 +36,7 @@ Agent Toolkit (`create_invoice`, `get_invoice`, `send_invoice`, `send_invoice_re
 
 ## AG Grid: AG Studio as the agent workspace
 
-- **Agents that write to PayPal, not only read:** from Studio's assistant the revenue agent drafts real PayPal sandbox invoices (each waits for approval) and the nudge agent sends PayPal reminders within code limits.
+- **Agents that write to PayPal, not only read:** from Studio's assistant the revenue agent drafts real PayPal sandbox invoices and the nudge agent sends PayPal reminders within code limits. The drafts come back into the chat as cards; the agent cannot approve them, and only the owner's Approve sends one, after the send agent checks it.
 - **Proof, read back from PayPal:** Studio's second page, Agents → PayPal, lists each invoice draft, send, reminder (the latest per invoice; each one kept for reminders sent after the 7 Nov 10:40 UTC update), refund and payout an agent made in the shared demo ledger (newest 40), each read back from PayPal when the page loads (cached ten minutes), with PayPal's status and the API it came through.
 - **A 60-second path:** /studio opens on four widgets: the money flow, the PayPal ledger under it, then Who still owes beside the latest agent actions read back from PayPal. Press "Nudge who is waiting" and confirm; when the chase agent sends reminders, the page reads PayPal again within seconds, so the new reminders come first. The per-ad detail is under More pages.
 - **Studio Agent Framework:** Claude through a custom `AgLlmAdapter`; two custom agents (budget, nudge) delegate to Studio's page agent, and the budget agent's answer passes the same evidence gate as the app. Every Paid Signal tool has its own chat card.
