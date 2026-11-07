@@ -106,13 +106,19 @@ format shape (`widgetForm.js`) so those settings are part of the widget's state.
 - **Studio's agents, plus ours:** the lead agent keeps Studio's own tools and can delegate to Studio's data, page,
   planning and widget agents and to two custom agents (`agentTools.js`): the **budget agent**, whose recommendation must
   pass the server's evidence gate (every number and capture id checked, one repair allowed), and the **nudge agent**,
-  which sends PayPal reminders through the chase agent within code limits.
-- **Paid Signal's tools in Studio:** read the reconciliation, list unpaid leads, draft PayPal invoices (Agent Toolkit,
-  drafts wait for approval), who still owes, send kind reminders, check the ledger against Transaction Search, submit a
-  budget recommendation, and filter the page to one ad. Each has its own chat card (`toolDisplay.jsx`).
-- **Recorded runs:** the assistant opens on four recorded real runs (`history.js`, `saved-threads.json`), one of them the revenue agent drafting PayPal invoice INV2-2EJR-A4ZY-BNZU-XVYK, and **Replay a
-  budget run** plays a recorded run back through Studio's own agent loop (`claudeAdapter.js`, `replay-budget.json`):
-  no model is called, and Studio carries out the recorded tool calls itself, so the page agent adds the chart again.
+  which proposes PayPal reminders as a card in the chat; the owner's Send runs the chase agent within code limits.
+- **Paid Signal's tools in Studio:** read the reconciliation, list unpaid leads, draft PayPal invoices (Agent Toolkit),
+  show the drafts waiting for approval (cards with Approve), who still owes, propose reminders (a card with Send), show
+  payments in the ledger (AG Grid filters, sorts, scrolls to and flashes them), check the ledger against Transaction
+  Search, submit a budget recommendation, and filter the page to one ad. Each has its own chat card (`toolDisplay.jsx`).
+  No tool sends an invoice or a reminder by itself; the owner's click on a card does (`test/studio-tools.test.js`).
+- **Studio's agents build a page:** *Build a page with Studio's agents* has the lead open the blank Your page (`open_page`)
+  and delegate to Studio's page, widget and data agents, which add a value widget, a column chart of money refunded per
+  ad and a grid of the captures, then read the numbers back.
+- **Recorded runs:** the assistant opens on five recorded real runs (`history.js`, `saved-threads.json`), one of them the revenue agent drafting PayPal invoice INV2-2EJR-A4ZY-BNZU-XVYK.
+  **Replay a budget run** and **Replay Studio building a page** play two of them back through Studio's own agent loop
+  (`claudeAdapter.js`, `replay-budget.json`, `replay-page.json`): no model is called, and Studio carries out the
+  recorded tool calls itself, so the page agent adds the chart, or the whole page, again.
   Recorded with `scripts/record-studio-chats.py`.
 
 ## Limits

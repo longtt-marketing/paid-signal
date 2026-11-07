@@ -22,3 +22,10 @@ test("every Paid Signal Studio tool is allowed", () => {
   assert.ok(ours.length >= 5);
   assert.deepEqual(ours.filter((n) => !allowed.has(n)), []);
 });
+
+// a PayPal write that reaches a customer (an invoice sent, a reminder) needs the owner's click on a card in the chat:
+// no tool the Studio agents can call posts to those endpoints itself
+test("no Studio agent tool sends an invoice or a reminder by itself", () => {
+  const tools = readFileSync(new URL("../web/src/agentTools.js", import.meta.url), "utf8");
+  for (const path of ["/api/invoices/approve", "/api/agent/chase", "/api/refunds", "/api/commissions/pay"]) assert.ok(!tools.includes(path), path);
+});

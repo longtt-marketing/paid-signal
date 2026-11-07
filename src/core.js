@@ -41,7 +41,7 @@ export const CLICK_ID = /^[A-Za-z0-9_-]{1,64}$/;
 export const STUDIO_TOOLS = new Set(["add_page_filter", "add_widget", "add_widget_filter", "clear_plan", "configure_widget", "create_expression", "create_plan",
   "delete_expression", "execute_query", "position_widget", "remove_page_filter", "remove_widget", "remove_widget_filter", "rename_thread", "update_expression",
   "update_plan", "view_page", "view_plan", "view_report", "view_schema", "view_widget", "delegate_to", "complete_task", "read_paid_signal", "list_unpaid_leads",
-  "draft_paypal_invoices", "check_paypal_ledger", "submit_budget_recommendation", "who_still_owes", "send_friendly_nudges", "filter_page_to_ad", "show_drafts_for_approval"]);
+  "draft_paypal_invoices", "check_paypal_ledger", "submit_budget_recommendation", "who_still_owes", "send_friendly_nudges", "filter_page_to_ad", "show_drafts_for_approval", "propose_nudges", "show_payments_in_ledger", "open_page"]);
 export const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
 export const VISITOR_COOKIE = "ps_vid";
 export const VISITOR_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

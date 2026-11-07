@@ -27,9 +27,13 @@ export function toMessages(items) {
 // Replay: a recorded run is played back turn by turn through Studio's own agent loop, so Studio really executes the
 // recorded tool calls (the page agent adds the chart) while no model is called. Turns are keyed by the agent (a hash of
 // its instructions) and taken in order. Recording fills window.__psRecordTurns the same way (scripts/record-studio-chats.py).
-import REPLAY from "./replay-budget.json";
-export const REPLAY_PROMPT = "Replay the recorded budget run";
-export const HAS_REPLAY = Object.keys(REPLAY.turns || {}).length > 0;
+import REPLAY_BUDGET from "./replay-budget.json";
+import REPLAY_PAGE from "./replay-page.json";
+// each recorded run is started by its own prompt; a run with no recorded turns offers no starter
+const RUNS = [{ prompt: "Replay the recorded budget run", turns: REPLAY_BUDGET.turns || {} }, { prompt: "Replay the recorded page build", turns: REPLAY_PAGE.turns || {} }];
+export const REPLAY_PROMPT = RUNS[0].prompt, PAGE_REPLAY_PROMPT = RUNS[1].prompt;
+export const HAS_REPLAY = Object.keys(RUNS[0].turns).length > 0, HAS_PAGE_REPLAY = Object.keys(RUNS[1].turns).length > 0;
+let REPLAY = { turns: {} }, RUN_PROMPT = "";
 const hash = (s) => { let h = 5381; for (const ch of String(s)) h = ((h << 5) + h + ch.charCodeAt(0)) | 0; return (h >>> 0).toString(36); };
 const firstUser = (items) => text((items || []).find((it) => it.type === "message" && it.kind === "input")?.content);
 let used = {}, replaying = false;
@@ -57,7 +61,8 @@ export function claudeAdapter({ endpoint = "/api/ai/turn", model = "claude-sonne
         // the agent, by the opening of its instructions (the rest carries live page state that differs between runs)
         const key = hash(String(request.instructions || "").slice(0, 160));
         const items = request.input || [];
-        if (firstUser(items).startsWith(REPLAY_PROMPT) && !items.some((it) => it.kind === "output")) { used = {}; replaying = true; }
+        const run0 = RUNS.find((r) => firstUser(items).startsWith(r.prompt));
+        if (run0 && !items.some((it) => it.kind === "output")) { used = {}; replaying = true; REPLAY = run0; RUN_PROMPT = run0.prompt; }
         let data;
         if (replaying && REPLAY.turns?.[key] && (used[key] || 0) < REPLAY.turns[key].length) {
           // the recorded reply for this agent's next turn; a short pause so the run reads at a human pace
@@ -65,7 +70,7 @@ export function claudeAdapter({ endpoint = "/api/ai/turn", model = "claude-sonne
           data = list[n - 1];
           await new Promise((r) => setTimeout(r, 700));
           // the lead's last recorded turn (no tool call) ends the replay
-          if (firstUser(items).startsWith(REPLAY_PROMPT) && !(data.content || []).some((b) => b.type === "tool_use")) replaying = false;
+          if (firstUser(items).startsWith(RUN_PROMPT) && !(data.content || []).some((b) => b.type === "tool_use")) replaying = false;
         } else {
           const res = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: options?.signal });
           data = await res.json().catch(() => ({}));

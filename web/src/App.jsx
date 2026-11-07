@@ -197,6 +197,8 @@ export default function App({ first = null }) {
     if (Object.keys(by).length) setInvoices((cur) => cur.map((i) => (by[i.id] ? { ...i, reminded_at: at, reminder: { subject: by[i.id].subject, note: by[i.id].note } } : i)));
   }, []);
   const [studioPage, setStudioPage] = useState("overview");
+  // an agent may switch the page itself (open_page, a filter, the ledger view): the tab bar follows Studio
+  useEffect(() => { const t = setInterval(() => { const id = window.__studio?.getState?.().selectedPageId; if (id) setStudioPage((cur) => (cur === id ? cur : id)); }, 800); return () => clearInterval(t); }, []);
   const [morePages, setMorePages] = useState(false);
   // the headline on /studio: how many of the agents' PayPal writes PayPal reports back right now
   const [readBack, setReadBack] = useState(null);

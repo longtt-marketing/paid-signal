@@ -11,7 +11,10 @@ from playwright.sync_api import sync_playwright
 BASE = os.environ.get("PS_BASE", "http://localhost:8790")
 OUT = Path(__file__).resolve().parents[1] / "web/src/saved-threads.json"
 TITLES = {"Review ad budgets": "Budget agent: proposals through the evidence gate", "Nudge who still owes": "Nudge agent: PayPal reminders",
-          "Invoice warm leads": "Revenue agent: PayPal invoice drafts", "Explain the real shop": "The real shop's October"}
+          "Invoice warm leads": "Revenue agent: PayPal invoice drafts", "Explain the real shop": "The real shop's October",
+          "Build a page with Studio's agents": "Studio's agents build a page"}
+# runs also replayed through Studio's own agent loop, with no model call
+REPLAYS = {"Review ad budgets": "replay-budget.json", "Build a page with Studio's agents": "replay-page.json"}
 
 
 def slim(thread):
@@ -50,12 +53,12 @@ def record(pw, label):
         if ended and still >= 4: break
     turns = pg.evaluate("() => JSON.stringify(window.__psRecordTurns || {})")
     b.close()
-    if label == "Review ad budgets":  # the budget run is also replayed through Studio's own agent loop (web/src/replay-budget.json)
-        (OUT.parent / "replay-budget.json").write_text(json.dumps({"recorded": date.today().isoformat(), "turns": json.loads(turns)}, ensure_ascii=False), "utf8")
+    if label in REPLAYS:  # also replayed through Studio's own agent loop (web/src/replay-*.json)
+        (OUT.parent / REPLAYS[label]).write_text(json.dumps({"recorded": date.today().isoformat(), "turns": json.loads(turns)}, ensure_ascii=False), "utf8")
     t = slim(json.loads(last))
     t["summary"]["title"] = TITLES.get(label, label)
     t["messages"].append({"id": f"note-{t['summary']['threadId']}", "role": "assistant", "createdAt": len(t["messages"]),
-        "parts": [{"type": "text", "text": f"_Recorded from the live app on {date.today().isoformat()}; opening it calls no model." + (" To watch Studio carry it out again, chart included, pick Replay a budget run (no model call)._" if label == "Review ad budgets" else " What it drafts, and the drafts, sends and reminders already made, are on Studio's Agents → PayPal page, read back from PayPal; ask again to watch it happen live._" if label == "Invoice warm leads" else " Ask again to watch it happen live._")}]})
+        "parts": [{"type": "text", "text": f"_Recorded from the live app on {date.today().isoformat()}; opening it calls no model." + (" To watch Studio carry it out again, chart included, pick Replay a budget run (no model call)._" if label == "Review ad budgets" else " To watch Studio build the page again, pick Replay Studio building a page (no model call)._" if label in REPLAYS else " What it drafts, and the drafts, sends and reminders already made, are on Studio's Agents → PayPal page, read back from PayPal; ask again to watch it happen live._" if label == "Invoice warm leads" else " Ask again to watch it happen live._")}]})
     return t
 
 

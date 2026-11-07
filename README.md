@@ -19,13 +19,14 @@ Or press **Assistant: replay a run** in the strip: Studio's own agent loop repla
 
 | What | See it | Code |
 |---|---|---|
-| Studio agents that write to PayPal (draft invoices, send reminders) within limits set in code; drafts come back into the chat as cards, and only the owner's Approve sends one | /studio, the assistant: Invoice warm leads | `web/src/agentTools.js`, `web/src/toolDisplay.jsx`, `web/src/claudeAdapter.js` |
+| Studio agents draft PayPal invoices and propose reminders; both reach a customer only on the owner's click on a chat card | /studio, the assistant: Invoice warm leads, Nudge who still owes | `web/src/agentTools.js`, `web/src/toolDisplay.jsx` |
+| The assistant drives the AG Grid ledger: AG Grid filters, sorts, scrolls to and flashes the payments asked for | /studio, the assistant: Show refunded or held payments | `show_payments_in_ledger` in `web/src/agentTools.js`, `web/src/LedgerWidget.jsx` |
 | Page "Agents → PayPal": the agents' invoice drafts, sends, reminders, refund and payout in the shared demo ledger, each read back from PayPal with its status, the API it came through and the limit in code (newest 40; what is counted: docs/AG-STUDIO.md) | /studio, second page | `src/agentActions.js`, `/api/agent-actions` in `src/routes/judge.js` |
 | Money-flow widget: a band runs from an ad's share of leads to its share of PayPal money; a click filters the page and shows the budget agent's checked verdict to approve | [/studio](https://paid-signal.thelongmarketing.workers.dev/studio), first page | `web/src/ClaimToCashFlowWidget.jsx` |
 | PayPal ledger widget in Studio, right under the money flow: an AG Grid table grouped by ad; a band click narrows it to that ad and a click on an ad's subtotal row filters the page back; ▸ opens a payment's trail (ad click → PayPal capture → ledger → what Meta heard); a Decision per payment | /studio, first page | `web/src/LedgerWidget.jsx`, `web/src/adPick.js` |
 | AG Grid ledger on the dashboard: grouped by ad with subtotals, a search box, an "Ad report → PayPal" cell on each ad's subtotal row (for example 31 leads → 1 paid), CSV export, the same trail row and Decision column (Refund… or Separate order…, checked by the server), an AG Charts bar chart whose bars filter the grid | [Dashboard](https://paid-signal.thelongmarketing.workers.dev/#payments), PayPal ledger | `web/src/LedgerGrid.jsx`, `web/src/gridTotals.js` |
 | The real shop's 735 payments as an AG Grid pivot in Studio | /studio, page "Real shop: October" | `web/src/studio.js` |
-| Recorded runs played back through Studio's own agent loop, no model call | /studio, the assistant: Replay a budget run | `web/src/history.js`, `web/src/replay-budget.json` |
+| Recorded runs played back through Studio's own agent loop, no model call | /studio, the assistant: Replay a budget run, Replay Studio building a page | `web/src/history.js`, `web/src/replay-budget.json` |
 
 Accessibility: axe-core 4.10.2 (WCAG 2.1 A and AA rules) reported 0 violations on nine pages of the live site at 390 px and 1440 px wide on 2026-11-07 ([report](docs/proof/axe-2026-11-07.json), `scripts/axe-check.py`); the money-flow bands work from the keyboard.
 

@@ -4,20 +4,26 @@ import { claudeAdapter } from "./claudeAdapter.js";
 import { createAiHarness, directLlmRunner } from "ag-studio";
 import { adName } from "./names.js";
 import { seededHistory } from "./history.js";
-import { REPLAY_PROMPT, HAS_REPLAY } from "./claudeAdapter.js";
+import { REPLAY_PROMPT, HAS_REPLAY, PAGE_REPLAY_PROMPT, HAS_PAGE_REPLAY } from "./claudeAdapter.js";
+import { eligibleForReminder } from "../../src/chaseAgent.js";
 
 const get = async (path, signal) => { const r = await fetch(path, { signal }); const d = await r.json(); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; };
 const post = async (path, body, signal) => { const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal }); const d = await r.json(); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; };
 
+const BUILD_PAGE = "Open Your page (it is blank) and have Studio's page and widget agents build it from the PayPal captures table: a value widget of money refunded (captures.refunded), a column chart of money refunded per ad (captures.adName, sum of captures.refunded), and a grid of the captures with ad, capture, status, captured and refunded. Then tell me in two lines what the page shows.";
+
 export const PROMPT_STARTERS = [
   // shown only once a recorded run is bundled (web/src/replay-budget.json)
   ...(HAS_REPLAY ? [{ label: "Replay a budget run (no model call)", prompt: `${REPLAY_PROMPT}: ask the budget agent which ads to cut or grow, and have it show the evidence on this page.` }] : []),
+  ...(HAS_PAGE_REPLAY ? [{ label: "Replay Studio building a page (no model call)", prompt: `${PAGE_REPLAY_PROMPT}: ${BUILD_PAGE}` }] : []),
   { label: "Which ads bring paid orders?", prompt: "Using the Paid Signal tools, which ads bring paying customers and which only bring leads? Quote the numbers exactly." },
   { label: "Invoice warm leads", prompt: "Have the revenue agent read what the unpaid leads wrote and draft PayPal invoices for the ones ready to pay. Tell me who it invoiced, for how much, and who it skipped or flagged and why, then show me the drafts here to approve." },
   { label: "Review ad budgets", prompt: "Ask the budget agent which ads to cut or grow, and have it show the evidence on this page." },
   { label: "Chart paid revenue by ad", prompt: "Add a bar chart of paid revenue by ad to this page." },
-  { label: "Nudge who still owes", prompt: "Ask the nudge agent to remind, kindly, the people who still owe us for a sent invoice, and show who still owes on the Who still owes page." },
+  { label: "Nudge who still owes", prompt: "Get kind PayPal reminders ready for the people who still owe us for a sent invoice, so I can send them from here, and open the Who still owes page." },
   { label: "Explain the real shop", prompt: "Open the Real shop: October page. Using its tables (Real shop: ad groups, Real shop: payments), explain in three sentences which ad group the ad account overrated: its share of chats against its share of the money kept. Quote the numbers exactly and say the shop was paid by bank transfer." },
+  { label: "Show refunded or held payments", prompt: "In the PayPal ledger, show me the payments that were refunded or are held, newest first, then tell me in two lines what they are." },
+  { label: "Build a page with Studio's agents", prompt: BUILD_PAGE },
   { label: "Show only the free guide", prompt: "Filter the Ads vs PayPal page to the free guide, then tell me in two lines what PayPal confirms for it against what the ad report claims." },
   { label: "Check against PayPal", prompt: "Check the webhook ledger against PayPal's own transaction history and tell me if anything is missing." },
 ];
@@ -29,17 +35,18 @@ nothing is sent here: each draft waits in Approvals, and only after the shop own
 After drafting, or when the owner asks what waits for approval, call show_drafts_for_approval: it puts each draft in this chat as a card with an Approve button. You cannot approve or send; only the owner's click does, and the send agent checks the draft again first.
 check_paypal_ledger compares the webhook ledger with PayPal's Transaction Search.
 For budget questions (which ads to cut, keep or grow), delegate to the budget agent; it checks its numbers in code.
-For invoices that were sent and not paid, delegate to the nudge agent: it sends friendly PayPal reminders within code limits.
-To show one ad (or one shop ad group) across a page, call filter_page_to_ad; to build a new view, use the blank "Your page".
+For invoices that were sent and not paid, call who_still_owes, then propose_nudges yourself (not through another agent), so its card shows in this chat: the chase agent sends the reminders, within code limits, only when the owner presses Send on it. It also opens the "Who still owes" page.
+To show particular payments (refunded, held, one ad's, biggest first), call show_payments_in_ledger: the PayPal ledger grid filters, sorts and flashes them. To show one ad (or one shop ad group) across a page, call filter_page_to_ad; to build a new view, use the blank "Your page".
 The tables "Real shop: ad groups" and "Real shop: payments" are a real Vietnamese gift shop's October book (VND, paid by bank transfer, not PayPal): the same gap between what the ad account counts and the money kept. Say so whenever you use them.
-Answer the owner briefly: at most six short lines (for budgets: Grow, Keep, Cut, then one line on what the evidence gate decided). Never pass on widget health-check notes or layout chatter.`;
+Every amount in the PayPal tables is in US dollars: write $156.00, never a bare number.
+Answer the owner briefly: at most six short lines (for budgets: Grow, Keep, Cut, then one line on what the evidence gate decided). Never pass on widget health-check notes (Studio's check can flag "data mapping unmapped" on a widget that renders fine) or layout chatter, and never ask the owner to check the page.`;
 
 // AG Grid's nudge-bot idea, built on the chase agent: who still owes, and kind reminders sent through PayPal's Agent Toolkit.
 const NUDGE = `You are the Paid Signal nudge agent. You help a small shop get paid for invoices it already sent, kindly: a heads-up, never a demand.
 1. Call who_still_owes. Quote names and amounts exactly as given.
-2. If anyone is waiting, call send_friendly_nudges once. The chase agent reads each invoice from PayPal, decides who a reminder would help and writes it; code allows only unpaid invoices, at most three a run, and no invented amount or discount.
+2. If anyone is waiting, call propose_nudges once. It puts a card in this chat listing who a reminder may go to; nothing is sent until the owner presses Send on it. Then the chase agent reads each invoice from PayPal, decides who a reminder would help and writes it; code allows only unpaid invoices, at most three a run, and no invented amount or discount.
 3. Ask the page agent to show the "Who still owes" page.
-4. Finish with two or three friendly sentences: who was nudged, who was skipped and why, and how much is still out. You never send anything yourself.`;
+4. Finish with two or three friendly sentences: who is waiting and for how much, and that the reminders go only when the owner presses Send on the card. You never send anything yourself.`;
 
 // A custom Studio agent. It proposes budget changes through the Worker's evidence gate (the same check the
 // standalone budget agent passes), then hands work to Studio's page agent to put the evidence on the dashboard.
@@ -114,18 +121,23 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           const { invoices } = await get("/api/invoices", ctx.signal);
           const sent = invoices.filter((i) => ["SENT", "UNPAID", "PARTIALLY_PAID", "PAID"].includes(i.status));
           const days = (i) => (i.sent_at ? Math.floor((Date.now() - Date.parse(i.sent_at)) / 86400000) : 0);
-          return ctx.success(`${sent.filter((i) => i.status !== "PAID").length} sent invoice(s) still unpaid.`, {
+          const paid = sent.filter((i) => i.status === "PAID").length;
+          return ctx.success(`${sent.length - paid} sent invoice(s) still waiting, ${paid} paid.`, {
             invoices: sent.map((i) => ({ who: i.lead, amount_usd: i.amount, status: i.status === "PAID" ? "paid" : "waiting", days_waiting: i.status === "PAID" ? 0 : days(i), last_reminder: i.reminded_at ? i.reminder?.note || "sent" : null })) });
         },
       }),
+      // a reminder reaches a real (sandbox) customer, and the agent reads text leads wrote: so the agent only proposes,
+      // and the owner's Send on the card runs the chase agent (no Studio tool can write to PayPal without a click)
       api.defineAiTool({
-        name: "send_friendly_nudges",
-        description: "Run the chase agent: it reads each sent, unpaid invoice from PayPal through the Agent Toolkit, picks who a reminder would help, writes it, and sends it with send_invoice_reminder. Code limits it to unpaid invoices, three a run, no invented amount or discount.",
+        name: "propose_nudges",
+        description: "Open the Who still owes page and put a card in this chat listing the sent, unpaid invoices a kind PayPal reminder may go to (the same eligibility the chase agent uses: sent over an hour ago, not reminded in the last day). Sends nothing: only the owner's Send on the card runs the chase agent, which reads each invoice from PayPal and reminds at most three.",
         params: (s) => s.object({ reason: s.string({ description: "Why nudge now, in one sentence." }) }),
         execute: async (_args, ctx) => {
-          const d = await post("/api/agent/chase", {}, ctx.signal);
-          onNudge?.(d);
-          return ctx.success(`${d.reminded.length} reminder(s) sent.`, { reminded: d.reminded.map((r) => ({ invoice: r.id, note: r.note })), chase_agent_summary: d.summary, waiting_before: d.eligible });
+          const { invoices } = await get("/api/invoices", ctx.signal);
+          const ready = eligibleForReminder(invoices);
+          // open the Who still owes page beside the card, so the owner sees who it is about
+          const studio = typeof window !== "undefined" ? window.__studio : null; if (studio) studio.setState({ ...studio.getState(), selectedPageId: "owes" });
+          return ctx.success(`${ready.length} invoice(s) a reminder may go to; nothing sent until the owner presses Send.`, { ready: ready.map((i) => ({ id: i.id, who: i.lead, amount_usd: i.amount, sent_at: i.sent_at })) });
         },
       }),
       api.defineAiTool({
@@ -142,6 +154,48 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           const pages = st.pages.map((pg) => pg.id !== pageId ? pg : { ...pg, crossFilter: args.clear ? { values: {} } : { values: { [widgetId]: [{ type: "value", field: { id: field }, group: 0, values: [value] }] } } });
           studio.setState({ ...st, pages, selectedPageId: pageId });
           return ctx.success(args.clear ? "Filter cleared." : `The ${pageId === "shop" ? "Real shop" : "Ads vs PayPal"} page now shows only ${value}.`, { applied: true, page: pageId, value: args.clear ? null : value });
+        },
+      }),
+      // the agent drives the AG Grid ledger itself: AG Grid filters, sorts, scrolls to and flashes what was asked for
+      api.defineAiTool({
+        name: "show_payments_in_ledger",
+        description: "Show payments in the PayPal ledger grid on the Ads vs PayPal page: the grid lists payments flat, filtered and sorted by AG Grid as asked, scrolls to them and flashes them; returns how many it shows and the first five (capture, ad, captured, kept, status). Read only. status: all, refunded, held (a possible double payment or an open PayPal dispute: kept out of paid orders and revenue until the owner counts it as a separate order, or it is refunded or the dispute is won), refunded_or_held, paid. ad: an ad key (free_guide, trial_video, parent_carousel, holiday_static), optional. sort: amount_desc, amount_asc, kept_desc, date_desc. reset: true goes back to the grouped ledger.",
+        params: (s) => s.object({
+          status: s.enum(["all", "refunded", "held", "refunded_or_held", "paid"]).optional(),
+          ad: s.string({ description: "Ad key, optional." }).optional(),
+          sort: s.enum(["amount_desc", "amount_asc", "kept_desc", "date_desc"]).optional(),
+          reset: s.boolean().optional(),
+        }),
+        execute: async (args, ctx) => {
+          const studio = typeof window !== "undefined" ? window.__studio : null;
+          if (!studio) return ctx.success("The report is not open.", { applied: false });
+          const st = studio.getState(); if (st.selectedPageId !== "overview") studio.setState({ ...st, selectedPageId: "overview" });
+          const ad = args.ad ? adName(String(args.ad)) : "";
+          const words = { refunded: "refunded", held: "held", refunded_or_held: "refunded or held", paid: "paid" }[args.status] || "every payment";
+          const order = { amount_desc: "biggest first", amount_asc: "smallest first", kept_desc: "most kept first", date_desc: "newest first" }[args.sort] || "";
+          const label = [words, ad && `on ${ad}`, order].filter(Boolean).join(", ");
+          // the ledger widget may still be mounting after the page switch: ask again until it answers
+          const out = await new Promise((resolve) => {
+            let done = false; const reply = (r) => { if (!done) { done = true; resolve(r); } };
+            const ask = (n) => { if (done) return; dispatchEvent(new CustomEvent("paid-signal:ledger-view", { detail: args.reset ? { reset: true } : { status: args.status, ad, sort: args.sort, label, reply } })); if (args.reset) reply({ reset: true }); else if (n > 0) setTimeout(() => ask(n - 1), 600); else reply(null); };
+            ask(12);
+          });
+          if (args.reset) return ctx.success("The ledger is back to every payment, grouped by ad.", { applied: true });
+          if (!out) return ctx.success("The ledger grid did not answer; it may not be on screen.", { applied: false });
+          return ctx.success(`The ledger grid now shows ${out.shown} payment(s): ${label}.`, { applied: true, view: label, ...out });
+        },
+      }),
+      api.defineAiTool({
+        name: "open_page",
+        description: "Show one page of the report: overview (Ads vs PayPal), agents (Agents → PayPal), shop (Real shop: October), owes (Who still owes), perad, captures, ledger, or mine (Your page, blank for new views). Do this before asking the page agent to build on a page.",
+        params: (s) => s.object({ page: s.enum(["overview", "agents", "perad", "captures", "ledger", "owes", "shop", "mine"]) }),
+        execute: async (args, ctx) => {
+          const studio = typeof window !== "undefined" ? window.__studio : null;
+          if (!studio) return ctx.success("The report is not open.", { applied: false });
+          const st = studio.getState(), pg = st.pages.find((p) => p.id === args.page);
+          if (!pg) return ctx.success(`No page ${args.page}.`, { applied: false });
+          studio.setState({ ...st, selectedPageId: args.page });
+          return ctx.success(`Now showing ${pg.name} (page id ${args.page}).`, { applied: true, page: args.page, name: pg.name, widgets: Object.keys(pg.widgets || {}).length });
         },
       }),
       api.defineAiTool({
@@ -185,9 +239,9 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
         }),
         directLlmRunner({
           id: "nudge", name: "Nudge agent", adapter, maxTurns: 10,
-          description: "Sends kind PayPal reminders for invoices that were sent and not paid, through the chase agent and PayPal's Agent Toolkit, and shows who still owes.",
+          description: "Proposes kind PayPal reminders for invoices that were sent and not paid, as a card in the chat; the owner's Send runs the chase agent (PayPal's Agent Toolkit). Shows who still owes.",
           instructions: () => NUDGE,
-          tools: () => [custom.find((t) => t.name === "who_still_owes"), custom.find((t) => t.name === "send_friendly_nudges"), tools.delegateTo(["page"])],
+          tools: () => [custom.find((t) => t.name === "who_still_owes"), custom.find((t) => t.name === "propose_nudges"), tools.delegateTo(["page"])],
         }),
       ],
       primary: "lead",

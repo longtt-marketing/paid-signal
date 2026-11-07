@@ -110,7 +110,7 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
           f("payers", "Paid orders (PayPal)", "integerFormat"), f("refunds", "Fully refunded", "integerFormat"), f("revenue", "Paid revenue", "currencyFormat"), f("noPayer", "Spend with no paid order", "currencyFormat"), f("invoiced", "Leads invoiced (PayPal)", "integerFormat")],
       },
       {
-        id: "captures", name: "PayPal captures", description: "One row per PayPal capture, attributed to an ad by click id.", data: caps,
+        id: "captures", name: "PayPal captures", description: "One row per PayPal capture, attributed to an ad by click id. Amounts are in US dollars.", data: caps,
         fields: [f("id", "Capture", "textFormat"), f("ad", "Ad key", "textFormat", true), f("adName", "Ad", "textFormat"), f("status", "Status", "textFormat"), f("source", "Click source", "textFormat"),
           f("gross", "Captured", "currencyFormat"), f("refunded", "Refunded", "currencyFormat"), f("net", "Net paid", "currencyFormat"), f("paid", "Is paid", "integerFormat"), f("held", "Held as possible duplicate", "integerFormat"), f("date", "Capture date", "dateFormat"), f("capturedAt", "Captured at", "textFormat"),
           f("via", "Paid through", "textFormat"), f("lead", "Who paid", "textFormat"), f("meta", "Meta", "textFormat"), f("metaAt", "Meta received at (UTC)", "textFormat")],

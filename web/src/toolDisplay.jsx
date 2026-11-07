@@ -36,6 +36,32 @@ const Err = ({ p }) => <div className="tool-d"><div className="tool-r"><span>{(p
 const body = (fn) => function Detail(p) { if (failed(p)) return <Err p={p} />; if (p.status !== "done") return null; return <Rows rows={fn(data(p), p.args || {})} />; };
 const usd = (v) => (v == null || v === "" ? "–" : `$${Number(v).toFixed(2)}`);
 
+// the nudge card: Send runs the chase agent on the server (eligible invoices only, three at most, PayPal's own reminder)
+function NudgeCard({ list }) {
+  const [state, setState] = useState({});
+  const go = async () => {
+    setState({ busy: true });
+    try {
+      const r = await fetch("/api/agent/chase", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(out.error || `HTTP ${r.status}`);
+      setState({ done: out.reminded || [], note: out.summary });
+      dispatchEvent(new Event("paid-signal:refresh"));
+    } catch (e) { setState({ error: e.message }); }
+  };
+  return (
+    <div className="tool-d">
+      {list.map((i) => <div className="tool-r" key={i.id}><span>{String(i.who).replace(" (fictional)", "")}</span><b>{usd(i.amount_usd)} · {i.id}</b></div>)}
+      <div className="tool-card">
+        {state.done ? <span className="tool-card-s ok">Chase agent sent {state.done.length} PayPal reminder(s){state.done.length ? `: ${state.done.map((r) => r.id).join(", ")}` : ""}</span>
+          : <button type="button" className="tool-card-b" disabled={state.busy || !list.length} onClick={go}>{state.busy ? "Chase agent reading PayPal…" : "Send kind reminders"}</button>}
+        {state.note && <span className="tool-card-t"><span>{state.note}</span></span>}
+        {state.error && <span className="tool-card-s gap">{state.error}</span>}
+      </div>
+    </div>
+  );
+}
+
 export const toolDisplay = {
   read_paid_signal: {
     label: (p) => ({ text: "Read what each ad claims and what PayPal confirms", pill: data(p).ads ? `${data(p).ads.length} ads` : undefined }),
@@ -65,9 +91,26 @@ export const toolDisplay = {
     label: (p) => ({ text: "Read who still owes for a sent invoice", pill: data(p).invoices ? `${data(p).invoices.filter((i) => i.status !== "paid").length} waiting` : undefined }),
     detail: body((d) => (d.invoices || []).map((i) => [String(i.who).replace(" (fictional)", ""), i.status === "paid" ? `${usd(i.amount_usd)} · paid` : `${usd(i.amount_usd)} · waiting ${i.days_waiting} days`, i.status === "paid" ? "ok" : ""])),
   },
+  propose_nudges: {
+    label: (p) => ({ text: "Reminders ready, sent only on your click (open to send)", pill: data(p).ready ? `${data(p).ready.length} waiting` : undefined }),
+    detail: function Nudges(p) {
+      if (failed(p)) return <Err p={p} />;
+      if (p.status !== "done") return null;
+      const list = data(p).ready || [];
+      return list.length ? <NudgeCard list={list} /> : <div className="tool-d"><div className="tool-r"><span>Nobody is waiting long enough for a reminder.</span></div></div>;
+    },
+  },
+  // kept so recorded runs from before 7 Nov, when the agent sent reminders itself, still read the same way
   send_friendly_nudges: {
     label: (p) => ({ text: p.status === "done" ? "Chase agent sent kind PayPal reminders" : "Chase agent is reading the unpaid invoices", pill: data(p).reminded ? `${data(p).reminded.length} sent` : undefined }),
     detail: body((d) => (d.reminded || []).length ? d.reminded.map((r) => [r.invoice, `“${r.note}”`]) : [["No reminder sent", d.chase_agent_summary || "nobody needed one"]]),
+  },
+  show_payments_in_ledger: {
+    label: (p) => ({ text: p.args?.reset ? "Put the PayPal ledger back to every payment" : "Filtered and sorted the PayPal ledger grid", pill: data(p).shown != null ? `${data(p).shown} shown` : undefined }),
+    detail: body((d) => (d.top || []).map((r) => [`${r.ad} · ${r.capture}`, `${usd(r.kept_usd)} kept of ${usd(r.captured_usd)} · ${r.status}`, /Held|Refunded/.test(r.status) ? "gap" : ""])),
+  },
+  open_page: {
+    label: (p) => ({ text: "Opened a report page", pill: data(p).name || undefined }),
   },
   filter_page_to_ad: {
     label: (p) => ({ text: p.args?.clear ? "Cleared the page filter" : "Filtered the page to one ad", pill: data(p).value || undefined }),
