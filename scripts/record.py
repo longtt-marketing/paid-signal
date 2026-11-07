@@ -558,7 +558,7 @@ def studio30b(pg):
     the Agents -> PayPal page with each agent's limit in code, then the recorded run where the revenue agent drafts an invoice."""
     studio_open(pg)
     pg.evaluate("document.querySelector('.owes').scrollIntoView({behavior: 'smooth', block: 'center'})"); pg.wait_for_timeout(1600)
-    mark(pg, "recent", ".ag-studio-layout-widget:has-text('4 · What the agents did')"); pg.wait_for_timeout(3000)
+    mark(pg, "recent", ".ag-studio-layout-widget:has-text('Agent writes, read back from PayPal')"); pg.wait_for_timeout(3000)
     pg.evaluate("window.scrollTo({top: 0, behavior: 'smooth'})"); pg.wait_for_timeout(1200)
     glide(pg, pg.locator(".judge-strip .js-count")); pg.wait_for_timeout(4500)
     mark(pg, "actions", ".ag-studio-layout-widget:has-text('Agent actions, newest first')"); pg.wait_for_timeout(4500)

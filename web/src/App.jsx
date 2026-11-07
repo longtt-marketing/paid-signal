@@ -251,14 +251,14 @@ export default function App({ first = null }) {
     setStudioPage("overview"); studio.current?.selectPage("overview");
     const go = (n) => {
       // Studio may keep a hidden copy of a widget: take a visible one, and the one holding the control when there is one
-      const all = [...document.querySelectorAll(".ag-studio-layout-widget")].filter((x) => x.offsetHeight > 0 && x.textContent.includes(title));
+      const all = [...document.querySelectorAll(".ag-studio-layout-widget")].filter((x) => x.offsetHeight > 0 && title.split("|").some((t) => x.textContent.includes(t)));
       const w = all.find((x) => control && x.querySelector(control)) || all[0];
       if (!w) { if (n > 0) setTimeout(() => go(n - 1), 300); return; }
       w.scrollIntoView({ behavior: "smooth", block: "center" });
       w.classList.add("ps-flash"); setTimeout(() => w.classList.remove("ps-flash"), 4200);
       // Studio draws a widget once it is in view: look for the control again until it is there
       const mark = (k) => {
-        const c = control && [...document.querySelectorAll(".ag-studio-layout-widget")].filter((x) => x.offsetHeight > 0 && x.textContent.includes(title)).map((x) => x.querySelector(control)).find(Boolean);
+        const c = control && [...document.querySelectorAll(".ag-studio-layout-widget")].filter((x) => x.offsetHeight > 0 && title.split("|").some((t) => x.textContent.includes(t))).map((x) => x.querySelector(control)).find(Boolean);
         if (c) { c.focus({ preventScroll: true }); c.classList.add("ps-point"); setTimeout(() => c.classList.remove("ps-point"), 4200); }
         else if (control && k > 0) setTimeout(() => mark(k - 1), 250);
       };
@@ -576,9 +576,9 @@ export default function App({ first = null }) {
           {STUDIO_PAGE && <ol className="judge-strip" aria-label="For AG Grid judges: three clicks">
             <li className="js-k">For AG Grid judges</li>
             {readBack && <li><button type="button" className="js-link js-count" onClick={() => { setStudioPage("agents"); studio.current?.selectPage("agents"); }}>{readBack.read_back}/{readBack.total} agent writes found in PayPal</button>{readBack.checked_at && <span className="js-at"> · read {String(readBack.checked_at).slice(11, 16)} UTC{readBack.stale ? ", limit reached: older read" : ""}</span>}</li>}
-            <li><button type="button" className="js-link" onClick={() => pointTo("1 · Leads", "[role=button][aria-label^='Testimonial']")}><b>1</b>Click a band</button></li>
-            <li><button type="button" className="js-link" onClick={() => pointTo("2 · PayPal ledger", ".trail-toggle, button[aria-expanded]")}><b>2</b>Open a payment's trail</button></li>
-            <li><button type="button" className="js-link" onClick={() => pointTo("3 · Who still owes", ".owes-act button")}><b>3</b>Nudge, PayPal confirms</button></li>
+            <li><button type="button" className="js-link" onClick={() => pointTo("Ad report vs PayPal: leads → paid money|1 · Leads", "[role=button][aria-label^='Testimonial']")}><b>1</b>Click a band</button></li>
+            <li><button type="button" className="js-link" onClick={() => pointTo("PayPal ledger (AG Grid)|2 · PayPal ledger", ".trail-toggle, button[aria-expanded]")}><b>2</b>Open a payment's trail</button></li>
+            <li><button type="button" className="js-link" onClick={() => pointTo("Who still owes", ".owes-act button")}><b>3</b>Nudge, PayPal confirms</button></li>
             <li><button type="button" className="js-link" onClick={openReplay}>Assistant: replay a run</button></li>
           </ol>}
           <div className="studio-pages" role="group" aria-label="Report pages">

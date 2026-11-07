@@ -79,7 +79,53 @@ export const publicMeta = ({ events, ...meta }) => ({ ...meta, events: events.ma
   ...(e.user_data.lead_id ? { lead_id: "(Meta lead ID; sent to Meta, kept server-side)" } : {}),
 } })) });
 
-// KV list calls are the scarce resource: the ledger is read through a 20-second edge cache, cleared on every write here
+// KV list() is capped per day on this Cloudflare plan (7 Nov: heavy testing used it up and every ledger read failed until
+// the reset). Keys under these prefixes are also kept in one index document per prefix, updated by every put and delete
+// that goes through this wrapper, so a listing costs one get. A real list() runs at most once an hour per prefix to
+// correct the index, and when the daily cap is reached the index, even an older one, still answers.
+const INDEXED = ["pay:", "inv:", "commission:", "dec:", "meta:"];
+const RELIST_MS = 3600000;
+/** @param {any} kv */
+export function indexedKV(kv) {
+  if (!kv || kv.__indexed) return kv;
+  const prefixOf = (k) => INDEXED.find((p) => String(k).startsWith(p));
+  const readIdx = async (p) => /** @type {{ keys: string[], listed: number } | null} */ (await kv.get(`idx:${p}`, "json"));
+  const writeIdx = (p, keys, listed) => kv.put(`idx:${p}`, JSON.stringify({ listed, keys: [...new Set(keys)].sort() }));
+  const realList = async (prefix) => {
+    const keys = []; let cursor;
+    do { const page = await kv.list({ prefix, cursor }); keys.push(...page.keys.map((k) => k.name)); cursor = page.list_complete ? undefined : page.cursor; } while (cursor);
+    return keys;
+  };
+  return {
+    __indexed: true,
+    get: (...a) => kv.get(...a),
+    getWithMetadata: (...a) => kv.getWithMetadata(...a),
+    async put(k, v, o) {
+      await kv.put(k, v, o);
+      const p = prefixOf(k); if (!p) return;
+      const idx = await readIdx(p);
+      if (idx && !idx.keys.includes(k)) await writeIdx(p, [...idx.keys, k], idx.listed);
+    },
+    async delete(k) {
+      await kv.delete(k);
+      const p = prefixOf(k); if (!p) return;
+      const idx = await readIdx(p);
+      if (idx && idx.keys.includes(k)) await writeIdx(p, idx.keys.filter((x) => x !== k), idx.listed);
+    },
+    async list(opts = {}) {
+      const prefix = String(opts.prefix || ""), p = INDEXED.find((x) => prefix.startsWith(x));
+      if (!p) return kv.list(opts);
+      let idx = await readIdx(p);
+      if (!idx || Date.now() - (idx.listed || 0) > RELIST_MS) {
+        try { const keys = await realList(p); const now = Date.now(); await writeIdx(p, keys, now); idx = { keys, listed: now }; }
+        catch (e) { if (!idx) throw e; console.warn("KV list failed; answering from the index", e?.message); }
+      }
+      return { keys: idx.keys.filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true };
+    },
+  };
+}
+
+// the ledger is also read through a short edge cache, cleared on every write here
 export const cacheKey = (prefix) => new Request(`https://ledger.paid-signal.internal/${prefix}`);
 export async function cachedList(env, prefix) {
   const cache = /** @type {any} */ (globalThis).caches?.default;

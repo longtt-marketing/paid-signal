@@ -157,15 +157,15 @@ export const initialReport = {
       // (filtered by the same click), and the agents acting on PayPal; the per-ad detail is on the next page
       id: "overview", name: "Ads vs PayPal",
       widgets: {
-        flow: { type: "money-flow", dataMapping: { category: [{ id: "ads.name" }], reported: [sum("ads.leads")], money: [sum("ads.revenue")] }, format: { title: { enabled: true, text: "1 · Leads in the ad report → money PayPal confirms" } } },
+        flow: { type: "money-flow", dataMapping: { category: [{ id: "ads.name" }], reported: [sum("ads.leads")], money: [sum("ads.revenue")] }, format: { title: { enabled: true, text: "Ad report vs PayPal: leads → paid money" } } },
         // the PayPal ledger, one row per capture; a band click in the flow narrows it to that ad (adPick.js)
         pays: { type: "paypal-ledger", dataMapping: { ad: [{ id: "captures.adName" }], id: [{ id: "captures.id" }], status: [{ id: "captures.status" }], via: [{ id: "captures.via" }], meta: [{ id: "captures.meta" }], source: [{ id: "captures.source" }], date: [{ id: "captures.date" }], at: [{ id: "captures.capturedAt" }], gross: [sum("captures.gross")], refunded: [sum("captures.refunded")], net: [sum("captures.net")], held: [sum("captures.held")] },
-          format: { title: { enabled: true, text: "2 · PayPal ledger: every payment, filtered with the page" } } },
+          format: { title: { enabled: true, text: "PayPal ledger (AG Grid)" } } },
         owes: { type: "who-still-owes", dataMapping: { who: [{ id: "invoices.who" }], status: [{ id: "invoices.status" }], amount: [sum("invoices.amount")], days: [{ id: "invoices.days", aggregation: "max" }], nudge: [{ id: "invoices.nudge" }] },
-          format: { title: { enabled: true, text: "3 · Who still owes: the nudge agent sends PayPal reminders" } } },
+          format: { title: { enabled: true, text: "Who still owes" } } },
         // beside it, the latest agent actions as PayPal reports them now: after a Nudge the new reminders come first
         recent: { type: "grid", dataMapping: { cols: [{ id: "actions.whenShort" }, { id: "actions.agentDid" }, { id: "actions.paypal" }] },
-          sort: [{ field: { id: "actions.whenShort" }, direction: "desc" }], format: { title: { enabled: true, text: "4 · What the agents did, read back from PayPal" } } },
+          sort: [{ field: { id: "actions.whenShort" }, direction: "desc" }], format: { title: { enabled: true, text: "Agent writes, read back from PayPal" } } },
       },
       widgetLayout: { flow: at(0, 0, 24, 16), pays: at(0, 16, 24, 28), owes: at(0, 44, 11, 24), recent: at(11, 44, 13, 24) },
     },

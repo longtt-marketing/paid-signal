@@ -98,22 +98,35 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
   }, [ready, widgetApi, context?.dataVersion, tick, atField?.id, ...KEYS.map((k) => m[k]?.id)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = useMemo(() => (id) => setOpen((cur) => { const n = new Set(cur); n.has(id) ? n.delete(id) : n.add(id); return n; }), []);
-  // the owner decides; the server checks; the report reloads from the ledger
-  const act = useMemo(() => async (choice, row) => {
+  // the owner decides in a small form under the grid (amount, or the reason it is a separate order) and confirms;
+  // the server checks it again; the report reloads from the ledger
+  const [ask, setAsk] = useState(null);
+  const act = useMemo(() => (choice, row) => {
+    const left = (row.raw.amount - row.raw.refunded_amount).toFixed(2);
+    if (choice === "Refund…") setAsk({ kind: "refund", row, left, value: left, busy: false, error: "" });
+    else if (choice === "Separate order…") setAsk({ kind: "separate", row, value: "", busy: false, error: "" });
+  }, []);
+  const askProblem = (a) => {
+    if (!a) return "";
+    if (a.kind === "separate") return a.value.trim().length < 3 ? "Say why, for example: a second child." : "";
+    const v = Number(a.value);
+    return !(v > 0) ? "Enter an amount above $0." : v > Number(a.left) + 1e-9 ? `At most $${a.left} is left to refund.` : "";
+  };
+  const confirm = async () => {
+    const a = ask; if (!a || askProblem(a)) return;
+    setAsk({ ...a, busy: true, error: "" });
     try {
-      if (choice === "Refund…") {
-        const left = (row.raw.amount - row.raw.refunded_amount).toFixed(2);
-        const v = window.prompt(`Refund how much of capture ${row.capture_id}? (sandbox)`, left); if (v === null) return;
-        const d = await post("/api/refund", { capture_id: row.capture_id, amount: v });
+      if (a.kind === "refund") {
+        const d = await post("/api/refund", { capture_id: a.row.capture_id, amount: Number(a.value).toFixed(2) });
         setSaid(d.preview ? d.message : `Refunded ${money(d.refund?.amount)}; the ad's numbers update.`);
-      } else if (choice === "Separate order…") {
-        const reason = window.prompt("Why is this a separate order and not a double payment? (for example: a second child)"); if (!reason) return;
-        await post("/api/duplicates/distinct", { capture_id: row.capture_id, reason });
+      } else {
+        await post("/api/duplicates/distinct", { capture_id: a.row.capture_id, reason: a.value.trim() });
         setSaid("Counted as a separate order: the ad, Meta and the commission count it again.");
       }
+      setAsk(null);
       dispatchEvent(new Event("paid-signal:ledger"));
-    } catch (e) { setSaid(e.message); }
-  }, []);
+    } catch (e) { setAsk({ ...a, busy: false, error: e.message }); }
+  };
 
   // the page's cross-filter (a band clicked in the money flow, an ad in another widget) is on the ads table, which Studio
   // does not carry over to each capture; the widget reads the selected ads and narrows its own rows to them
@@ -185,6 +198,15 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
           // a click on an ad's subtotal row filters the whole page to that ad
           onRowClicked={(e) => { if (e.data?.isGroup) filterTo(e.data.ad.replace(/ \(\d+\)$/, "")); }} />
       </div>
+      {ask && <form className="ledger-ask" onSubmit={(e) => { e.preventDefault(); confirm(); }} aria-label={ask.kind === "refund" ? "Confirm a refund" : "Count as a separate order"}>
+        <b>{ask.kind === "refund" ? `Refund capture ${ask.row.capture_id} (${ask.row.ad})` : `Count ${ask.row.capture_id} as a separate order`}</b>
+        {ask.kind === "refund"
+          ? <label>Amount, USD (up to ${ask.left}) <input type="number" step="0.01" min="0.01" max={ask.left} value={ask.value} autoFocus onChange={(e) => setAsk({ ...ask, value: e.target.value, error: "" })} /></label>
+          : <label>Why is it not a double payment? <input type="text" value={ask.value} autoFocus placeholder="for example: a second child" onChange={(e) => setAsk({ ...ask, value: e.target.value, error: "" })} /></label>}
+        <button type="submit" className="ledger-ask-go" disabled={ask.busy || Boolean(askProblem(ask))}>{ask.busy ? "Checking…" : ask.kind === "refund" ? "Refund through PayPal" : "Count it"}</button>
+        <button type="button" className="ledger-ask-x" onClick={() => setAsk(null)} disabled={ask.busy}>Cancel</button>
+        <span className="ledger-ask-note">{ask.error || askProblem(ask) || "The server checks it again; on the demo's seeded payments a refund is only previewed."}</span>
+      </form>}
       <div className="ledger-w-foot">{view && <button type="button" className="chip-x" onClick={() => setView(null)} aria-label="Back to every payment grouped by ad">Assistant's view: {view.label || "filtered"} ×</button>}{picked.length > 0 && <button type="button" className="chip-x" onClick={() => setPick([], "ledger")}>Showing: {picked.join(", ")} ×</button>}
         <span>{said || "▸ opens a payment's trail · click an ad's row to filter the page · click a Decision to act (the server checks it)"}</span>
         <button type="button" className="ledger-w-csv" onClick={() => grid.current?.api?.exportDataAsCsv({ fileName: "paypal-ledger.csv", columnKeys: ["ad", "amount", "kept", "back", "via", "status", "why", "meta", "capture_id", "date", "source"],

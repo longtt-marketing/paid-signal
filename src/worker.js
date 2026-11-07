@@ -1,7 +1,7 @@
 // Paid Signal Worker. Secrets: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, ANTHROPIC_API_KEY (+ ANTHROPIC_WORKSPACE_ID),
 // PAYPAL_WEBHOOK_ID once the webhook is registered. KV LEDGER holds sandbox captures (no raw email, only its hash).
 // This file only wires things together: shared pieces are in src/core.js, routes in src/routes/*.js.
-import { json, visitorId, addVisitorCookie, withVisitorCookie, forget, revenueDrafts, syncDisputes, firstPaint, cleanTurns, withPageHeaders, mcpTool, listPrefix, syncInvoices, CLAUDE_DAILY, quota, paypal, ordersSdk, handleMcp } from "./core.js";
+import { json, visitorId, addVisitorCookie, withVisitorCookie, forget, indexedKV, revenueDrafts, syncDisputes, firstPaint, cleanTurns, withPageHeaders, mcpTool, listPrefix, syncInvoices, CLAUDE_DAILY, quota, paypal, ordersSdk, handleMcp } from "./core.js";
 import { route as payments } from "./routes/payments.js";
 import { route as invoices } from "./routes/invoices.js";
 import { route as judge } from "./routes/judge.js";
@@ -90,13 +90,14 @@ app.scheduled = async (event, env) => {
   try { await syncDisputes(env); } catch (e) { console.warn("dispute sync failed", e?.message); }
 };
 const worker = {
-  async fetch(request, env) {
+  async fetch(request, env0) {
+    const env = { ...env0, LEDGER: indexedKV(env0.LEDGER) }; // KV listings come from an index (src/core.js)
     const current = visitorId(request);
     const id = current || crypto.randomUUID();
     const incoming = current ? request : addVisitorCookie(request, id);
     const response = await app.fetch(incoming, env);
     return withVisitorCookie(request, response, id, !current);
   },
-  scheduled: app.scheduled,
+  scheduled: (event, env0, ctx) => app.scheduled(event, { ...env0, LEDGER: indexedKV(env0.LEDGER) }, ctx),
 };
 export default worker;

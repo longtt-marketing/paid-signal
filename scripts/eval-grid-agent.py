@@ -44,7 +44,16 @@ CASES = [
 ]
 
 ledger = json.load(urllib.request.urlopen(BASE + "/api/ledger"))
-held_ids = {d["capture_id"] for d in ledger["duplicates"]}
+# held, as src/ledger.js has it: a flagged double payment, or a PayPal dispute that is open, lost or unclear (disputeState)
+def dispute_state(p):
+    d = p.get("dispute")
+    if not d: return None
+    if d.get("status") != "RESOLVED": return "open"
+    o = str(d.get("outcome") or "")
+    if o in ("RESOLVED_BUYER_FAVOUR", "ACCEPTED"): return "lost"
+    if o in ("RESOLVED_SELLER_FAVOUR", "CANCELED_BY_BUYER", "DENIED"): return "won"
+    return "unclear"
+held_ids = {d["capture_id"] for d in ledger["duplicates"]} | {p["capture_id"] for p in ledger["payments"] if dispute_state(p) in ("open", "lost", "unclear")}
 pay = {p["capture_id"]: p for p in ledger["payments"]}
 def refunded(p): return p["status"] == "REFUNDED" or float(p.get("refunded_amount") or 0) > 0
 def kept(p): return 0.0 if p["capture_id"] in held_ids else float(p["amount"]) - float(p.get("refunded_amount") or 0)

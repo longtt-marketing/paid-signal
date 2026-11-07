@@ -7,7 +7,7 @@
 ![AG Studio, 30 seconds: a click on an ad filters the page; the PayPal ledger (AG Grid) narrows to it; a payment opens its trail; the owner decides in the cell](docs/img/studio-tour.gif)
 
 **For AG Grid judges, 90 seconds** (live, no login):
-1. Open [/studio](https://paid-signal.thelongmarketing.workers.dev/studio) and click the Testimonial band: the page filters, the PayPal ledger (an AG Grid widget) narrows to that ad, and the budget agent's checked verdict waits for Approve.
+1. Open [/studio](https://paid-signal.thelongmarketing.workers.dev/studio) and, in the money-flow chart, click the Testimonial ad's band: the page filters, the PayPal ledger (an AG Grid widget) narrows to that ad, and the budget agent's checked verdict waits for Approve.
 2. Press ▸ on a payment: its trail opens inside the grid, from the ad click to PayPal to what Meta heard.
 3. Open the assistant and pick **Show refunded or held payments**: AG Grid filters, sorts and flashes them. **Replay Studio building a page** shows Studio's own agents building a page (no model call).
 4. Open **Agents → PayPal**: the invoices, reminders, refund and payout the agents made, each with the status PayPal returns for it, read back now ([live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions)).
