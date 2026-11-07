@@ -125,11 +125,9 @@ export default function App({ first = null }) {
   }, []);
   useEffect(() => { fetch("/data/demo-ads.csv").then((r) => r.text()).then((t) => { setCsv(t); load(t); }); }, [load]);
   // a person says a flagged pair is two real orders: the second payment counts again (ad, Meta, commission)
-  const markDistinct = useCallback(async (id) => {
-    const reason = window.prompt("Why is this a separate order and not a double payment? (for example: a second child)");
-    if (!reason) return;
-    // the answer shows as a notice beside the ledger, where the owner clicked (the server explains a refusal)
-    try { await api("/api/duplicates/distinct", { capture_id: id, reason }); await load(csv); flash("Counted as a separate order: the ad, Meta and the commission count it again."); } catch (e) { flash(e.message); }
+  // the reason comes from the form under the ledger; a refusal comes back to that form (the server explains it)
+  const markDistinct = useCallback(async (id, reason) => {
+    await api("/api/duplicates/distinct", { capture_id: id, reason }); await load(csv); flash("Counted as a separate order: the ad, Meta and the commission count it again.");
   }, [load, csv]); // eslint-disable-line react-hooks/exhaustive-deps
   // the last checked recommendation and the decisions on it come back after a reload
   useEffect(() => {
@@ -291,11 +289,10 @@ export default function App({ first = null }) {
     loadInvoices();
   };
   // full by default; a smaller amount is a partial refund (Google gets a restatement instead of a retraction)
-  const refund = async (p) => {
-    const left = (Number(p.amount) - Number(p.refunded_amount || 0)).toFixed(2);
-    const v = window.prompt(`Refund how much of capture ${p.capture_id}? (sandbox)`, left); if (v === null) return;
-    try { const d = await api("/api/refund", { capture_id: p.capture_id, amount: v }); flash(d.preview ? d.message : `Refunded ${money(d.refund?.amount)}. The ad's numbers and its conversion are updated.`); }
-    catch (e) { flash(e.message); }
+  // the amount comes from the form under the ledger, already checked against what is left; the server checks it again
+  const refund = async (p, amount) => {
+    const d = await api("/api/refund", { capture_id: p.capture_id, amount });
+    flash(d.preview ? d.message : `Refunded ${money(d.refund?.amount)}. The ad's numbers and its conversion are updated.`);
     load(csvRef.current);
   };
   // a decision is recorded on the server (what and when is kept with its evidence)

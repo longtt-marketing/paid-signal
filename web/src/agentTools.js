@@ -2,7 +2,7 @@
 // only creates PayPal DRAFT invoices. A person approves each one in Approvals; only then does the send agent send it.
 import { claudeAdapter } from "./claudeAdapter.js";
 import { createAiHarness, directLlmRunner } from "ag-studio";
-import { adName } from "./names.js";
+import { adName, AD_NAMES } from "./names.js";
 import { seededHistory } from "./history.js";
 import { REPLAY_PROMPT, HAS_REPLAY, PAGE_REPLAY_PROMPT, HAS_PAGE_REPLAY } from "./claudeAdapter.js";
 import { eligibleForReminder } from "../../src/chaseAgent.js";
@@ -31,12 +31,12 @@ export const PROMPT_STARTERS = [
 const EXTRA = `You also act for a small shop that sells through PayPal. Ad platforms report leads; PayPal confirms who paid.
 Use read_paid_signal for per-ad spend, leads, paid orders and revenue (computed in code; quote numbers exactly, never invent or forecast).
 Use list_unpaid_leads to see leads with no PayPal payment. draft_paypal_invoices creates PayPal DRAFT invoices tagged with each lead's ad click;
-nothing is sent here: each draft waits in Approvals, and only after the shop owner approves it does the send agent send it. Draft only for leads who showed buying intent, and say why.
+nothing is sent here: each draft waits in Approvals, and only after the shop owner approves it does the send agent send it. Draft only for leads who showed buying intent, and say why. Draft only when the owner asks to invoice leads: the people in the PayPal ledger have already paid, so a request to invoice or bill them is declined, and nothing is drafted.
 After drafting, or when the owner asks what waits for approval, call show_drafts_for_approval: it puts each draft in this chat as a card with an Approve button. You cannot approve or send; only the owner's click does, and the send agent checks the draft again first.
 check_paypal_ledger compares the webhook ledger with PayPal's Transaction Search.
 For budget questions (which ads to cut, keep or grow), delegate to the budget agent; it checks its numbers in code.
 For invoices that were sent and not paid, call who_still_owes, then propose_nudges yourself (not through another agent), so its card shows in this chat: the chase agent sends the reminders, within code limits, only when the owner presses Send on it. It also opens the "Who still owes" page.
-To show particular payments (refunded, held, one ad's, biggest first), call show_payments_in_ledger: the PayPal ledger grid filters, sorts and flashes them. To show one ad (or one shop ad group) across a page, call filter_page_to_ad; to build a new view, use the blank "Your page".
+To show particular payments (refunded, held, one ad's, biggest first), call show_payments_in_ledger: the PayPal ledger grid filters, sorts and flashes them. If the owner names an ad that is not one of the four in the export (Free guide, Trial class, Testimonial, Holiday camp), say there is no such ad and name the four; never pick a similar-sounding one. To show one ad (or one shop ad group) across a page, call filter_page_to_ad; to build a new view, use the blank "Your page".
 The tables "Real shop: ad groups" and "Real shop: payments" are a real Vietnamese gift shop's October book (VND, paid by bank transfer, not PayPal): the same gap between what the ad account counts and the money kept. Say so whenever you use them.
 Every amount in the PayPal tables is in US dollars: write $156.00, never a bare number.
 Answer the owner briefly: at most six short lines (for budgets: Grow, Keep, Cut, then one line on what the evidence gate decided). Never pass on widget health-check notes (Studio's check can flag "data mapping unmapped" on a widget that renders fine) or layout chatter, and never ask the owner to check the page.`;
@@ -151,9 +151,11 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           const pageId = shop ? "shop" : "overview", widgetId = shop ? "gap" : "flow", field = shop ? "shopGroups.name" : "ads.name";
           const SHOP = { A: "A · Attention video", B: "B · Customer reviews", C: "C · Personalised for an occasion" };
           const value = shop ? SHOP[String(args.ad).toUpperCase()] : adName(String(args.ad || ""));
-          const pages = st.pages.map((pg) => pg.id !== pageId ? pg : { ...pg, crossFilter: args.clear ? { values: {} } : { values: { [widgetId]: [{ type: "value", field: { id: field }, group: 0, values: [value] }] } } });
+          // only this widget's own selection changes: a filter a person set on another widget of the page stays
+          const keepOthers = (pg) => Object.fromEntries(Object.entries(pg.crossFilter?.values || {}).filter(([w]) => w !== widgetId));
+          const pages = st.pages.map((pg) => pg.id !== pageId ? pg : { ...pg, crossFilter: { ...(pg.crossFilter || {}), values: args.clear ? keepOthers(pg) : { ...keepOthers(pg), [widgetId]: [{ type: "value", field: { id: field }, group: 0, values: [value] }] } } });
           studio.setState({ ...st, pages, selectedPageId: pageId });
-          return ctx.success(args.clear ? "Filter cleared." : `The ${pageId === "shop" ? "Real shop" : "Ads vs PayPal"} page now shows only ${value}.`, { applied: true, page: pageId, value: args.clear ? null : value });
+          return ctx.success(args.clear ? "This tool's filter is cleared; filters set on other widgets stay." : `The ${pageId === "shop" ? "Real shop" : "Ads vs PayPal"} page now shows only ${value}.`, { applied: true, page: pageId, value: args.clear ? null : value });
         },
       }),
       // the agent drives the AG Grid ledger itself: AG Grid filters, sorts, scrolls to and flashes what was asked for
@@ -170,7 +172,11 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           const studio = typeof window !== "undefined" ? window.__studio : null;
           if (!studio) return ctx.success("The report is not open.", { applied: false });
           const st = studio.getState(); if (st.selectedPageId !== "overview") studio.setState({ ...st, selectedPageId: "overview" });
-          const ad = args.ad ? adName(String(args.ad)) : "";
+          // an ad that is not in the export (a typo, an ad from another platform) changes nothing: the agent is told which ads exist
+          const want = String(args.ad || "").trim(), low = want.toLowerCase();
+          const match = want ? Object.entries(AD_NAMES).find(([k, n]) => k === low || n.toLowerCase() === low || n.toLowerCase().startsWith(low) || low.includes(n.toLowerCase().split(" · ")[0]) || low.includes(k)) : null;
+          if (want && !match) return ctx.success(`There is no ad called "${want}" in this ad export; the grid is unchanged. The ads are: ${Object.values(AD_NAMES).join(", ")}.`, { applied: false, ads: AD_NAMES });
+          const ad = match ? match[1] : "";
           const words = { refunded: "refunded", held: "held", refunded_or_held: "refunded or held", paid: "paid" }[args.status] || "every payment";
           const order = { amount_desc: "biggest first", amount_asc: "smallest first", kept_desc: "most kept first", date_desc: "newest first" }[args.sort] || "";
           const label = [words, ad && `on ${ad}`, order].filter(Boolean).join(", ");

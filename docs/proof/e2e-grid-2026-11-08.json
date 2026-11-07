@@ -1,0 +1,106 @@
+{
+ "run": "2026-11-08",
+ "base": "http://localhost:8792",
+ "checks": 6,
+ "passed": 6,
+ "results": [
+  {
+   "check": "studio total row: every payment, money kept",
+   "ok": true,
+   "detail": {
+    "total_row": "Total · 13 shown$432.001 held · 3 refunded0 received",
+    "expected": [
+     "13 shown",
+     "$432.00"
+    ]
+   }
+  },
+  {
+   "check": "assistant view: ids from the row model match the rows on screen and the ledger",
+   "ok": true,
+   "detail": {
+    "reported": [
+     "90288919WU0051526",
+     "71264306943252202",
+     "7Y943188M77480212",
+     "19L75638WN729671C",
+     "7A791792B60079253"
+    ],
+    "on_screen": [
+     "90288919WU0051526",
+     "71264306943252202",
+     "7Y943188M77480212",
+     "19L75638WN729671C",
+     "7A791792B60079253"
+    ],
+    "ledger": [
+     "90288919WU0051526",
+     "71264306943252202",
+     "7Y943188M77480212",
+     "19L75638WN729671C",
+     "7A791792B60079253"
+    ]
+   }
+  },
+  {
+   "check": "assistant view: total row follows the filter",
+   "ok": true,
+   "detail": {
+    "total_row": "Total · 5 shown$40.001 held · 3 refunded0 received",
+    "expected": [
+     "5 shown",
+     "$40.00"
+    ]
+   }
+  },
+  {
+   "check": "trail row sits right under its payment after AG Grid sorts",
+   "ok": true,
+   "detail": {
+    "rows": [
+     [
+      0,
+      "90288919WU0051526"
+     ],
+     [
+      1,
+      "71264306943252202"
+     ],
+     [
+      2,
+      "trail"
+     ],
+     [
+      3,
+      "7Y943188M77480212"
+     ],
+     [
+      4,
+      "19L75638WN729671C"
+     ],
+     [
+      5,
+      "7A791792B60079253"
+     ]
+    ]
+   }
+  },
+  {
+   "check": "decision form: over the refundable amount is blocked; a valid amount gets the server's answer",
+   "ok": true,
+   "detail": {
+    "note": "At most $40.00 is left to refund.",
+    "server_said": "Capture 7Y943188M77480212 is part of the frozen evidence ledger the judge path quotes, so a refund here is only previewed. Pay in the demo shop and refund your "
+   }
+  },
+  {
+   "check": "dashboard: the search box narrows the rows and the total row follows",
+   "ok": true,
+   "detail": {
+    "before": "Total · 13 shown\n$432.00\n1 held · 3 back",
+    "after": "Total · 3 shown\n$0.00\n0 held · 3 back",
+    "refunded_in_ledger": 3
+   }
+  }
+ ]
+}

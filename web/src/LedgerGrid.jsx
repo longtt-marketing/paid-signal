@@ -9,12 +9,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AgCharts, BarSeriesModule, CategoryAxisModule, LegendModule, ModuleRegistry as ChartModules, NumberAxisModule } from "ag-charts-community";
 import { AgGridReact } from "ag-grid-react";
-import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
+import { ModuleRegistry, themeQuartz } from "ag-grid-community";
+import { GRID_MODULES } from "./gridModules.js";
 import { byAdChart, decisionOf, groupByAd, totalsOf, trailHeight, trailSteps, withTrail } from "./gridTotals.js";
 import { AD_CLAIMS, claimCell, getClaims, searchRows } from "./adClaims.js";
 import { disputeState } from "../../src/ledger.js";
 
-ModuleRegistry.registerModules([AllCommunityModule]);
+ModuleRegistry.registerModules(GRID_MODULES);
 ChartModules.registerModules([BarSeriesModule, CategoryAxisModule, NumberAxisModule, LegendModule]);
 
 const theme = themeQuartz.withParams({
@@ -124,6 +125,46 @@ function KeptByAd({ rows, pick, onPick, narrow }) {
   return <div className="kept-chart"><div className="kept-head"><b>Money kept by ad</b><span className="muted">click a bar to filter the table</span></div><div ref={box} /></div>;
 }
 
+// The owner's Decision, confirmed in a small form under the grid (an amount, or why it is a separate order) instead of a
+// browser prompt: the amount is checked against what is left to refund before the button works, and the server checks
+// it again. submit(kind, row, value) does the call; both ledgers use this.
+export function useDecisionForm(submit) {
+  const [ask, setAsk] = useState(null);
+  const open = (choice, row) => {
+    const left = (Number(row.raw.amount) - Number(row.raw.refunded_amount || 0)).toFixed(2);
+    if (choice === "Refund…") setAsk({ kind: "refund", row, left, value: left, busy: false, error: "" });
+    else if (choice === "Separate order…") setAsk({ kind: "separate", row, value: "", busy: false, error: "" });
+  };
+  const problem = (a) => {
+    if (!a) return "";
+    if (a.kind === "separate") return a.value.trim().length < 3 ? "Say why, for example: a second child." : "";
+    const v = Number(a.value);
+    return !(v > 0) ? "Enter an amount above $0." : v > Number(a.left) + 1e-9 ? `At most $${a.left} is left to refund.` : "";
+  };
+  const confirm = async () => {
+    const a = ask; if (!a || problem(a)) return;
+    setAsk({ ...a, busy: true, error: "" });
+    try { await submit(a.kind, a.row, a.kind === "refund" ? Number(a.value).toFixed(2) : a.value.trim()); setAsk(null); }
+    catch (e) { setAsk({ ...a, busy: false, error: e.message }); }
+  };
+  return { ask, setAsk, open, problem, confirm };
+}
+export function DecisionForm({ form }) {
+  const { ask, setAsk, problem, confirm } = form;
+  if (!ask) return null;
+  return (
+    <form className="ledger-ask" onSubmit={(e) => { e.preventDefault(); confirm(); }} aria-label={ask.kind === "refund" ? "Confirm a refund" : "Count as a separate order"}>
+      <b>{ask.kind === "refund" ? `Refund capture ${ask.row.capture_id} (${ask.row.ad})` : `Count ${ask.row.capture_id} as a separate order`}</b>
+      {ask.kind === "refund"
+        ? <label>Amount, USD (up to ${ask.left}) <input type="number" step="0.01" min="0.01" max={ask.left} value={ask.value} autoFocus onChange={(e) => setAsk({ ...ask, value: e.target.value, error: "" })} /></label>
+        : <label>Why is it not a double payment? <input type="text" value={ask.value} autoFocus placeholder="for example: a second child" onChange={(e) => setAsk({ ...ask, value: e.target.value, error: "" })} /></label>}
+      <button type="submit" className="ledger-ask-go" disabled={ask.busy || Boolean(problem(ask))}>{ask.busy ? "Checking…" : ask.kind === "refund" ? "Refund through PayPal" : "Count it"}</button>
+      <button type="button" className="ledger-ask-x" onClick={() => setAsk(null)} disabled={ask.busy}>Cancel</button>
+      <span className="ledger-ask-note">{ask.error || problem(ask) || "The server checks it again; on the demo's seeded payments a refund is only previewed."}</span>
+    </form>
+  );
+}
+
 export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, onCount }) {
   const grid = useRef(null), box = useRef(null);
   const [grouped, setGrouped] = useState(true);
@@ -140,6 +181,8 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
     ro.observe(el); return () => ro.disconnect();
   }, []);
   const [total, setTotal] = useState(null);
+  // the owner's Decision is confirmed in the form under the grid; App does the server call
+  const decisionForm = useDecisionForm((kind, row, value) => (kind === "refund" ? onRefund(row.raw, value) : onCount(row.capture_id, value)));
   const narrow = width > 0 && width < 760, tiny = width > 0 && width < 420;
   const rows = useMemo(() => payments.slice().reverse().map((p) => {
     const held = Boolean(dup[p.capture_id]);
@@ -180,12 +223,12 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
       editable: (p) => Boolean(p.data && !p.data.isGroup && !p.node.rowPinned && decisionOf(p.data).options.length), singleClickEdit: true,
       // the cell never stores the choice: it calls the same server routes as before, and the reloaded ledger shows the result
       cellEditor: DecisionEditor, cellEditorPopup: true, cellEditorPopupPosition: "over",
-      cellEditorParams: { act: (choice, row) => (choice === "Refund…" ? onRefund(row.raw) : choice === "Separate order…" ? onCount(row.capture_id) : null) },
+      cellEditorParams: { act: (choice, row) => decisionForm.open(choice, row) },
       valueSetter: () => false },
     // not shown, exported: the CSV carries the capture date, click source, refunded amount and why a payment is held
     { field: "date", headerName: "Captured (UTC date)", hide: true }, { field: "source", headerName: "Click source", hide: true },
     { field: "back", headerName: "Refunded", hide: true, valueFormatter: (p) => money(p.value) }, { field: "why", headerName: "Why held", hide: true },
-  ], [narrow, tiny, grouped, onRefund, onCount]);
+  ], [narrow, tiny, grouped, onRefund, onCount]); // eslint-disable-line react-hooks/exhaustive-deps
   const retotal = (api) => { const list = []; api.forEachNodeAfterFilter((n) => n.data && !n.data.isGroup && !n.data.isDetail && list.push(n.data)); setTotal(totalsOf(list, narrow)); };
   const exportCsv = () => grid.current?.api?.exportDataAsCsv({ fileName: "paypal-ledger.csv", columnKeys: ["ad", "amount", "kept", "back", "via", "status", "why", "meta", "capture_id", "date", "source"],
     shouldRowBeSkipped: (p) => Boolean(p.node.data?.isGroup || p.node.data?.isDetail), processCellCallback: (p) => (p.column.getColId() === "ad" ? p.node.data?.ad : p.value) });
@@ -193,6 +236,7 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
     <div className="ledger-grid" ref={box}>
       <KeptByAd rows={rows} pick={pick} onPick={onPick} narrow={narrow} />
       <SearchBox value={q} onChange={setQ} />
+      <DecisionForm form={decisionForm} />
       {pick && <div className="grid-pick"><button type="button" className="chip-x" onClick={() => setPick("")} aria-label={`Show every ad, not only ${pick}`}>Showing: {pick} ×</button><span className="muted">the total row follows the filter</span></div>}
       <div style={{ height: data.length > 10 ? 520 : "auto" }}>
         <AgGridReact ref={grid} theme={theme} rowData={data} columnDefs={cols} context={{ narrow, grouped, open, toggle, claims }}
