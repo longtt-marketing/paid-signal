@@ -11,11 +11,14 @@ Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers
 | What | See it | Code |
 |---|---|---|
 | Studio agents that write to PayPal (draft invoices, send reminders) within limits set in code | /studio, the assistant | `web/src/agentTools.js`, `web/src/claudeAdapter.js` |
+| Page "Agents → PayPal": each invoice draft, send, latest reminder, refund and payout an agent made in the shared demo ledger (newest 40; judges' own Try runs are not listed), each read back from PayPal with its status and the API it came through (refreshed at most every ten minutes) | /studio, second page | `src/agentActions.js`, `/api/agent-actions` in `src/routes/judge.js` |
 | Money-flow widget: a band runs from an ad's share of leads to its share of PayPal money; a click filters the page and shows the budget agent's checked verdict to approve | [/studio](https://paid-signal.thelongmarketing.workers.dev/studio), first page | `web/src/MoneyFlowWidget.jsx` |
 | PayPal ledger widget in Studio, right under the money flow: an AG Grid table grouped by ad; a band click narrows it to that ad and a click on an ad's subtotal row filters the page back; ▸ opens a payment's trail (ad click → PayPal capture → ledger → what Meta heard); a Decision per payment | /studio, first page | `web/src/LedgerWidget.jsx`, `web/src/adPick.js` |
 | AG Grid ledger on the dashboard: grouped by ad with subtotals, the same trail row and Decision column (Refund… or Separate order…, checked by the server), an AG Charts bar chart whose bars filter the grid | [Dashboard](https://paid-signal.thelongmarketing.workers.dev/#payments), PayPal ledger | `web/src/LedgerGrid.jsx`, `web/src/gridTotals.js` |
 | The real shop's 735 payments as an AG Grid pivot in Studio | /studio, page "Real shop: October" | `web/src/studio.js` |
 | Recorded runs played back through Studio's own agent loop, no model call | /studio, the assistant: Replay a budget run | `web/src/history.js`, `web/src/replay-budget.json` |
+
+Licences: the two ledger tables are AG Grid Community; their grouping by ad, subtotal rows and trail rows are built in our code (`web/src/gridTotals.js`) and use no AG Grid Enterprise feature. The pivots, cross-filters and agent framework are AG Studio's (which bundles AG Grid Enterprise), under its own licence key.
 
 Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:52): https://www.youtube.com/watch?v=jLqSAY67n9c ([script](docs/video-script.md)) · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
 
@@ -188,7 +191,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 194 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 196 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

@@ -86,6 +86,7 @@ export function paypal({ clientId, secret, base = "https://api-m.sandbox.paypal.
     createPayout: ({ batchId, receiver, recipientType = "PAYPAL_ID", value, note, subject, itemId }) => call("/v1/payments/payouts", { body: {
       sender_batch_header: { sender_batch_id: batchId, email_subject: subject, email_message: note },
       items: [{ recipient_type: recipientType, receiver, amount: { value, currency: "USD" }, note, sender_item_id: itemId }] } }),
+    getRefund: (refundId) => call(`/v2/payments/refunds/${encodeURIComponent(refundId)}`, { method: "GET" }),
     getPayout: (batchId) => call(`/v1/payments/payouts/${encodeURIComponent(batchId)}`, { method: "GET" }),
     listWebhooks: () => call("/v1/notifications/webhooks", { method: "GET" }),
     createWebhook: (url, events) => call("/v1/notifications/webhooks", { body: { url, event_types: events.map((name) => ({ name })) } }),

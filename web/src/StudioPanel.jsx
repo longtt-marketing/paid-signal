@@ -29,8 +29,11 @@ const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, 
   const [shop, setShop] = useState(() => shopSources(null, ""));
   useEffect(() => { Promise.all([fetch("/data/merchant-case.json").then((r) => r.json()), fetch("/data/shop/payments-2026-10.csv").then((r) => r.text())])
     .then(([c, csv]) => setShop(shopSources(c.read, csv))).catch(() => {}); }, []);
-  const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments, invoices, state.duplicates, state.metaSends, shop) : undefined), [state, invoices, shop]);
-  const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() + (invoices || []).map((i) => i.id + i.status + (i.reminded_at || "")).join() + `|shop${shop.sources[1].data.length}` }), [state, invoices, shop]);
+  // every thing an agent wrote to PayPal, read back from PayPal (the server caches the read-backs for ten minutes)
+  const [actions, setActions] = useState([]);
+  useEffect(() => { fetch("/api/agent-actions").then((r) => r.json()).then((d) => setActions(d.items || [])).catch(() => {}); }, []);
+  const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments, invoices, state.duplicates, state.metaSends, shop, actions) : undefined), [state, invoices, shop, actions]);
+  const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() + (invoices || []).map((i) => i.id + i.status + (i.reminded_at || "")).join() + `|shop${shop.sources[1].data.length}|acts${actions.length}` }), [state, invoices, shop, actions]);
   // tell custom widgets the data changed, once Studio has taken the new data in
   useEffect(() => { if (!data) return; const t = setTimeout(() => dispatchEvent(new Event(DATA_EVENT)), 400); return () => clearTimeout(t); }, [data]);
   const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition, funnelWidgetDefinition, owesWidgetDefinition, shareGapWidgetDefinition, moneyFlowWidgetDefinition, ledgerWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline", "lead-funnel", "who-still-owes", "share-gap", "money-flow", "paypal-ledger"] }] }), []);

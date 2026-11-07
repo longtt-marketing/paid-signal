@@ -542,7 +542,7 @@ export default function App({ first = null }) {
             <li><b>3</b> <button type="button" className="js-link" onClick={openAssistant}>Open the assistant</button>: Replay a budget run (recorded)</li>
           </ol>}
           <div className="studio-pages" role="tablist" aria-label="Report pages">
-            {[["overview", "Ads vs PayPal"], ["perad", "Per ad"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["shop", "Real shop: October"], ["mine", "Your page"]].map(([id, label]) => (
+            {[["overview", "Ads vs PayPal"], ["agents", "Agents → PayPal"], ["perad", "Per ad"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["shop", "Real shop: October"], ["mine", "Your page"]].map(([id, label]) => (
               <button key={id} role="tab" aria-selected={studioPage === id} className={studioPage === id ? "on" : ""} onClick={() => { setStudioPage(id); studio.current?.selectPage(id); }}>{label}</button>
             ))}
           </div>

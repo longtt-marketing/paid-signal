@@ -61,7 +61,7 @@ export function shopSources(read, paymentsCsv) {
 }
 
 /** Two tables joined on the ad key: what each ad claims, and what PayPal captured for it and Meta received. */
-export function buildData(rec, payments, invoices = [], duplicates = [], metaSends = [], shop = shopSources(null, "")) {
+export function buildData(rec, payments, invoices = [], duplicates = [], metaSends = [], shop = shopSources(null, ""), actions = []) {
   const ads = rec.ads.map((r) => ({
     ad: r.ad, name: adName(r.ad), spend: r.spend_cents / 100, leads: r.leads, payers: r.paid, refunds: r.refunded,
     revenue: r.revenue_cents / 100, noPayer: r.paid === 0 ? r.spend_cents / 100 : 0,
@@ -110,6 +110,15 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
         id: "invoices", name: "Invoices sent", description: "One row per PayPal invoice the shop sent: who, how much, whether it is paid, how long it has waited, and the last friendly reminder the chase agent wrote.", data: owed,
         fields: [f("id", "Invoice", "textFormat"), f("who", "Who", "textFormat"), f("adName", "Ad", "textFormat"), f("amount", "Amount", "currencyFormat"), f("status", "Status", "textFormat"), f("days", "Days waiting", "decimalFormat"), f("nudge", "Last nudge", "textFormat")],
       },
+      {
+        // every thing an agent wrote to PayPal, with what PayPal says about it now (read back by /api/agent-actions)
+        id: "actions", name: "Agent actions on PayPal", description: "One row per thing an agent wrote to PayPal (an invoice drafted, sent or reminded; a refund; a payout), with the status PayPal returns for it when the page loads.",
+        data: actions.map((a) => ({ key: a.key, date: String(a.at).slice(0, 10), agent: a.agent, did: a.did, kind: a.kind, id: a.id, amount: Number(a.amount) || 0,
+          moved: a.kind === "invoice" ? 0 : Number(a.amount) || 0, paypal: a.paypal?.status || "not read", through: a.paypal?.through || "", one: 1, read: a.paypal?.status ? 1 : 0 })),
+        fields: [f("key", "Action", "textFormat", true), f("date", "When", "textFormat"), f("agent", "Agent", "textFormat"), f("did", "Did", "textFormat"), f("kind", "PayPal object", "textFormat"),
+          f("id", "PayPal id", "textFormat"), f("amount", "Amount", "currencyFormat"), f("moved", "Money moved", "currencyFormat"), f("paypal", "PayPal says now", "textFormat"), f("through", "Read through", "textFormat"),
+          f("one", "Actions", "integerFormat"), f("read", "Read back from PayPal", "integerFormat")],
+      },
       ...(shop ? shop.sources : []),
     ],
     relations: [...(shop ? [shop.relation] : []), { id: "captures-ad", source: { tableId: "captures", fieldId: "ad" }, target: { tableId: "ads", fieldId: "ad" }, type: "many-to-one" }],
@@ -147,6 +156,18 @@ export const initialReport = {
           format: { title: { enabled: true, text: "3 · Who still owes: the nudge agent sends PayPal reminders" } } },
       },
       widgetLayout: { flow: at(0, 0, 24, 16), pays: at(0, 16, 24, 28), owes: at(0, 44, 24, 24) },
+    },
+    {
+      // what the agents wrote to PayPal, each read back from PayPal: the agents act, PayPal confirms
+      id: "agents", name: "Agents → PayPal",
+      widgets: {
+        acts: kpi("Things the agents wrote to PayPal", sum("actions.one")),
+        reads: kpi("Read back from PayPal now", sum("actions.read")),
+        moved: kpi("Money moved: refunds, payouts", sum("actions.moved")),
+        list: { type: "grid", dataMapping: { cols: [{ id: "actions.date" }, { id: "actions.agent" }, { id: "actions.did" }, { id: "actions.kind" }, { id: "actions.id" }, { id: "actions.amount" }, { id: "actions.paypal" }, { id: "actions.through" }] },
+          sort: [{ field: { id: "actions.date" }, direction: "desc" }], format: { title: { enabled: true, text: "Every agent action, and what PayPal says about it now" }, style: { headerRow: { wrapText: true } } } },
+      },
+      widgetLayout: { acts: at(0, 0, 8, 7), reads: at(8, 0, 8, 7), moved: at(16, 0, 8, 7), list: at(0, 7, 24, 30) },
     },
     {
       id: "perad", name: "Per ad",
@@ -286,6 +307,7 @@ export const phoneReport = {
     ...(pg.id === "perad" ? { widgets: { ...pg.widgets, rpd: kpi("Revenue per $1", { id: "revenuePerDollar" }), nopayer: kpi("Per paid order", { id: "costPerPayer" }) } } : {}),
     ...(pg.id === "shop" ? { widgets: { ...pg.widgets, chats: kpi("Chats", { id: "sChats" }), kept: kpi("Orders kept", { id: "sKept" }), money: kpi("Kept, M VND", { id: "sMoneyM" }), spend: kpi("Spend, M VND", { id: "sSpendM" }) } } : {}),
     widgetLayout: pg.id === "overview" ? { flow: at(0, 0, 24, 16), pays: at(0, 16, 24, 30), owes: at(0, 46, 24, 34) }
+      : pg.id === "agents" ? { acts: at(0, 0, 12, 7), reads: at(12, 0, 12, 7), moved: at(0, 7, 24, 7), list: at(0, 14, 24, 34) }
       : pg.id === "perad"
       ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), claim: at(0, 14, 24, 16), table: at(0, 30, 24, 20), funnel: at(0, 50, 24, 16) }
       : pg.id === "ledger" ? { path: at(0, 0, 24, 20), ledger: at(0, 20, 24, 24) }

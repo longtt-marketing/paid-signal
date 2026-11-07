@@ -1,6 +1,7 @@
 // Commission payouts, PayPal cross-checks, decisions and the judge path's read-only replays.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
 import { RULE_SINCE, utc, AD_KEYS, json, visitorId, sha, cachedList, forget, syncDisputes, listPayments, heldDuplicates, CREATOR, commissionState, listPrefix, demoLeads, guard, claudeGuard, paypal, parseAdCsv, reconcile, disputeState, anthropicLLM, checkRecommendation, runPayoutAgent, commissionOrders, PAYOUT_SYSTEM, PAYOUT_TOOLS, scenario, adName } from "../core.js";
+import { agentActions, readBackStatus } from "../agentActions.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
@@ -57,6 +58,29 @@ export async function route({ request, env, url, pp, orders, ip }) {
       return json({ program: { ad: CREATOR.ad, ad_name: adName(CREATOR.ad), creator: CREATOR.creator, rate: CREATOR.rate, leads, per_lead_would_be: (leads * Number(CREATOR.rate)).toFixed(2),
         contrast: { ad_name: adName("free_guide"), leads: guideLeads, paid_orders: guide, per_lead: (guideLeads * Number(CREATOR.rate)).toFixed(2), per_paid_order: (guide * Number(CREATOR.rate)).toFixed(2) } },
         ...st, checked_at: new Date().toISOString() });
+    }
+
+    // Every thing an agent wrote to PayPal, each read back from PayPal now (cached ten minutes): the Studio page
+    // "Agents → PayPal" shows PayPal's own status next to what the agent did.
+    if (url.pathname === "/api/agent-actions") {
+      const cached = await env.LEDGER.get("actions:v3", "json");
+      if (cached && Date.now() - Date.parse(cached.checked_at) < 600000) return json({ ...cached, cached: true });
+      const stop = await guard(env, request, "PayPal readbacks", 20, 300); if (stop) return json({ error: stop }, 429);
+      const [invoices, payments, payouts] = await Promise.all([cachedList(env, "inv:"), listPayments(env), cachedList(env, "commission:")]);
+      const list = agentActions({ invoices, payments, payouts }).slice(0, 40);
+      const reads = new Map();
+      const read = (a) => {
+        const k = `${a.kind}:${a.id}`;
+        // one more try when PayPal answers with an empty or failed response; a second failure is shown as not read
+        const get = () => (a.kind === "invoice" ? pp.getInvoice(a.id) : a.kind === "refund" ? pp.getRefund(a.id) : pp.getPayout(a.id));
+        if (!reads.has(k)) reads.set(k, get().catch(get).then((b) => readBackStatus(a.kind, b)).catch((e) => ({ status: null, error: String(e?.message || e).slice(0, 120) })));
+        return reads.get(k);
+      };
+      const items = await Promise.all(list.map(async (a) => ({ ...a, paypal: await read(a) })));
+      const out = { checked_at: new Date().toISOString(), total: items.length, read_back: items.filter((i) => i.paypal.status).length,
+        moved: Math.round(items.filter((i) => i.kind !== "invoice").reduce((n, i) => n + i.amount, 0) * 100) / 100, items };
+      await env.LEDGER.put("actions:v3", JSON.stringify(out), { expirationTtl: 3600 });
+      return json(out);
     }
 
     // Cross-check the webhook ledger against PayPal's own transaction history.

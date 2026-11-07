@@ -21,6 +21,11 @@ The money flow on the real gift shop's October book: 69% of the chats, 19% of th
 
 ![Money flow on the real shop's book](img/studio-shop-flow.png)
 
+The second page, Agents → PayPal: each invoice draft, send, latest reminder, refund and payout an agent made in the shared
+demo ledger (newest 40; judges' own Try runs are not listed), each read back from PayPal when the page loads (`/api/agent-actions`, cached ten minutes), with PayPal's status and the API it came through:
+
+![Agent actions read back from PayPal](img/studio-agent-actions.png)
+
 Who still owes, with the Nudge button that sends PayPal reminders through the chase agent:
 
 ![Who still owes](img/studio-who-still-owes.png)
@@ -66,7 +71,7 @@ totals equal the ledger's and the shop book's (705 kept orders, 1,317M VND, 12,1
 
 ## Report
 
-Seven pages: Ads vs PayPal (the money flow, the PayPal ledger and Who still owes), Per ad, PayPal captures, Ad → PayPal → Meta, Who still owes, Real shop: October, and a blank Your page.
+Eight pages: Ads vs PayPal (the money flow, the PayPal ledger and Who still owes), Agents → PayPal, Per ad, PayPal captures, Ad → PayPal → Meta, Who still owes, Real shop: October, and a blank Your page.
 A phone layout re-flows every page. **Save layout** keeps the owner's version in the browser; **Reset** restores it.
 
 ## Theme
