@@ -1,0 +1,811 @@
+[
+ {
+  "key": "hook",
+  "lines": [
+   [
+    "31 leads",
+    "ink",
+    150
+   ],
+   [
+    "1 paid order",
+    "paid",
+    150
+   ],
+   [
+    "The ad report counts leads. PayPal counts money.",
+    "mute",
+    44
+   ]
+  ],
+  "text": "In this sandbox demo, the ad report gives the free guide thirty one leads. PayPal shows one paid order. Paid Signal lets AI agents act on the second number, inside AG Studio."
+ },
+ {
+  "key": "studio1",
+  "chip": "01 · AG Studio investigates",
+  "text": "Judges land on AG Studio. One click on the testimonial ad filters the page, and the budget agent's verdict, checked by a rule in code, waits for the owner's approval. Under it, the PayPal ledger is an AG Grid table, narrowed to that ad: eleven leads, four paid. Open a payment for its trail, from the ad click to PayPal to what Meta heard, and decide it right in the cell; the server checks every decision.",
+  "clip": "studio30a",
+  "clip_from": 5.5,
+  "clip_to": 34.2,
+  "speed": 1.083,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    1.18,
+    960,
+    540,
+    1
+   ],
+   [
+    1.58,
+    922,
+    488,
+    1.0
+   ],
+   [
+    5.13,
+    922,
+    488,
+    1.0
+   ],
+   [
+    5.53,
+    922,
+    558,
+    1.0
+   ],
+   [
+    10.63,
+    922,
+    558,
+    1.0
+   ],
+   [
+    11.03,
+    922,
+    598,
+    1.0
+   ],
+   [
+    12.05,
+    922,
+    598,
+    1.0
+   ],
+   [
+    12.45,
+    829,
+    483,
+    1.6
+   ],
+   [
+    15.89,
+    829,
+    483,
+    1.6
+   ],
+   [
+    16.29,
+    922,
+    580,
+    1.0
+   ],
+   [
+    21.58,
+    922,
+    580,
+    1.0
+   ],
+   [
+    21.98,
+    1716,
+    583,
+    1.6
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     43,
+     376,
+     1759,
+     224
+    ],
+    "from": 1.68,
+    "to": 5.33
+   },
+   {
+    "box": [
+     43,
+     516,
+     1759,
+     84
+    ],
+    "from": 5.63,
+    "to": 10.83
+   },
+   {
+    "box": [
+     43,
+     378,
+     1759,
+     441
+    ],
+    "from": 11.13,
+    "to": 12.25
+   },
+   {
+    "box": [
+     754,
+     466,
+     151,
+     35
+    ],
+    "from": 12.55,
+    "to": 16.09
+   },
+   {
+    "box": [
+     44,
+     544,
+     1757,
+     73
+    ],
+    "from": 16.39,
+    "to": 21.78
+   },
+   {
+    "box": [
+     1631,
+     542,
+     170,
+     82
+    ],
+    "from": 22.08
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "studio2",
+  "chip": "02 · Agents write, PayPal confirms",
+  "text": "These agents do not only read. They draft invoices, send reminders, refund and pay out on PayPal, each inside a limit set in code, and Paid Signal reads each PayPal object back: thirty six of thirty six found today. The assistant opens on a recorded run where the revenue agent drafts a real sandbox invoice for the one lead ready to book, and flags a prompt injection.",
+  "clip": "studio30b",
+  "clip_from": 7.53,
+  "clip_to": 33.7,
+  "speed": 1.057,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    1.21,
+    960,
+    540,
+    1
+   ],
+   [
+    1.61,
+    1332,
+    828,
+    1.6
+   ],
+   [
+    10.69,
+    1332,
+    828,
+    1.6
+   ],
+   [
+    11.09,
+    922,
+    722,
+    1.0
+   ],
+   [
+    19.73,
+    922,
+    722,
+    1.0
+   ],
+   [
+    20.13,
+    1705,
+    680,
+    1.18
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     848,
+     612,
+     968,
+     432
+    ],
+    "from": 1.71,
+    "to": 10.89
+   },
+   {
+    "box": [
+     29,
+     452,
+     1787,
+     540
+    ],
+    "from": 11.19,
+    "to": 19.93
+   },
+   {
+    "box": [
+     1515,
+     300,
+     380,
+     760
+    ],
+    "from": 20.23
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "studio3",
+  "chip": "03 · Replayed in Studio's agent loop",
+  "text": "Replay a budget run plays a recorded run back through Studio's own agent loop, with no model call. The budget agent's proposal passes the evidence gate on its second try, Studio's page agent adds the chart, and its widget agent fills it in.",
+  "clip": "studio30c",
+  "clip_from": 24.16,
+  "clip_to": 35.61,
+  "speed": 0.758,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    1.81,
+    960,
+    540,
+    1
+   ],
+   [
+    2.21,
+    1705,
+    680,
+    1.18
+   ],
+   [
+    8.21,
+    1705,
+    680,
+    1.18
+   ],
+   [
+    8.61,
+    765,
+    864,
+    1.15
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     1515,
+     300,
+     380,
+     760
+    ],
+    "from": 2.31,
+    "to": 8.41
+   },
+   {
+    "box": [
+     29,
+     684,
+     1473,
+     360
+    ],
+    "from": 8.71
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "customer",
+  "chip": "04 · Be the customer",
+  "text": "On the judge path, you are the customer. Ask to book, and Claude drafts a real PayPal sandbox invoice; code sets the price. You approve, and the send agent sends it on PayPal; the pay link opens here.",
+  "clip": "cust23",
+  "clip_from": 6.28,
+  "clip_to": 34.45,
+  "speed": 2.066,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    0.47,
+    960,
+    540,
+    1
+   ],
+   [
+    0.87,
+    1100,
+    226,
+    1.6
+   ],
+   [
+    5.37,
+    1100,
+    226,
+    1.6
+   ],
+   [
+    5.77,
+    1100,
+    465,
+    1.6
+   ],
+   [
+    6.95,
+    1100,
+    465,
+    1.6
+   ],
+   [
+    7.35,
+    1100,
+    554,
+    1.6
+   ],
+   [
+    11.79,
+    1100,
+    554,
+    1.6
+   ],
+   [
+    12.19,
+    1100,
+    593,
+    1.6
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     729,
+     191,
+     742,
+     70
+    ],
+    "from": 0.97,
+    "to": 5.57
+   },
+   {
+    "box": [
+     729,
+     332,
+     742,
+     267
+    ],
+    "from": 5.87,
+    "to": 7.15
+   },
+   {
+    "box": [
+     729,
+     510,
+     742,
+     89
+    ],
+    "from": 7.45,
+    "to": 11.99
+   },
+   {
+    "box": [
+     729,
+     510,
+     742,
+     166
+    ],
+    "from": 12.29
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "paid",
+  "chip": "05 · PayPal confirms",
+  "clip": "paidpage",
+  "clip_from": 3.0,
+  "clip_to": 13.8,
+  "text": "Payment happens on PayPal's own page, as the sandbox buyer; here is one a sandbox buyer paid. No real money moves.",
+  "speed": 1.246,
+  "cam": [
+   [
+    0,
+    960,
+    491,
+    1.1
+   ],
+   [
+    20,
+    960,
+    491,
+    1.1
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     1184,
+     276,
+     62,
+     32
+    ],
+    "from": 1.0,
+    "to": 4.5
+   },
+   {
+    "box": [
+     1296,
+     105,
+     551,
+     108
+    ],
+    "from": 4.7
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "no",
+  "chip": "06 · Claude says no",
+  "text": "The owner asks to raise the free guide. Thirty one leads, one paid order: Claude refuses, and recommends the ad PayPal says is paying. The same raise, sent straight to the rule in code, is refused too.",
+  "clip": "says23",
+  "clip_from": 2.38,
+  "clip_to": 16.08,
+  "speed": 1.03,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    1.25,
+    960,
+    540,
+    1
+   ],
+   [
+    1.65,
+    589,
+    187,
+    1.6
+   ],
+   [
+    4.02,
+    589,
+    187,
+    1.6
+   ],
+   [
+    4.42,
+    1120,
+    169,
+    1.6
+   ],
+   [
+    6.96,
+    1120,
+    169,
+    1.6
+   ],
+   [
+    7.36,
+    1120,
+    234,
+    1.6
+   ],
+   [
+    9.89,
+    1120,
+    234,
+    1.6
+   ],
+   [
+    10.29,
+    1120,
+    299,
+    1.6
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     449,
+     141,
+     280,
+     93
+    ],
+    "from": 1.75,
+    "to": 4.22
+   },
+   {
+    "box": [
+     769,
+     141,
+     702,
+     56
+    ],
+    "from": 4.52,
+    "to": 7.16
+   },
+   {
+    "box": [
+     769,
+     197,
+     702,
+     74
+    ],
+    "from": 7.46,
+    "to": 10.09
+   },
+   {
+    "box": [
+     769,
+     271,
+     702,
+     57
+    ],
+    "from": 10.39
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "money",
+  "chip": "07 · Real refund, real payout",
+  "text": "In the PayPal sandbox, the refund agent returned a double payment, and PayPal says completed. The ad's creator is paid per paid order through PayPal Payouts: fifteen dollars for three paid orders.",
+  "clip": "money23",
+  "clip_from": 1.79,
+  "clip_to": 15.59,
+  "speed": 1.012,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    1.28,
+    960,
+    540,
+    1
+   ],
+   [
+    1.68,
+    960,
+    439,
+    1.6
+   ],
+   [
+    3.78,
+    960,
+    439,
+    1.6
+   ],
+   [
+    4.18,
+    960,
+    495,
+    1.6
+   ],
+   [
+    10.17,
+    960,
+    495,
+    1.6
+   ],
+   [
+    10.57,
+    615,
+    178,
+    1.6
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     449,
+     411,
+     1022,
+     56
+    ],
+    "from": 1.78,
+    "to": 3.98
+   },
+   {
+    "box": [
+     449,
+     467,
+     1022,
+     57
+    ],
+    "from": 4.28,
+    "to": 10.37
+   },
+   {
+    "box": [
+     449,
+     142,
+     333,
+     73
+    ],
+    "from": 10.67
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "shop",
+  "chip": "08 · A real shop",
+  "text": "And the problem is real. In a gift shop the author runs ads for, the attention video brought sixty nine percent of the chats, but nineteen percent of the money. That shop is paid by bank transfer, not PayPal, and its own book, run through the same ledger code, gives the same seven hundred and five orders.",
+  "clip": "shop23",
+  "clip_from": 2.66,
+  "clip_to": 20.06,
+  "speed": 0.987,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    1.32,
+    960,
+    540,
+    1
+   ],
+   [
+    1.72,
+    598,
+    196,
+    1.6
+   ],
+   [
+    4.0,
+    598,
+    196,
+    1.6
+   ],
+   [
+    4.4,
+    959,
+    196,
+    1.6
+   ],
+   [
+    6.66,
+    959,
+    196,
+    1.6
+   ],
+   [
+    7.06,
+    1321,
+    196,
+    1.6
+   ],
+   [
+    10.76,
+    1321,
+    196,
+    1.6
+   ],
+   [
+    11.16,
+    960,
+    488,
+    1.6
+   ],
+   [
+    14.09,
+    960,
+    488,
+    1.6
+   ],
+   [
+    14.49,
+    960,
+    544,
+    1.6
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     424,
+     116,
+     349,
+     161
+    ],
+    "from": 1.82,
+    "to": 4.2
+   },
+   {
+    "box": [
+     785,
+     116,
+     349,
+     161
+    ],
+    "from": 4.5,
+    "to": 6.86
+   },
+   {
+    "box": [
+     1147,
+     116,
+     349,
+     161
+    ],
+    "from": 7.16,
+    "to": 10.96
+   },
+   {
+    "box": [
+     449,
+     460,
+     1022,
+     56
+    ],
+    "from": 11.26,
+    "to": 14.29
+   },
+   {
+    "box": [
+     449,
+     516,
+     1022,
+     57
+    ],
+    "from": 14.59
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "close",
+  "text": "Paid Signal. AI actions, backed by PayPal. Try it live.",
+  "lines": [
+   [
+    "Paid Signal.",
+    "ink",
+    110
+   ],
+   [
+    "AI actions, backed by PayPal.",
+    "paid",
+    60
+   ]
+  ]
+ }
+]

@@ -318,125 +318,6 @@
   },
   {
    "summary": {
-    "threadId": "thread-0ee0a6e7-ebba-4a0e-8e5a-505748f531ad",
-    "agentId": "lead",
-    "updatedAt": 14,
-    "title": "Budget agent: proposals through the evidence gate"
-   },
-   "messages": [
-    {
-     "id": "msg-fca5bf24-b363-4b51-b56a-1312876d9acf",
-     "role": "user",
-     "parts": [
-      {
-       "type": "text",
-       "text": "Ask the budget agent which ads to cut or grow, and have it show the evidence on this page."
-      }
-     ],
-     "createdAt": 0
-    },
-    {
-     "id": "toolu_01TLzNDTd9GsstPNFBo57hUG",
-     "role": "assistant",
-     "parts": [
-      {
-       "type": "tool_call",
-       "toolCall": {
-        "toolCallId": "toolu_01TLzNDTd9GsstPNFBo57hUG",
-        "name": "delegate_to",
-        "status": "complete",
-        "args": {
-         "type": {
-          "id": "budget"
-         },
-         "instructions": "Review PayPal-confirmed results per ad and propose which ads to cut, keep or grow. Have the page agent show the evidence on the current page."
-        },
-        "childThreadId": "toolu_01TLzNDTd9GsstPNFBo57hUG-sub",
-        "result": {
-         "success": true,
-         "response": "Grow: Testimonial · carousel (4 paid orders, $196.00 paid revenue). Keep: Trial class · video (3 paid orders, $147.00; one possible duplicate held out) and Free guide · lead form (1 paid order, needs more paid orders). Cut: none, because no ad with 3 or more paid orders qualified. Holiday camp · static has 1 paid order and needs more. The gate accepted the recommendation and it awaits owner approval. The page agent added an empty chart widget. The title and data mappings still need to be set by a widget agent."
-        }
-       }
-      }
-     ],
-     "createdAt": 1
-    },
-    {
-     "id": "toolu_0145sr4D8eunrWLU8MpRUCM7",
-     "role": "assistant",
-     "parts": [
-      {
-       "type": "tool_call",
-       "toolCall": {
-        "toolCallId": "toolu_0145sr4D8eunrWLU8MpRUCM7",
-        "name": "view_page",
-        "status": "complete",
-        "args": {},
-        "result": {
-         "success": true,
-         "response": "Found 8 widget(s) in layout."
-        }
-       }
-      }
-     ],
-     "createdAt": 2
-    },
-    {
-     "id": "toolu_01GQnxa7aNd4eoLc4rCXSRFP",
-     "role": "assistant",
-     "parts": [
-      {
-       "type": "tool_call",
-       "toolCall": {
-        "toolCallId": "toolu_01GQnxa7aNd4eoLc4rCXSRFP",
-        "name": "delegate_to",
-        "status": "complete",
-        "args": {
-         "type": {
-          "id": "widget",
-          "widgetType": "column-chart-grouped",
-          "widgetId": "revenue-vs-spend",
-          "pageId": "overview"
-         },
-         "instructions": "Configure this chart as the budget evidence: per ad, spend next to PayPal-confirmed net paid revenue. Give it a clear title."
-        },
-        "childThreadId": "toolu_01GQnxa7aNd4eoLc4rCXSRFP-sub",
-        "result": {
-         "success": true,
-         "response": "Configured revenue-vs-spend as a grouped column chart. It plots @field[ads.spend] and @field[ads.revenue] (paid revenue net of refunds, from PayPal) for each @field[ads.name]. The title is \"Ad Spend vs PayPal Net Paid Revenue by Ad\", and the legend is enabled at the bottom. The final health check still flagged the legend as not enabled, but the saved config shows it on. The chart also has only 4 ads, so the bars are spaced wider than ideal."
-        }
-       }
-      }
-     ],
-     "createdAt": 3
-    },
-    {
-     "id": "msg_011CgmdUhtaszZrm3eT7NTBR-t0",
-     "role": "assistant",
-     "parts": [
-      {
-       "type": "text",
-       "text": "**Grow:** Testimonial · carousel (4 paid orders, $196.00).\n**Keep:** Trial class · video (3 paid orders, $147.00, with one possible duplicate held out) and Free guide · lead form (1 paid order, so it needs more).\n**Cut:** None. No ad reached 3 or more paid orders in a way that qualified it. Holiday camp · static has 1 paid order and needs more.\n**Evidence gate:** It accepted the recommendation, and the recommendation is waiting for your approval.\n\nThe evidence is on the Overview page in the chart \"Ad Spend vs PayPal Net Paid Revenue by Ad\". It shows each ad's spend next to its PayPal-confirmed revenue."
-      }
-     ],
-     "createdAt": 4
-    },
-    {
-     "id": "note-thread-0ee0a6e7-ebba-4a0e-8e5a-505748f531ad",
-     "role": "assistant",
-     "createdAt": 5,
-     "parts": [
-      {
-       "type": "text",
-       "text": "_Recorded from the live app on 2026-11-06; opening it calls no model. To watch Studio carry it out again, chart included, pick Replay a budget run (no model call)._"
-      }
-     ]
-    }
-   ],
-   "artifacts": []
-  },
-  {
-   "summary": {
     "threadId": "thread-f0b43527-1c05-4e43-becc-89182b7f2d6b",
     "agentId": "lead",
     "updatedAt": 9,
@@ -565,7 +446,247 @@
      "parts": [
       {
        "type": "text",
-       "text": "_Recorded from the live app on 2026-11-07; opening it calls no model. The draft INV2-2EJR-A4ZY-BNZU-XVYK is on Studio's Agents → PayPal page, read back from PayPal; ask again to watch it happen live._"
+       "text": "_Recorded from the live app on 2026-11-07; opening it calls no model. The draft INV2-2EJR-A4ZY-BNZU-XVYK is on Studio's Agents → PayPal page, read back from PayPal; ask again to watch it happen live. Note: the reply above miscounts the skipped list; it has 10 leads._"
+      }
+     ]
+    }
+   ],
+   "artifacts": []
+  },
+  {
+   "summary": {
+    "threadId": "thread-6891a976-17b5-47ec-8d3c-c0f1e2646043",
+    "agentId": "lead",
+    "updatedAt": 16,
+    "title": "Budget agent: proposals through the evidence gate"
+   },
+   "messages": [
+    {
+     "id": "msg-95a9a732-0c1d-4d9d-9c91-d066a484a9c6",
+     "role": "user",
+     "parts": [
+      {
+       "type": "text",
+       "text": "Ask the budget agent which ads to cut or grow, and have it show the evidence on this page."
+      }
+     ],
+     "createdAt": 0
+    },
+    {
+     "id": "toolu_01PrwbpKCfiJHyXmMFy3tphk",
+     "role": "assistant",
+     "parts": [
+      {
+       "type": "tool_call",
+       "toolCall": {
+        "toolCallId": "toolu_01PrwbpKCfiJHyXmMFy3tphk",
+        "name": "view_report",
+        "status": "complete",
+        "args": {},
+        "result": {
+         "success": true,
+         "response": "overview (selected): 4 widget(s), 0 page filter(s)\nagents: 4 widget(s), 0 page filter(s)\nperad: 7 widget(s), 0 page filter(s)\ncaptures: 4 widget(s), 0 page filter(s)\nledger: 2 widget(s), 0 page filter(s)\nowes: 2 widget(s), 0 page filter(s)\nshop: 10 widget(s), 0 page filter(s)\nmine: 0 widget(s), 0 page filter(s)",
+         "data": {
+          "selectedPageId": "overview",
+          "pages": [
+           {
+            "pageId": "overview",
+            "selected": true,
+            "widgetCount": 4,
+            "widgetTypes": [
+             "money-flow",
+             "paypal-ledger",
+             "who-still-owes",
+             "grid"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "agents",
+            "selected": false,
+            "widgetCount": 4,
+            "widgetTypes": [
+             "value",
+             "value",
+             "value",
+             "grid"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "perad",
+            "selected": false,
+            "widgetCount": 7,
+            "widgetTypes": [
+             "value",
+             "value",
+             "value",
+             "value",
+             "claim-vs-confirmed",
+             "grid",
+             "lead-funnel"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "captures",
+            "selected": false,
+            "widgetCount": 4,
+            "widgetTypes": [
+             "value",
+             "value",
+             "payment-timeline",
+             "grid"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "ledger",
+            "selected": false,
+            "widgetCount": 2,
+            "widgetTypes": [
+             "pivot-grid",
+             "grid"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "owes",
+            "selected": false,
+            "widgetCount": 2,
+            "widgetTypes": [
+             "who-still-owes",
+             "grid"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "shop",
+            "selected": false,
+            "widgetCount": 10,
+            "widgetTypes": [
+             "value",
+             "value",
+             "value",
+             "value",
+             "money-flow",
+             "share-gap",
+             "column-chart-grouped",
+             "grid",
+             "line-chart",
+             "pivot-grid"
+            ],
+            "pageFilterCount": 0
+           },
+           {
+            "pageId": "mine",
+            "selected": false,
+            "widgetCount": 0,
+            "widgetTypes": [],
+            "pageFilterCount": 0
+           }
+          ]
+         }
+        }
+       }
+      }
+     ],
+     "createdAt": 1
+    },
+    {
+     "id": "toolu_01KNWYyM7Q85v6QXk9cZLBWJ",
+     "role": "assistant",
+     "parts": [
+      {
+       "type": "tool_call",
+       "toolCall": {
+        "toolCallId": "toolu_01KNWYyM7Q85v6QXk9cZLBWJ",
+        "name": "delegate_to",
+        "status": "complete",
+        "args": {
+         "type": {
+          "id": "budget"
+         },
+         "instructions": "Review PayPal-confirmed results per ad and propose which ads to cut, keep or grow; show the evidence on the overview page (the current page)."
+        },
+        "childThreadId": "toolu_01KNWYyM7Q85v6QXk9cZLBWJ-sub",
+        "result": {
+         "success": true,
+         "response": "Grow: Testimonial · carousel, 4 paid orders and $196.00 paid revenue on $71.90 spend, $17.98 per paid order.\nKeep: Trial class · video, 3 paid orders and $147.00 paid revenue on $96.20 spend. One possible duplicate payment is held out of its paid orders, so if it is a real second purchase the paid count is one higher. Free guide · lead form is also kept: 1 paid order, $49.00 paid revenue, $118.40 spend, so it needs more paid orders before any cut. Holiday camp · static has 1 paid order and also needs more paid orders.\nCut: None. No ad has the 3 paid orders needed to justify a cut.\nThe evidence gate accepted the recommendation on the second try. The first try was rejected because I used ad names where the gate expects ad keys. The owner still has to approve it in the approvals column.\nThe overview chart is not finished. The page agent added an empty chart, \"Paid revenue vs spend, by ad\", but couldn't set its title or data mapping. The Widget agent still has to set the title, the category ads.name, and the values mRevenue (Revenue) and mSpend (Spend). I made only the one delegation I'm allowed, so I haven't retried."
+        }
+       }
+      }
+     ],
+     "createdAt": 2
+    },
+    {
+     "id": "toolu_011jzB4TkWfQ5FPL8hGjHcxy",
+     "role": "assistant",
+     "parts": [
+      {
+       "type": "tool_call",
+       "toolCall": {
+        "toolCallId": "toolu_011jzB4TkWfQ5FPL8hGjHcxy",
+        "name": "view_page",
+        "status": "complete",
+        "args": {},
+        "result": {
+         "success": true,
+         "response": "Found 5 widget(s) in layout."
+        }
+       }
+      }
+     ],
+     "createdAt": 3
+    },
+    {
+     "id": "toolu_01BocN6BihBzzkqYiWJZsHQ3",
+     "role": "assistant",
+     "parts": [
+      {
+       "type": "tool_call",
+       "toolCall": {
+        "toolCallId": "toolu_01BocN6BihBzzkqYiWJZsHQ3",
+        "name": "delegate_to",
+        "status": "complete",
+        "args": {
+         "type": {
+          "id": "widget",
+          "widgetType": "column-chart-grouped",
+          "widgetId": "revenueVsSpend",
+          "pageId": "overview"
+         },
+         "instructions": "Configure: title \"Paid revenue vs spend, by ad\"; category ads.name; values mRevenue (Revenue) and mSpend (Spend)."
+        },
+        "childThreadId": "toolu_01BocN6BihBzzkqYiWJZsHQ3-sub",
+        "result": {
+         "success": true,
+         "response": "Configured revenueVsSpend as a grouped column chart. It plots @field[mRevenue] and @field[mSpend] by @field[ads.name], with the title \"Paid revenue vs spend, by ad\" and a bottom legend. The health check still says the title isn't set, even though view_widget shows it in the config. The only other flag is a low category-density score, since there are just 4 ads."
+        }
+       }
+      }
+     ],
+     "createdAt": 4
+    },
+    {
+     "id": "msg_011CgoTbgJt7LSU2swzTfcu9-t0",
+     "role": "assistant",
+     "parts": [
+      {
+       "type": "text",
+       "text": "**Grow:** Testimonial · carousel. It has 4 paid orders and $196.00 revenue on $71.90 spend, which is $17.98 per paid order.\n\n**Keep:**\n- Trial class · video has 3 paid orders and $147.00 revenue on $96.20 spend. One possible duplicate payment is held out of that count.\n- Free guide · lead form has 1 paid order and $49.00 revenue on $118.40 spend.\n- Holiday camp · static has 1 paid order.\n- The last two need more paid orders before any cut.\n\n**Cut:** None. No ad has the 3 paid orders needed to justify a cut.\n\n**Evidence gate:** It accepted the recommendation on the second try. The first try used ad names where the gate expects ad keys. Your approval is still needed in the approvals column.\n\n**Evidence on this page:** The Overview page now has the \"Paid revenue vs spend, by ad\" chart. It sits next to the money-flow and PayPal ledger widgets."
+      }
+     ],
+     "createdAt": 5
+    },
+    {
+     "id": "note-thread-6891a976-17b5-47ec-8d3c-c0f1e2646043",
+     "role": "assistant",
+     "createdAt": 6,
+     "parts": [
+      {
+       "type": "text",
+       "text": "_Recorded from the live app on 2026-11-07; opening it calls no model. To watch Studio carry it out again, chart included, pick Replay a budget run (no model call)._"
       }
      ]
     }

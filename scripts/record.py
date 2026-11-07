@@ -530,7 +530,60 @@ def studio26(pg):
     mark(pg, "nudge", ".studio [class*='ai'] >> nth=0"); pg.wait_for_timeout(7000)
 
 
-SEGMENTS = {"studio26": studio26, "home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
+def studio_open(pg):
+    pg.goto(BASE + "/studio?film=1", wait_until="networkidle"); pg.wait_for_selector(".ledger-w .row-group", timeout=90000); pg.wait_for_timeout(2500)
+
+
+def studio30a(pg):
+    """V30 scene 1, AG Studio investigates: a band click filters the page and shows the checked verdict; the ledger widget
+    under it narrows to that ad; a payment's trail opens; the Decision menu; the claim cell on the subtotal row."""
+    studio_open(pg)
+    mark(pg, "flow", ".flow-w"); pg.wait_for_timeout(1800)
+    band = pg.locator("g.flow-band", has_text="Testimonial").first
+    b = band.locator("rect").first.bounding_box(); pg.mouse.move(b["x"] + b["width"] / 2, b["y"] + b["height"] / 2, steps=25); pg.wait_for_timeout(300)
+    pg.mouse.down(); pg.wait_for_timeout(90); pg.mouse.up(); pg.wait_for_timeout(1500)
+    mark(pg, "verdict", ".flow-verdict"); pg.wait_for_timeout(4200)
+    pg.evaluate("document.querySelector('.ledger-w').scrollIntoView({behavior: 'smooth', block: 'center'})"); pg.wait_for_timeout(1500)
+    mark(pg, "ledger", ".ledger-w"); pg.wait_for_timeout(1500)
+    mark(pg, "claim", ".ledger-w .claim-cell"); pg.wait_for_timeout(2200)
+    glide(pg, pg.locator(".ledger-w .trail-toggle").first); pg.wait_for_timeout(900)
+    mark(pg, "trail", ".ledger-w .trail-row"); pg.wait_for_timeout(4200)
+    glide(pg, pg.locator(".ledger-w .grid-decide").first); pg.wait_for_timeout(900)
+    mark(pg, "decide", ".decide-menu"); pg.wait_for_timeout(2600)
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(800)
+
+
+def studio30b(pg):
+    """V30 scene 2, agents write and PayPal confirms: the latest agent actions read back from PayPal beside Who still owes,
+    the Agents -> PayPal page with each agent's limit in code, then the recorded run where the revenue agent drafts an invoice."""
+    studio_open(pg)
+    pg.evaluate("document.querySelector('.owes').scrollIntoView({behavior: 'smooth', block: 'center'})"); pg.wait_for_timeout(1600)
+    mark(pg, "recent", ".ag-studio-layout-widget:has-text('4 · What the agents did')"); pg.wait_for_timeout(3000)
+    pg.evaluate("window.scrollTo({top: 0, behavior: 'smooth'})"); pg.wait_for_timeout(1200)
+    glide(pg, pg.locator(".judge-strip .js-count")); pg.wait_for_timeout(4500)
+    mark(pg, "actions", ".ag-studio-layout-widget:has-text('Agent actions, newest first')"); pg.wait_for_timeout(4500)
+    glide(pg, pg.locator("#studio").get_by_role("button", name="Open the Studio assistant")); pg.wait_for_timeout(4000)
+    mark(pg, "chat", ".studio [class*='ai'] >> nth=0"); pg.wait_for_timeout(7000)
+
+
+def studio30c(pg):
+    """V30 scene 3, a recorded budget run replayed through Studio's own agent loop (no model call): Studio adds the chart."""
+    studio_open(pg)
+    glide(pg, pg.locator(".judge-strip .js-link", has_text="replay")); pg.wait_for_timeout(3500)
+    btn = pg.locator("#studio button", has_text="Replay a budget run").first
+    mark(pg, "starter", "#studio button:has-text('Replay a budget run')"); glide(pg, btn)
+    for _ in range(40):
+        pg.wait_for_timeout(1500)
+        if pg.locator(".ag-studio-layout-widget", has_text="Paid revenue vs spend").count(): break
+    pg.wait_for_timeout(2500)
+    mark(pg, "chat", ".studio [class*='ai'] >> nth=0"); pg.wait_for_timeout(2500)
+    # the page agent placed the chart below the first widgets: bring it into view
+    pg.evaluate("[...document.querySelectorAll('.ag-studio-layout-widget')].find((w) => w.textContent.includes('Paid revenue vs spend'))?.scrollIntoView({behavior: 'smooth', block: 'center'})")
+    pg.wait_for_timeout(1800)
+    mark(pg, "chart", ".ag-studio-layout-widget:has-text('Paid revenue vs spend')"); pg.wait_for_timeout(5500)
+
+
+SEGMENTS = {"studio30a": studio30a, "studio30b": studio30b, "studio30c": studio30c, "studio26": studio26, "home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
 
 with sync_playwright() as p:
     b = p.chromium.launch(channel=os.environ.get("PS_CHANNEL") or None, args=["--mute-audio", "--disable-sync", "--no-first-run", "--no-default-browser-check"])
@@ -541,7 +594,7 @@ with sync_playwright() as p:
             ctx.add_init_script(CURSOR)
             pg = ctx.new_page(); t0 = time.time()
             pg.on("response", lambda r: print("API", r.status, r.url.split("/api/")[-1], flush=True) if "/api/" in r.url and r.status >= 400 else None)
-            pg.goto(BASE + "/?film=1", wait_until="networkidle"); pg.wait_for_selector("#captures .cap", timeout=60000); pg.wait_for_timeout(3000)
+            pg.goto(BASE + "/?film=1", wait_until="networkidle"); pg.wait_for_selector("#payments", timeout=60000, state="attached"); pg.wait_for_timeout(3000)
             ready = time.time() - t0
             MARKS.clear(); T0[0] = time.time()
             SEGMENTS[name](pg)
