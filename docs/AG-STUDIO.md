@@ -21,7 +21,7 @@ The money flow on the real gift shop's October book: 69% of the chats, 19% of th
 
 ![Money flow on the real shop's book](img/studio-shop-flow.png)
 
-The second page, Agents → PayPal: each invoice draft, send, latest reminder, refund and payout an agent made in the shared
+The second page, Agents → PayPal: each invoice draft, send, reminder (the latest per invoice; each one kept for reminders sent after the 7 Nov 10:40 UTC update), refund and payout an agent made in the shared
 demo ledger (newest 40; judges' own Try runs are not listed), each read back from PayPal when the page loads (`/api/agent-actions`, cached ten minutes), with PayPal's status and the API it came through:
 
 ![Agent actions read back from PayPal](img/studio-agent-actions.png)
@@ -87,7 +87,7 @@ All read through Studio's widget API (`widgetApi.getData`), so page filters and 
 
 | Widget | File | What it shows | Acts |
 |---|---|---|---|
-| Ad report → PayPal money flow | `MoneyFlowWidget.jsx` | one band per ad from its share of leads (left) to its share of PayPal-confirmed revenue (right); on the shop page, chats to money kept | a click on a band filters the page and shows the budget agent's latest checked verdict for that ad, with Approve and Dismiss (recorded through `/api/decisions`, which copies the move from the gate-checked recommendation); edit panel: right-side order and both headings; its own phone layout |
+| Ad report → PayPal money flow | `ClaimToCashFlowWidget.jsx` | one band per ad from its share of leads (left) to its share of PayPal-confirmed revenue (right); on the shop page, chats to money kept | a click on a band filters the page and shows the budget agent's latest checked verdict for that ad, with Approve and Dismiss (recorded through `/api/decisions`, which copies the move from the gate-checked recommendation); edit panel: right-side order and both headings; its own phone layout |
 | Claimed vs confirmed | `ClaimWidget.jsx` | per ad, leads against PayPal paid orders | a click filters the page to that ad; edit panel: the budget floor (ads below it are marked) |
 | Reported share vs money share | `ShareGapWidget.jsx` | each ad's share of what the report counts against its share of the money | a click filters the page; edit panel: when to flag an overrated ad |
 | Payment timeline | `TimelineWidget.jsx` | every capture on a time line per ad: paid, partly refunded, refunded | |

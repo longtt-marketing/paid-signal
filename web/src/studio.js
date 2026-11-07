@@ -60,6 +60,14 @@ export function shopSources(read, paymentsCsv) {
   };
 }
 
+// the limit in code each agent works under (src/revenue.js, sendAgent.js, chaseAgent.js, refundAgent.js, payoutAgent.js)
+const LIMITS = {
+  "Revenue agent": "price and recipient set in code; a draft waits for approval",
+  "Send agent": "only the approved draft, its own amount in USD",
+  "Chase agent": "unpaid invoices only, at most 3 a run, no other amount",
+  "Refund agent": "only the flagged second capture, in full, once",
+  "Commission agent": "recipient fixed; per paid order; total checked",
+};
 /** Two tables joined on the ad key: what each ad claims, and what PayPal captured for it and Meta received. */
 export function buildData(rec, payments, invoices = [], duplicates = [], metaSends = [], shop = shopSources(null, ""), actions = []) {
   const ads = rec.ads.map((r) => ({
@@ -115,10 +123,10 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
         // every thing an agent wrote to PayPal, with what PayPal says about it now (read back by /api/agent-actions)
         id: "actions", name: "Agent actions on PayPal", description: "One row per thing an agent wrote to PayPal (an invoice drafted, sent or reminded; a refund; a payout), with the status PayPal returns for it when the page loads.",
         data: actions.map((a) => ({ key: a.key, date: String(a.at).slice(0, 10), when: String(a.at).slice(0, 16).replace("T", " "), whenShort: String(a.at).slice(5, 16).replace("T", " "), agentDid: `${a.agent} · ${a.did} (…${String(a.id).slice(-4)})`, agent: a.agent, did: a.did, kind: a.kind, id: a.id, amount: Number(a.amount) || 0,
-          moved: a.kind === "invoice" ? 0 : Number(a.amount) || 0, paypal: a.paypal?.status || "not read", through: a.paypal?.through || "", one: 1, read: a.paypal?.status ? 1 : 0 })),
+          moved: a.kind === "invoice" ? 0 : Number(a.amount) || 0, limit: LIMITS[a.agent] || "", paypal: a.paypal?.status || "not read", through: a.paypal?.through || "", one: 1, read: a.paypal?.status ? 1 : 0 })),
         fields: [f("key", "Action", "textFormat", true), f("date", "Date", "textFormat"), f("when", "When (UTC)", "textFormat"), f("whenShort", "When (UTC)", "textFormat"), f("agentDid", "Agent did", "textFormat"), f("agent", "Agent", "textFormat"), f("did", "Did", "textFormat"), f("kind", "PayPal object", "textFormat"),
           f("id", "PayPal id", "textFormat"), f("amount", "Amount", "currencyFormat"), f("moved", "Money moved", "currencyFormat"), f("paypal", "PayPal says now", "textFormat"), f("through", "Read through", "textFormat"),
-          f("one", "Actions", "integerFormat"), f("read", "Read back from PayPal", "integerFormat")],
+          f("limit", "Limit in code", "textFormat"), f("one", "Actions", "integerFormat"), f("read", "Read back from PayPal", "integerFormat")],
       },
       ...(shop ? shop.sources : []),
     ],
@@ -168,7 +176,7 @@ export const initialReport = {
         acts: kpi("Things the agents wrote to PayPal", sum("actions.one")),
         reads: kpi("Read back from PayPal now", sum("actions.read")),
         moved: kpi("Money moved: refunds, payouts", sum("actions.moved")),
-        list: { type: "grid", dataMapping: { cols: [{ id: "actions.when" }, { id: "actions.agent" }, { id: "actions.did" }, { id: "actions.kind" }, { id: "actions.id" }, { id: "actions.amount" }, { id: "actions.paypal" }, { id: "actions.through" }] },
+        list: { type: "grid", dataMapping: { cols: [{ id: "actions.when" }, { id: "actions.agent" }, { id: "actions.did" }, { id: "actions.kind" }, { id: "actions.id" }, { id: "actions.amount" }, { id: "actions.paypal" }, { id: "actions.through" }, { id: "actions.limit" }] },
           sort: [{ field: { id: "actions.when" }, direction: "desc" }], format: { title: { enabled: true, text: "Agent actions, newest first (up to 40), and what PayPal says about each now" }, style: { headerRow: { wrapText: true } } } },
       },
       widgetLayout: { acts: at(0, 0, 8, 7), reads: at(8, 0, 8, 7), moved: at(16, 0, 8, 7), list: at(0, 7, 24, 30) },

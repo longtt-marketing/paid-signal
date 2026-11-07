@@ -16,7 +16,11 @@ test("agent actions: drafts, sends, reminders, refunds and payouts, newest first
     ],
     payouts: [{ batch_id: "B1", total: "15.00", capture_ids: ["a", "b", "c"], at: "2026-10-31T08:00:00Z" }, { batch_id: "B2", invoice_id: "T1", total: "5.00" }, { batch_id: "B2", state: "paid" }],
   });
-  assert.deepEqual(list.map((a) => a.key), ["nudge:INV2-A", "refund:RF1", "send:INV2-A", "draft:INV2-A", "payout:B1"]);
+  assert.deepEqual(list.map((a) => a.key), ["nudge:INV2-A:2026-11-03T09:00:00Z", "refund:RF1", "send:INV2-A", "draft:INV2-A", "payout:B1"]);
+  // an invoice reminded twice keeps both reminders
+  const two = agentActions({ invoices: [{ id: "INV2-C", amount: "49", reminders: [{ at: "2026-11-04T01:00:00Z", by: "chase agent" }, { at: "2026-11-06T01:00:00Z", by: "chase agent", paypal: "accepted" }] }] });
+  assert.deepEqual(two.map((a) => a.key), ["nudge:INV2-C:2026-11-06T01:00:00Z", "nudge:INV2-C:2026-11-04T01:00:00Z"]);
+  assert.equal(two[0].write, "accepted");
   assert.equal(list.find((a) => a.kind === "payout").did, "paid the ad's creator for 3 paid orders");
   assert.equal(list.find((a) => a.kind === "payout").amount, 15);
 });

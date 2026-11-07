@@ -182,9 +182,12 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
       cellEditor: DecisionEditor, cellEditorPopup: true, cellEditorPopupPosition: "under",
       cellEditorParams: { act: (choice, row) => (choice === "Refund…" ? onRefund(row.raw) : choice === "Separate order…" ? onCount(row.capture_id) : null) },
       valueSetter: () => false },
+    // not shown, exported: the CSV carries the capture date, click source, refunded amount and why a payment is held
+    { field: "date", headerName: "Captured (UTC date)", hide: true }, { field: "source", headerName: "Click source", hide: true },
+    { field: "back", headerName: "Refunded", hide: true, valueFormatter: (p) => money(p.value) }, { field: "why", headerName: "Why held", hide: true },
   ], [narrow, tiny, grouped, onRefund, onCount]);
   const retotal = (api) => { const list = []; api.forEachNodeAfterFilter((n) => n.data && !n.data.isGroup && !n.data.isDetail && list.push(n.data)); setTotal(totalsOf(list, narrow)); };
-  const exportCsv = () => grid.current?.api?.exportDataAsCsv({ fileName: "paypal-ledger.csv", columnKeys: ["ad", "amount", "kept", "via", "status", "meta", "capture_id"],
+  const exportCsv = () => grid.current?.api?.exportDataAsCsv({ fileName: "paypal-ledger.csv", columnKeys: ["ad", "amount", "kept", "back", "via", "status", "why", "meta", "capture_id", "date", "source"],
     shouldRowBeSkipped: (p) => Boolean(p.node.data?.isGroup || p.node.data?.isDetail), processCellCallback: (p) => (p.column.getColId() === "ad" ? p.node.data?.ad : p.value) });
   return (
     <div className="ledger-grid" ref={box}>

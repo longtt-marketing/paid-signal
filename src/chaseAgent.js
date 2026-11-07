@@ -98,7 +98,8 @@ export async function runChaseAgent({ llm, tools, eligible, leads, maxTurns = 8 
       // the model chose whom and wrote the words; code passes exactly those, nothing more
       const out = String(await tools.send_invoice_reminder.execute({ invoice_id: c.input.invoice_id, subject: c.input.subject, note: c.input.note }));
       const j = parse(out), failed = Boolean(j?.error || (j?.name && j?.message)) || /error|failed/i.test(out.slice(0, 120)) && !j;
-      if (!failed) { sent.push(c.input.invoice_id); notes[c.input.invoice_id] = { subject: c.input.subject, note: c.input.note }; }
+      // keep what PayPal answered for this reminder, as the record of the write (PayPal returns no body on success)
+      if (!failed) { sent.push(c.input.invoice_id); notes[c.input.invoice_id] = { subject: c.input.subject, note: c.input.note, paypal: out.slice(0, 160) || "accepted" }; }
       trace.push({ tool: c.name, invoice: c.input.invoice_id, ok: !failed });
       results.push({ id: c.id, content: failed ? `PayPal refused: ${out.slice(0, 400)}` : "Reminder sent." });
     }

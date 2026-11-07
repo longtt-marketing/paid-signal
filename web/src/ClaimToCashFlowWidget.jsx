@@ -13,7 +13,7 @@ const KEY_OF = Object.fromEntries(Object.entries(AD_NAMES).map(([k, v]) => [v, k
 const CHANGE = { increase: "Raise", reduce: "Cut", pause: "Pause", keep: "Keep", fix_tracking: "Fix tracking" };
 const PAID = "#0B6B3A", CLAIMED = "#C4B99D", FADED = "#9C8F70", INK = "#14130F", LABEL = "#5A5242", SHEET = "#FFFDF7";
 
-export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
+export function ClaimToCashFlowWidget({ dataMapping, format, widgetApi, context }) {
   const order = format?.style?.rightOrder === "same" ? "same" : "money";
   const leftLabel = format?.style?.leftLabel || "Ad report counts", rightLabel = format?.style?.rightLabel || "PayPal confirms";
   const brief = (t) => t.split(" (")[0].split(" ").slice(0, 2).join(" ");
@@ -168,7 +168,7 @@ export const moneyFlowWidgetDefinition = {
       { type: "textfield", id: "format.style.leftLabel", label: "Left heading", placeholder: "Ad report counts" },
       { type: "textfield", id: "format.style.rightLabel", label: "Right heading", placeholder: "PayPal confirms" }] }),
   formatShape: widgetFormat((s) => s.object({ rightOrder: s.enum(["money", "same"], { description: "Order of the right side: 'money' puts the ad with the most money at the top so bands cross when the report's ranking is wrong; 'same' keeps the left order. Default 'money'." }).optional(), leftLabel: s.string({ description: "Heading over the left side. Default 'Ad report counts'." }).optional(), rightLabel: s.string({ description: "Heading over the right side. Default 'PayPal confirms'." }).optional() })),
-  comp: MoneyFlowWidget,
+  comp: ClaimToCashFlowWidget,
   featureConfig: { crossFilter: { supportsHighlight: true } },
   ai: { label: "Ad report → PayPal money flow", description: "One band per ad from its share of what the ad report counts (left) to its share of the money PayPal confirms (right); green bands earn more than the report credits them; clicking a band filters the page to that ad and shows the budget agent's checked verdict for it, which the owner approves or dismisses (the decision is recorded; no live ad budget changes).", usage: "Map category to the ad or group name, reported to leads or chats, money to paid revenue or money kept." },
   defaultSize: { width: 800, height: 300 },

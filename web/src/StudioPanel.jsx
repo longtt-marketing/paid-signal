@@ -7,7 +7,7 @@ import { buildData, initialReport, phoneReport, phoneTheme, shopSources, theme }
 import { shareGapWidgetDefinition } from "./ShareGapWidget.jsx";
 import { toolDisplay } from "./toolDisplay.jsx";
 import { claimWidgetDefinition } from "./ClaimWidget.jsx";
-import { moneyFlowWidgetDefinition } from "./MoneyFlowWidget.jsx";
+import { moneyFlowWidgetDefinition } from "./ClaimToCashFlowWidget.jsx";
 import { timelineWidgetDefinition } from "./TimelineWidget.jsx";
 import { funnelWidgetDefinition } from "./FunnelWidget.jsx";
 import { owesWidgetDefinition, DATA_EVENT } from "./OwesWidget.jsx";

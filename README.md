@@ -4,7 +4,7 @@
 
 **The ad report says the free guide wins (31 leads). PayPal says the testimonial ad makes the money (4 paid orders against 1). Paid Signal's AI agents act only on what PayPal confirms, and every money movement is checked in code.**
 
-**36 of 36** agent writes in the shared demo ledger (invoice drafts, sends, latest reminder per invoice, a refund, a payout; judges' Try runs not included) point to PayPal objects that PayPal returned on 2026-11-07: 15 invoices with their current status, the refund COMPLETED and the payout SUCCESS: [live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions), Studio page Agents → PayPal.
+**36 of 36** agent writes in the shared demo ledger (invoice drafts, sends, reminders (the latest per invoice; each one kept for reminders sent after the 7 Nov 10:40 UTC update), a refund, a payout; judges' Try runs not included) point to PayPal objects that PayPal returned on 2026-11-07: 15 invoices with their current status, the refund COMPLETED and the payout SUCCESS: [live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions), Studio page Agents → PayPal.
 
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
@@ -13,10 +13,10 @@ Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers
 | What | See it | Code |
 |---|---|---|
 | Studio agents that write to PayPal (draft invoices, send reminders) within limits set in code | /studio, the assistant | `web/src/agentTools.js`, `web/src/claudeAdapter.js` |
-| Page "Agents → PayPal": each invoice draft, send, latest reminder, refund and payout an agent made in the shared demo ledger (newest 40; judges' own Try runs are not listed), each read back from PayPal with its status and the API it came through (refreshed at most every ten minutes) | /studio, second page | `src/agentActions.js`, `/api/agent-actions` in `src/routes/judge.js` |
-| Money-flow widget: a band runs from an ad's share of leads to its share of PayPal money; a click filters the page and shows the budget agent's checked verdict to approve | [/studio](https://paid-signal.thelongmarketing.workers.dev/studio), first page | `web/src/MoneyFlowWidget.jsx` |
+| Page "Agents → PayPal": each invoice draft, send, reminder (the latest per invoice; each one kept for reminders sent after the 7 Nov 10:40 UTC update), refund and payout an agent made in the shared demo ledger (newest 40; judges' own Try runs are not listed), each read back from PayPal with its status and the API it came through (refreshed at most every ten minutes) | /studio, second page | `src/agentActions.js`, `/api/agent-actions` in `src/routes/judge.js` |
+| Money-flow widget: a band runs from an ad's share of leads to its share of PayPal money; a click filters the page and shows the budget agent's checked verdict to approve | [/studio](https://paid-signal.thelongmarketing.workers.dev/studio), first page | `web/src/ClaimToCashFlowWidget.jsx` |
 | PayPal ledger widget in Studio, right under the money flow: an AG Grid table grouped by ad; a band click narrows it to that ad and a click on an ad's subtotal row filters the page back; ▸ opens a payment's trail (ad click → PayPal capture → ledger → what Meta heard); a Decision per payment | /studio, first page | `web/src/LedgerWidget.jsx`, `web/src/adPick.js` |
-| AG Grid ledger on the dashboard: grouped by ad with subtotals, a search box, an "Ad report → PayPal" cell on each ad's subtotal row (for example 31 leads → 1 paid), the same trail row and Decision column (Refund… or Separate order…, checked by the server), an AG Charts bar chart whose bars filter the grid | [Dashboard](https://paid-signal.thelongmarketing.workers.dev/#payments), PayPal ledger | `web/src/LedgerGrid.jsx`, `web/src/gridTotals.js` |
+| AG Grid ledger on the dashboard: grouped by ad with subtotals, a search box, an "Ad report → PayPal" cell on each ad's subtotal row (for example 31 leads → 1 paid), CSV export, the same trail row and Decision column (Refund… or Separate order…, checked by the server), an AG Charts bar chart whose bars filter the grid | [Dashboard](https://paid-signal.thelongmarketing.workers.dev/#payments), PayPal ledger | `web/src/LedgerGrid.jsx`, `web/src/gridTotals.js` |
 | The real shop's 735 payments as an AG Grid pivot in Studio | /studio, page "Real shop: October" | `web/src/studio.js` |
 | Recorded runs played back through Studio's own agent loop, no model call | /studio, the assistant: Replay a budget run | `web/src/history.js`, `web/src/replay-budget.json` |
 
@@ -165,7 +165,7 @@ Six Claude agents, each with its own tools checked against a JSON Schema; code o
 How it is built, file by file: [docs/AG-STUDIO.md](docs/AG-STUDIO.md).
 
 `web/` is a React app on AG Studio: data sources for ads and PayPal captures joined on the ad key, calculated measures
-(cost per paid order, paid revenue per ad dollar), a themed report, and seven custom widgets: an **ad report → PayPal money flow** (`web/src/MoneyFlowWidget.jsx`), the **PayPal ledger** as an AG Grid table (`web/src/LedgerWidget.jsx`: grouped by ad, cross-filtered with the money flow, ▸ opens a payment's trail row, the owner's Decision), **Reported share vs
+(cost per paid order, paid revenue per ad dollar), a themed report, and seven custom widgets: an **ad report → PayPal money flow** (`web/src/ClaimToCashFlowWidget.jsx`), the **PayPal ledger** as an AG Grid table (`web/src/LedgerWidget.jsx`: grouped by ad, cross-filtered with the money flow, ▸ opens a payment's trail row, the owner's Decision), **Reported share vs
 money share** (`web/src/ShareGapWidget.jsx`), **Claimed vs confirmed**
 (`web/src/ClaimWidget.jsx`), a **payment timeline** (`web/src/TimelineWidget.jsx`: paid, partly refunded and refunded
 payments per ad), **leads, PayPal invoices and paid orders per ad** (`web/src/FunnelWidget.jsx`) and **Who still owes**

@@ -243,6 +243,12 @@ export default function App({ first = null }) {
     }
     catch (e) { setAgent({ status: "error", error: e.message }); }
   };
+  // the strip's link: open the assistant on a new chat, so its starters (Replay a budget run first) are in view
+  const openReplay = () => {
+    openAssistant();
+    const tryNew = (n) => { const b = [...document.querySelectorAll("#studio button")].find((x) => /^New( chat)?$/.test(x.textContent.trim())); if (b) b.click(); else if (n > 0) setTimeout(() => tryNew(n - 1), 400); };
+    setTimeout(() => tryNew(20), 600);
+  };
   const openAssistant = () => {
     setStudioOn(true); if (location.hash !== "#report") location.hash = "report";
     const tryOpen = (n) => { if (!studio.current?.openAssistant() && n > 0) setTimeout(() => tryOpen(n - 1), 400); };
@@ -548,7 +554,7 @@ export default function App({ first = null }) {
             <li><b>1</b> Click a band, approve the verdict</li>
             <li><b>2</b> ▸ a payment's trail, decide it</li>
             <li><b>3</b> Nudge: PayPal confirms beside it</li>
-            <li><button type="button" className="js-link" onClick={openAssistant}>Assistant: replay a run</button></li>
+            <li><button type="button" className="js-link" onClick={openReplay}>Assistant: replay a run</button></li>
           </ol>}
           <div className="studio-pages" role="group" aria-label="Report pages">
             {/* three pages carry the story; the rest fold under More pages */}

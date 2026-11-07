@@ -186,7 +186,10 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const at = new Date().toISOString();
       for (const r of run.reminded) {
         const rec = await env.LEDGER.get(`inv:${r.id}`, "json");
-        if (rec) await env.LEDGER.put(`inv:${r.id}`, JSON.stringify({ ...rec, reminded_at: at, reminder: { subject: r.subject, note: r.note, by: "chase agent (Claude + PayPal Agent Toolkit)" } }));
+        // every reminder is kept with its time and PayPal's answer, not only the latest one
+        const reminder = { subject: r.subject, note: r.note, by: "chase agent (Claude + PayPal Agent Toolkit)" };
+        const history = [...(rec?.reminders || (rec?.reminded_at ? [{ at: rec.reminded_at, by: rec.reminder?.by || "" }] : [])), { at, by: reminder.by, paypal: String(r.paypal || "accepted").slice(0, 160) }].slice(-20);
+        if (rec) await env.LEDGER.put(`inv:${r.id}`, JSON.stringify({ ...rec, reminded_at: at, reminder, reminders: history }));
       }
       if (run.reminded.length) await forget("inv:");
       return json({ ...run, eligible: eligible.length, ms: Date.now() - t0 });

@@ -41,7 +41,7 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
   const [q, setQ] = useState("");
   const claims = useClaims();
   const [width, setWidth] = useState(0);
-  const box = useRef(null);
+  const box = useRef(null), grid = useRef(null);
   useEffect(() => { const on = () => setTick((t) => t + 1); addEventListener(DATA_EVENT, on); return () => removeEventListener(DATA_EVENT, on); }, []);
   useEffect(() => {
     const el = box.current; if (!el) return;
@@ -61,7 +61,7 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
         const v = Object.fromEntries(KEYS.map((k, i) => [k, pick(r, m[k], i)]));
         const gross = Number(v.gross) || 0, back = Number(v.refunded) || 0, held = Number(v.held) > 0, st = String(v.status);
         return {
-          capture_id: String(v.id), ad: String(v.ad), adValue: v.ad, amount: gross, kept: Number(v.net) || 0, held,
+          capture_id: String(v.id), ad: String(v.ad), adValue: v.ad, amount: gross, kept: Number(v.net) || 0, back, held,
           via: String(v.via).replace("PayPal ", ""), source: String(v.source) === "Other" ? "" : String(v.source), date: day(v.date),
           status: held && /dispute/i.test(String(v.meta)) ? "Held: dispute" : held ? "Held: double?" : st === "REFUNDED" ? "Refunded" : back > 0 ? `Paid, ${money(back)} back` : "Paid",
           meta: String(v.meta), why: held && /dispute/i.test(String(v.meta)) ? "Held out of revenue: a PayPal dispute is open, or the buyer won it." : held ? "Held out of paid orders as a possible double payment: same payer and ad minutes apart. Separate order… counts it." : "",
@@ -112,13 +112,17 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
       valueGetter: (p) => (p.data && !p.data.isGroup && !p.node.rowPinned ? decisionOf(p.data).value : ""), cellRenderer: DecisionCell,
       editable: (p) => Boolean(p.data && !p.data.isGroup && !p.node.rowPinned && decisionOf(p.data).options.length), singleClickEdit: true,
       cellEditor: DecisionEditor, cellEditorPopup: true, cellEditorPopupPosition: "under", cellEditorParams: { act }, valueSetter: () => false },
+    // not shown, exported: the CSV carries the capture date, click source, refunded amount and why a payment is held
+    { field: "date", headerName: "Captured (UTC date)", hide: true }, { field: "source", headerName: "Click source", hide: true },
+    { field: "back", headerName: "Refunded", hide: true, valueFormatter: (p) => money(p.value) }, { field: "why", headerName: "Why held", hide: true },
+    { field: "amount", headerName: "Captured", hide: true, valueFormatter: (p) => money(p.value) }, { field: "capture_id", headerName: "PayPal capture", hide: true }, { field: "via", headerName: "Paid through", hide: true },
   ], [narrow, act]);
 
   return (
     <div className="ledger-w" ref={box}>
       <SearchBox value={q} onChange={setQ} />
       <div className="ledger-w-grid">
-        <AgGridReact theme={theme} rowData={data} columnDefs={cols} context={{ grouped: true, open, toggle, claims }}
+        <AgGridReact ref={grid} theme={theme} rowData={data} columnDefs={cols} context={{ grouped: true, open, toggle, claims }}
           defaultColDef={{ sortable: false, resizable: true, suppressMovable: true }}
           getRowId={(p) => p.data?.detailId || p.data?.capture_id || p.data?.groupId || "total"}
           getRowHeight={(p) => (p.data?.isDetail ? trailHeight(width) : 40)} isFullWidthRow={(p) => Boolean(p.rowNode.data?.isDetail)} fullWidthCellRenderer={TrailRow}
@@ -128,7 +132,9 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
           onRowClicked={(e) => { if (e.data?.isGroup) filterTo(e.data.ad.replace(/ \(\d+\)$/, "")); }} />
       </div>
       <div className="ledger-w-foot">{picked.length > 0 && <button type="button" className="chip-x" onClick={() => setPick([], "ledger")}>Showing: {picked.join(", ")} ×</button>}
-        <span>{said || "▸ opens a payment's trail · click an ad's row to filter the page · click a Decision to act (the server checks it)"}</span></div>
+        <span>{said || "▸ opens a payment's trail · click an ad's row to filter the page · click a Decision to act (the server checks it)"}</span>
+        <button type="button" className="ledger-w-csv" onClick={() => grid.current?.api?.exportDataAsCsv({ fileName: "paypal-ledger.csv", columnKeys: ["ad", "amount", "kept", "back", "via", "status", "why", "meta", "capture_id", "date", "source"],
+          shouldRowBeSkipped: (p) => Boolean(p.node.data?.isGroup || p.node.data?.isDetail) })}>Export CSV</button></div>
     </div>
   );
 }
