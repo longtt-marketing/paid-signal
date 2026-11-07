@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { widgetFormat, withSection } from "./widgetForm.js";
 import { stack, firstSentence } from "./flowLayout.js";
 import { AD_NAMES } from "./names.js";
+import { AD_PICK, getPick, nextPick, setPick } from "./adPick.js";
 
 const pick = (row, field, i) => row[field?.key] ?? row[field?.id] ?? Object.values(row)[i];
 const pct = (x) => `${Math.round(x * 100)}%`;
@@ -53,8 +54,21 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
     return () => ro.disconnect();
   }, []);
 
+  // an ad picked in the PayPal ledger widget counts as picked here too (it reads captures, Studio's filter does not join them)
+  // a pick made in the ledger: this widget filters the page with its own ad field, as if its band had been clicked
+  const rowsRef = useRef(rows); rowsRef.current = rows;
+  useEffect(() => {
+    const on = (e) => {
+      const { list = [], from } = e.detail || {};
+      if (from !== "ledger") return;
+      if (!list.length) { widgetApi.resetCrossFilter(); return; }
+      const r = rowsRef.current.find((x) => x.name === list[0]);
+      if (r) widgetApi.toggleCrossFilter({ type: "value", value: r.value, field: cat, group: 0, reset: true });
+    };
+    addEventListener(AD_PICK, on); return () => removeEventListener(AD_PICK, on);
+  }, [widgetApi, cat]);
   const selected = new Set((widgetApi.getCrossFilterSelections?.() || []).flatMap((s) => (s.type === "value" ? s.values : [])));
-  const choose = (r) => (e) => { widgetApi.toggleCrossFilter({ type: "value", value: r.value, field: cat, group: 0, reset: !(e.metaKey || e.ctrlKey) }); e.stopPropagation(); };
+  const choose = (r) => (e) => { widgetApi.toggleCrossFilter({ type: "value", value: r.value, field: cat, group: 0, reset: !(e.metaKey || e.ctrlKey) }); setPick(nextPick(getPick(), r.value), "flow"); e.stopPropagation(); };
 
   const one = selected.size === 1 ? rows.find((r) => selected.has(r.value)) : null;
   const key = one && KEY_OF[one.name];
@@ -93,7 +107,7 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
   };
 
   return (
-    <div className="flow-w" ref={ref} onClick={(e) => { if (e.target === e.currentTarget || e.target.tagName === "svg") widgetApi.resetCrossFilter(); }}>
+    <div className="flow-w" ref={ref} onClick={(e) => { if (e.target === e.currentTarget || e.target.tagName === "svg") { widgetApi.resetCrossFilter(); setPick([], "flow"); } }}>
       {w > 0 && rows.length > 0 && (
         <svg width={w} height={h} role="img" aria-label={rows.map((r) => `${r.name}: ${pct(r.sa)} of what the ad report counts, ${pct(r.sb)} of the money`).join("; ")}>
           <text x={0} y={13} fontSize="12" fontWeight="600" fill={LABEL}>{narrow ? brief(leftLabel) : leftLabel}</text>

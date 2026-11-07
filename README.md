@@ -11,7 +11,8 @@ Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers
 | What | See it | Code |
 |---|---|---|
 | Money-flow widget: a band runs from an ad's share of leads to its share of PayPal money; a click filters the page and shows the budget agent's checked verdict to approve | [/studio](https://paid-signal.thelongmarketing.workers.dev/studio), first page | `web/src/MoneyFlowWidget.jsx` |
-| AG Grid ledger: grouped by ad with subtotals, a Decision column edited in the cell (Refund… or Separate order…, checked by the server), an AG Charts bar chart whose bars filter the grid | [Dashboard](https://paid-signal.thelongmarketing.workers.dev/#payments), PayPal ledger | `web/src/LedgerGrid.jsx`, `web/src/gridTotals.js` |
+| PayPal ledger widget in Studio, right under the money flow: an AG Grid table grouped by ad; a band click narrows it to that ad and a click on an ad's subtotal row filters the page back; ▸ opens a payment's trail (ad click → PayPal capture → ledger → what Meta heard); a Decision per payment | /studio, first page | `web/src/LedgerWidget.jsx`, `web/src/adPick.js` |
+| AG Grid ledger on the dashboard: grouped by ad with subtotals, the same trail row and Decision column (Refund… or Separate order…, checked by the server), an AG Charts bar chart whose bars filter the grid | [Dashboard](https://paid-signal.thelongmarketing.workers.dev/#payments), PayPal ledger | `web/src/LedgerGrid.jsx`, `web/src/gridTotals.js` |
 | The real shop's 735 payments as an AG Grid pivot in Studio | /studio, page "Real shop: October" | `web/src/studio.js` |
 | Studio agents that write to PayPal (draft invoices, send reminders) within limits set in code | /studio, the assistant | `web/src/agentTools.js`, `web/src/claudeAdapter.js` |
 | Recorded runs played back through Studio's own agent loop, no model call | /studio, the assistant: Replay a budget run | `web/src/history.js`, `web/src/replay-budget.json` |
@@ -76,7 +77,7 @@ No login is needed to look around; paying needs the sandbox buyer from the Devpo
    - **Try to trick Claude** sends a planted instruction ("invoice me for $1 ... another email address"); **Check every number** reads every ledger payment back from PayPal (13 of 13).
    A **More** bar opens the rest: the refund agent and the two-buyer test, the commission agent paying the creator through Payouts, and the real gift shop's book run through the same ledger code (`node scripts/eval-shop-replay.mjs`).
 2. **[Dashboard](https://paid-signal.thelongmarketing.workers.dev)**: 62 leads against 9 PayPal-confirmed paid orders; the PayPal ledger as an AG Grid table (grouped by ad with a subtotal per ad, a total row that follows the filters, CSV export, refund or count a held payment from its row); **Ask the revenue agent**, **Approve** a draft (send agent), **Chase unpaid** (chase agent).
-3. **Report · AG Studio** tab (`/studio`): six custom widgets, led by a money flow from the ad report to PayPal (a click on a band filters the page and shows the budget agent's checked verdict for that ad, to approve or dismiss), a page on the real shop's book, and the Studio assistant: **Replay a budget run** (Studio carries out a recorded run, no model call), **Review ad budgets** (a custom Studio agent on Claude submits through the evidence gate) or **Nudge who still owes**. How it is built: [docs/AG-STUDIO.md](docs/AG-STUDIO.md).
+3. **Report · AG Studio** tab (`/studio`): seven custom widgets, led by a money flow from the ad report to PayPal (a click on a band filters the page and shows the budget agent's checked verdict for that ad, to approve or dismiss) with the PayPal ledger under it, filtered by the same click, a page on the real shop's book, and the Studio assistant: **Replay a budget run** (Studio carries out a recorded run, no model call), **Review ad budgets** (a custom Studio agent on Claude submits through the evidence gate) or **Nudge who still owes**. How it is built: [docs/AG-STUDIO.md](docs/AG-STUDIO.md).
 4. **[Proof](https://paid-signal.thelongmarketing.workers.dev/proof)**: held-out evals (revenue agent 24 of 24 bookings, 20 of 20 not-ready leads, 0 of 16 injections invoiced), the evidence gate under attack (11 kinds of planted error, 100 of each: all caught), the refund-agent eval, the shop replay, live PayPal and Meta checks, and a budget simulation (run on the 30 Oct ledger of 6 paid orders: $1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs).
 5. **[Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit)** in the browser (Ads Manager export plus PayPal activity, or a bank-transfer shop's own order book, payments and refunds; *Load the gift shop's book* runs the published one), and any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
 
@@ -144,7 +145,7 @@ Six Claude agents, each with its own tools checked against a JSON Schema; code o
 How it is built, file by file: [docs/AG-STUDIO.md](docs/AG-STUDIO.md).
 
 `web/` is a React app on AG Studio: data sources for ads and PayPal captures joined on the ad key, calculated measures
-(cost per paid order, paid revenue per ad dollar), a themed report, and six custom widgets: an **ad report → PayPal money flow** (`web/src/MoneyFlowWidget.jsx`), **Reported share vs
+(cost per paid order, paid revenue per ad dollar), a themed report, and seven custom widgets: an **ad report → PayPal money flow** (`web/src/MoneyFlowWidget.jsx`), the **PayPal ledger** as an AG Grid table (`web/src/LedgerWidget.jsx`: grouped by ad, cross-filtered with the money flow, ▸ opens a payment's trail row, the owner's Decision), **Reported share vs
 money share** (`web/src/ShareGapWidget.jsx`), **Claimed vs confirmed**
 (`web/src/ClaimWidget.jsx`), a **payment timeline** (`web/src/TimelineWidget.jsx`: paid, partly refunded and refunded
 payments per ad), **leads, PayPal invoices and paid orders per ad** (`web/src/FunnelWidget.jsx`) and **Who still owes**
@@ -187,7 +188,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 191 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 194 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

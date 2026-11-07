@@ -53,3 +53,30 @@ test("decision cell: held rows can be counted, paid rows refunded, refunded rows
   assert.equal(decisionOf({ held: false, refundable: true }).value, "Keep");
   assert.deepEqual(decisionOf({ held: false, refundable: false, status: "Refunded" }), { value: "Refunded", options: [] });
 });
+
+test("trail row: four steps from the ad click to Meta, and it opens under its own payment only", async () => {
+  const { trailSteps, withTrail } = await import("../web/src/gridTotals.js");
+  const r = { capture_id: "9NM26871ABC", ad: "Testimonial · carousel", source: "Meta click", via: "invoice", amount: 49, kept: 49, held: false, status: "Paid", meta: "Received by Meta", date: "2026-11-05" };
+  const s = trailSteps(r);
+  assert.deepEqual(s.map((x) => x.k), ["Ad click", "PayPal", "Ledger", "Meta"]);
+  assert.equal(s[0].v, "Meta click on Testimonial · carousel");
+  assert.equal(s[1].v, "invoice, capture 9NM26871…, $49.00, 2026-11-05");
+  assert.equal(s[2].v, "a paid order, $49.00 kept");
+  assert.equal(trailSteps({ ...r, held: true, kept: 0 })[2].v, "held as a possible double payment, $0.00 kept");
+  const rows = withTrail([{ isGroup: true, ad: "T (2)" }, r, { ...r, capture_id: "OTHER" }], new Set(["9NM26871ABC"]));
+  assert.equal(rows.length, 4);
+  assert.equal(rows[2].isDetail, true);
+  assert.equal(rows[2].of.capture_id, "9NM26871ABC");
+});
+
+test("trail row height follows the grid width", async () => {
+  const { trailHeight } = await import("../web/src/gridTotals.js");
+  assert.deepEqual([trailHeight(375), trailHeight(700), trailHeight(1300)], [196, 110, 74]);
+});
+
+test("picked ad: a click picks that ad alone, a second click on it clears the pick", async () => {
+  const { nextPick } = await import("../web/src/adPick.js");
+  assert.deepEqual(nextPick([], "Testimonial"), ["Testimonial"]);
+  assert.deepEqual(nextPick(["Testimonial"], "Testimonial"), []);
+  assert.deepEqual(nextPick(["Testimonial"], "Free guide"), ["Free guide"]);
+});

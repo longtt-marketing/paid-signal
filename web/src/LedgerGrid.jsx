@@ -4,11 +4,13 @@
 // total row follows the filters. Above it an AG Charts bar chart (Community, MIT) shows money kept, held and refunded
 // per ad; a click on a bar filters the grid to that ad. The last column is the owner's Decision, edited in the cell:
 // "Refund…" goes through the server's refund route (the server checks it), "Separate order…" counts a held payment.
+// The ▸ on a payment opens its trail under it: ad click → PayPal capture → ledger → what Meta heard. The same pieces
+// make the PayPal ledger widget inside AG Studio (LedgerWidget.jsx).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AgCharts, BarSeriesModule, CategoryAxisModule, LegendModule, ModuleRegistry as ChartModules, NumberAxisModule } from "ag-charts-community";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
-import { byAdChart, decisionOf, groupByAd, totalsOf } from "./gridTotals.js";
+import { byAdChart, decisionOf, groupByAd, totalsOf, trailHeight, trailSteps, withTrail } from "./gridTotals.js";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 ChartModules.registerModules([BarSeriesModule, CategoryAxisModule, NumberAxisModule, LegendModule]);
@@ -18,10 +20,10 @@ const theme = themeQuartz.withParams({
   headerBackgroundColor: "#F7F7F5", headerFontWeight: 600, borderColor: "#E6E6E3", rowBorder: { color: "#F0F0EE" },
   accentColor: "#0F8A4B", wrapperBorderRadius: 12, rowHoverColor: "#F7F7F5", spacing: 7,
 });
-const money = (v) => `$${Number(v || 0).toFixed(2)}`;
-const trail = (id) => `/trail?capture=${encodeURIComponent(id)}`;
+export const money = (v) => `$${Number(v || 0).toFixed(2)}`;
+export const trail = (id) => `/trail?capture=${encodeURIComponent(id)}`;
 
-function StatusCell({ data, node }) {
+export function StatusCell({ data, node }) {
   if (!data) return null;
   if (node.rowPinned || data.isGroup) return <b className="grid-total">{data.status}</b>;
   const cls = data.status === "Paid" ? "pill good" : data.status.startsWith("Held") ? "pill warn" : "pill";
@@ -31,16 +33,31 @@ function CaptureCell({ value, node, data }) {
   if (!data || node.rowPinned || data.isGroup) return null;
   return <a className="grid-id" href={trail(value)} title="Open its money trail">{value}</a>;
 }
-function AdCell({ data, context, node }) {
+// the ▸ that opens a payment's trail row under it
+export function TrailToggle({ data, context }) {
+  const on = context.open?.has(data.capture_id);
+  return <button type="button" className="trail-toggle" aria-expanded={on} aria-label={`${on ? "Close" : "Open"} the trail of capture ${data.capture_id}`} onClick={(e) => { e.stopPropagation(); context.toggle(data.capture_id); }}>{on ? "▾" : "▸"}</button>;
+}
+export function AdCell({ data, context, node }) {
   if (!data) return null;
   if (node.rowPinned || data.isGroup) return <b className="grid-total">{data.ad}</b>;
-  // inside a group the ad is the group's: the row shows how it was paid and links its PayPal capture to the money trail
-  if (context.grouped) return <a className="grid-ad grid-leaf" href={trail(data.capture_id)} title={`PayPal capture ${data.capture_id}: open its money trail`}>{data.via} · {data.capture_id.slice(0, 8)}…</a>;
-  return context.narrow ? <a className="grid-ad" href={trail(data.capture_id)} title={`PayPal capture ${data.capture_id}: open its money trail`}>{data.ad}</a> : <span title={data.capture_id}>{data.ad}</span>;
+  // inside a group the ad is the group's: the row shows how it was paid; ▸ opens its trail
+  if (context.grouped) return <span className="grid-leaf-wrap"><TrailToggle data={data} context={context} /><span className="grid-leaf">{data.via} · {data.capture_id.slice(0, 8)}…</span></span>;
+  return <span className="grid-leaf-wrap"><TrailToggle data={data} context={context} /><span title={data.capture_id}>{data.ad}</span></span>;
+}
+// the trail row under a payment: four steps, then the full money trail page
+export function TrailRow({ data }) {
+  if (!data?.of) return null;
+  return (
+    <div className="trail-row">
+      <ol>{trailSteps(data.of).map((s, i) => <li key={s.k}><b>{i + 1} · {s.k}</b><span>{s.v}</span></li>)}</ol>
+      <a href={trail(data.of.capture_id)}>Full money trail →</a>
+    </div>
+  );
 }
 // the Decision cell: a select the owner edits in place; rows with nothing left to decide show plain text
 // the Decision editor: one click on the cell opens the choices under it; picking a new one acts, Esc closes
-function DecisionEditor({ data, stopEditing, act }) {
+export function DecisionEditor({ data, stopEditing, act }) {
   const d = decisionOf(data), first = useRef(null);
   useEffect(() => { first.current?.focus(); }, []);
   const pick = (o) => { stopEditing(true); if (o !== d.value) act(o, data); };
@@ -50,7 +67,7 @@ function DecisionEditor({ data, stopEditing, act }) {
     </div>
   );
 }
-function DecisionCell({ data, node }) {
+export function DecisionCell({ data, node }) {
   if (!data || node.rowPinned || data.isGroup) return null;
   const d = decisionOf(data);
   if (!d.options.length) return <span className="muted">{d.value}</span>;
@@ -87,6 +104,8 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
   const grid = useRef(null), box = useRef(null);
   const [grouped, setGrouped] = useState(true);
   const [pick, setPick] = useState("");
+  const [open, setOpen] = useState(() => new Set());
+  const toggle = useMemo(() => (id) => setOpen((cur) => { const n = new Set(cur); n.has(id) ? n.delete(id) : n.add(id); return n; }), []);
   const onPick = useMemo(() => (ad) => setPick((cur) => (cur === ad ? "" : ad)), []);
   const [width, setWidth] = useState(0);
   useEffect(() => {
@@ -104,6 +123,8 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
       via: p.via === "invoice" ? "invoice" : "checkout",
       status: held ? "Held: double?" : p.status === "REFUNDED" ? "Refunded" : part ? `Paid, ${money(p.refunded_amount)} back` : "Paid",
       meta: metaSent[p.capture_id]?.ok ? "Received" : p.status === "REFUNDED" ? "No purchase" : "Not sent",
+      source: p.source === "fb" ? "Meta click" : p.source === "g" ? "Google click" : "", date: String(p.captured_at || "").slice(0, 10),
+      metaAt: metaSent[p.capture_id]?.ok && metaSent[p.capture_id].at ? String(metaSent[p.capture_id].at).slice(0, 16).replace("T", " ") : "",
       kept: held || p.status === "REFUNDED" ? 0 : Number(p.amount) - Number(p.refunded_amount || 0),
       held, why: held ? `Held out of paid orders: same payer and ad as ${dup[p.capture_id].first}, ${dup[p.capture_id].seconds} s apart. Count it if it is a separate order.` : "", refundable: !held && (p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED"),
     };
@@ -111,7 +132,7 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
   // grouped: one subtotal row per ad, then its payments; sorting and filtering are for the ungrouped view
   // a bar picked in the chart narrows the grid to that ad (the total row follows)
   const shown = useMemo(() => (pick ? rows.filter((r) => r.ad === pick) : rows), [rows, pick]);
-  const data = useMemo(() => (grouped ? groupByAd(shown) : shown), [shown, grouped]);
+  const data = useMemo(() => withTrail(grouped ? groupByAd(shown) : shown, open), [shown, grouped, open]);
   const cols = useMemo(() => [
     { headerName: "Ad click", children: [{ field: "ad", headerName: grouped ? "Ad, then each payment" : "Ad", flex: 1.4, minWidth: grouped ? 150 : 100, cellRenderer: AdCell }] },
     { headerName: "PayPal", children: [
@@ -133,23 +154,23 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
       cellEditorParams: { act: (choice, row) => (choice === "Refund…" ? onRefund(row.raw) : choice === "Separate order…" ? onCount(row.capture_id) : null) },
       valueSetter: () => false },
   ], [narrow, tiny, grouped, onRefund, onCount]);
-  const retotal = (api) => { const list = []; api.forEachNodeAfterFilter((n) => n.data && !n.data.isGroup && list.push(n.data)); setTotal(totalsOf(list, narrow)); };
+  const retotal = (api) => { const list = []; api.forEachNodeAfterFilter((n) => n.data && !n.data.isGroup && !n.data.isDetail && list.push(n.data)); setTotal(totalsOf(list, narrow)); };
   const exportCsv = () => grid.current?.api?.exportDataAsCsv({ fileName: "paypal-ledger.csv", columnKeys: ["ad", "amount", "kept", "via", "status", "meta", "capture_id"],
-    shouldRowBeSkipped: (p) => Boolean(p.node.data?.isGroup), processCellCallback: (p) => (p.column.getColId() === "ad" ? p.node.data?.ad : p.value) });
+    shouldRowBeSkipped: (p) => Boolean(p.node.data?.isGroup || p.node.data?.isDetail), processCellCallback: (p) => (p.column.getColId() === "ad" ? p.node.data?.ad : p.value) });
   return (
     <div className="ledger-grid" ref={box}>
       <KeptByAd rows={rows} pick={pick} onPick={onPick} narrow={narrow} />
       {pick && <div className="grid-pick"><button type="button" className="chip-x" onClick={() => setPick("")} aria-label={`Show every ad, not only ${pick}`}>Showing: {pick} ×</button><span className="muted">the total row follows the filter</span></div>}
       <div style={{ height: data.length > 10 ? 520 : "auto" }}>
-        <AgGridReact ref={grid} theme={theme} rowData={data} columnDefs={cols} context={{ narrow, grouped }}
+        <AgGridReact ref={grid} theme={theme} rowData={data} columnDefs={cols} context={{ narrow, grouped, open, toggle }}
           defaultColDef={{ sortable: !grouped, filter: !grouped, resizable: true, suppressMovable: true }}
-          domLayout={data.length > 10 ? "normal" : "autoHeight"} getRowId={(p) => p.data?.capture_id || p.data?.groupId || "total"} rowHeight={44}
+          domLayout={data.length > 10 ? "normal" : "autoHeight"} getRowId={(p) => p.data?.detailId || p.data?.capture_id || p.data?.groupId || "total"} getRowHeight={(p) => (p.data?.isDetail ? trailHeight(width) : 44)}
+          isFullWidthRow={(p) => Boolean(p.rowNode.data?.isDetail)} fullWidthCellRenderer={TrailRow}
           getRowClass={(p) => (p.node.rowPinned ? "row-total" : p.data?.isGroup ? "row-group" : p.data?.held ? "row-held" : "")}
           pinnedBottomRowData={total ? [total] : []} tooltipShowDelay={200}
-          // one click on a Decision cell opens its list of choices at once
           onFirstDataRendered={(e) => retotal(e.api)} onGridSizeChanged={(e) => retotal(e.api)} onFilterChanged={(e) => retotal(e.api)} onRowDataUpdated={(e) => retotal(e.api)} />
       </div>
-      <div className="ledger-foot"><span className="muted">{grouped ? "Grouped by ad, with a subtotal per ad; ungroup to sort and filter (the total row follows the filters)" : "Sort or filter any column; the total row follows the filters"}; {grouped || narrow ? "a payment's link" : "a capture id"} opens its money trail; hover a held row for why; click a Decision cell to change it.</span>
+      <div className="ledger-foot"><span className="muted">{grouped ? "Grouped by ad, with a subtotal per ad; ungroup to sort and filter (the total row follows the filters)" : "Sort or filter any column; the total row follows the filters"}; {narrow ? "" : "a capture id opens its money trail; "}▸ opens a payment's trail; hover a held row for why; click a Decision cell to change it.</span>
         <span className="ledger-acts"><button type="button" className="btn ghost" onClick={() => setGrouped((g) => !g)}>{grouped ? "Ungroup" : "Group by ad"}</button><button type="button" className="btn ghost" onClick={exportCsv}>Export CSV</button></span></div>
     </div>
   );

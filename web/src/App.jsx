@@ -146,6 +146,8 @@ export default function App({ first = null }) {
   // webhooks first; this asks PayPal about sent invoices too, since the sandbox does not always emit INVOICING.INVOICE.PAID
   // a custom Studio widget that acted (the Nudge button) asks for fresh invoices, so the board shows the new reminders
   useEffect(() => { const on = () => loadInvoices(); addEventListener("paid-signal:refresh", on); return () => removeEventListener("paid-signal:refresh", on); }, [loadInvoices]);
+  // the ledger widget in Studio refunded a payment or counted one: reload the ledger, so every widget shows it
+  useEffect(() => { const on = () => csvRef.current && load(csvRef.current); addEventListener("paid-signal:ledger", on); return () => removeEventListener("paid-signal:ledger", on); }, [load]);
   const syncInvoices = useCallback(async () => { setSyncNote(""); try { const d = await api("/api/invoices/sync", {}); if (d.paid && csvRef.current) load(csvRef.current); } catch (e) { setSyncNote(e.message); } loadInvoices(); }, [load, loadInvoices]);
   // the dashboard asks PayPal for newly paid invoices on open; /studio only reads
   useEffect(() => { if (!STUDIO_PAGE) syncInvoices(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -525,7 +527,7 @@ export default function App({ first = null }) {
 
         <section id="studio" className="card studio-card" ref={studioBox} aria-label="AG Studio">
           <div className="card-head">
-            <div><h2>{view === "report" ? "Report · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2><p className="muted">{STUDIO_PAGE ? "Click a band in the money flow to filter the page and see the budget agent's verdict, then Approve. Open the assistant for Replay a budget run." : "Six custom widgets, a real shop's book, cross-filters, Claude in the assistant."}{layoutNote ? ` ${layoutNote}.` : ""}</p></div>
+            <div><h2>{view === "report" ? "Report · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2><p className="muted">{STUDIO_PAGE ? "Seven custom widgets on one ledger; the agents act on PayPal." : "Seven custom widgets, a real shop's book, cross-filters, Claude in the assistant."}{layoutNote ? ` ${layoutNote}.` : ""}</p></div>
             <div className="row">
               {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {myDecisionCount > 0 && <span className="count">{myDecisionCount}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
               <button className="btn" onClick={() => setLayoutNote(studio.current?.saveLayout() ? "Saved in this browser" : "Could not save")}>Save layout</button>
@@ -533,6 +535,12 @@ export default function App({ first = null }) {
               <button className="btn dark" onClick={openAssistant}>Open the Studio assistant</button>
             </div>
           </div>
+          {STUDIO_PAGE && <ol className="judge-strip" aria-label="For AG Grid judges: three clicks">
+            <li className="js-k">For AG Grid judges</li>
+            <li><b>1</b> Click a band in the money flow: the page filters, approve the budget verdict</li>
+            <li><b>2</b> In the PayPal ledger under it: ▸ opens a payment's trail; decide a payment</li>
+            <li><b>3</b> <button type="button" className="js-link" onClick={openAssistant}>Open the assistant</button>: Replay a budget run (recorded)</li>
+          </ol>}
           <div className="studio-pages" role="tablist" aria-label="Report pages">
             {[["overview", "Ads vs PayPal"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["shop", "Real shop: October"], ["mine", "Your page"]].map(([id, label]) => (
               <button key={id} role="tab" aria-selected={studioPage === id} className={studioPage === id ? "on" : ""} onClick={() => { setStudioPage(id); studio.current?.selectPage(id); }}>{label}</button>

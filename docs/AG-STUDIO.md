@@ -11,7 +11,14 @@ A click on the testimonial ad's band filters the page and shows the budget agent
 
 ![Money flow with the budget verdict](img/studio-flow-verdict.png)
 
-The same widget on the real gift shop's October book: 69% of the chats, 19% of the money kept.
+Right under it, the PayPal ledger widget (AG Grid, Community) narrowed by that same click to the testimonial ad, with one
+payment's trail open (ad click → PayPal capture → ledger → what Meta heard) and the owner's Decision per payment. A click
+on an ad's subtotal row filters the page back. Studio's cross-filter is on the ads table and does not reach each capture, so the two
+widgets also share the picked ad (`web/src/adPick.js`):
+
+![PayPal ledger widget in Studio](img/studio-ledger-widget.png)
+
+The money flow on the real gift shop's October book: 69% of the chats, 19% of the money kept.
 
 ![Money flow on the real shop's book](img/studio-shop-flow.png)
 

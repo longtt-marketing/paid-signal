@@ -5,7 +5,7 @@ const money = (v) => `$${Number(v || 0).toFixed(2)}`;
 export function totalsOf(list, short = false) {
   const n = (f) => list.filter(f).length;
   const kept = list.reduce((s, r) => s + (r.held || r.status === "Refunded" ? 0 : r.amount - Number(r.raw?.refunded_amount || 0)), 0);
-  return { ad: `Total · ${list.length} shown`, amount: list.reduce((s, r) => s + r.amount, 0), via: "", meta: `${n((r) => r.meta === "Received")} received`,
+  return { ad: `Total · ${list.length} shown`, amount: list.reduce((s, r) => s + r.amount, 0), via: "", meta: `${n((r) => String(r.meta).startsWith("Received"))} received`,
     kept, status: short ? `${n((r) => r.held)} held · ${n((r) => r.status === "Refunded")} back` : `${n((r) => r.held)} held · ${n((r) => r.status === "Refunded")} refunded`, capture_id: "",
     why: `${money(kept)} kept after refunds · ${n((r) => r.held)} held as possible double payments · ${n((r) => r.status === "Refunded")} refunded` };
 }
@@ -16,7 +16,7 @@ export function groupByAd(rows) {
   for (const r of rows) { if (!by.has(r.ad)) by.set(r.ad, []); by.get(r.ad).push(r); }
   const groups = [...by.entries()].map(([ad, list]) => ({
     head: { isGroup: true, groupId: `group:${ad}`, ad: `${ad} (${list.length})`, amount: list.reduce((s, r) => s + r.amount, 0), kept: list.reduce((s, r) => s + r.kept, 0),
-      status: `${list.filter((r) => r.held).length} held · ${list.filter((r) => r.status === "Refunded").length} refunded`, meta: `${list.filter((r) => r.meta === "Received").length} received` },
+      status: `${list.filter((r) => r.held).length} held · ${list.filter((r) => r.status === "Refunded").length} refunded`, meta: `${list.filter((r) => String(r.meta).startsWith("Received")).length} received` },
     list }));
   groups.sort((a, b) => b.head.kept - a.head.kept);
   return groups.flatMap((g) => [g.head, ...g.list]);
@@ -34,6 +34,26 @@ export function byAdChart(rows) {
   }
   const round = (v) => Math.round(v * 100) / 100;
   return [...by.values()].map((b) => ({ ...b, kept: round(b.kept), held: round(b.held), refunded: round(b.refunded) })).sort((a, b) => b.kept - a.kept || a.ad.localeCompare(b.ad));
+}
+
+// a payment's path in four steps, for the row that opens under it in the grid: the ad click, the PayPal capture, what the
+// ledger counts, and what Meta heard (each from the payment itself; the full trail page has the evidence)
+export function trailSteps(r) {
+  const ledger = r.held ? "held as a possible double payment, $0.00 kept" : r.status === "Refunded" ? "refunded, $0.00 kept" : `${r.status === "Paid" ? "a paid order" : r.status.toLowerCase()}, ${money(r.kept)} kept`;
+  return [
+    { k: "Ad click", v: r.ad === "No ad click" ? "no ad click on the order" : `${r.source || "a click"} on ${r.ad}` },
+    { k: "PayPal", v: `${r.via}, capture ${String(r.capture_id).slice(0, 8)}…, ${money(r.amount)}${r.date ? `, ${r.date}` : ""}` },
+    { k: "Ledger", v: ledger },
+    { k: "Meta", v: `${r.meta}${r.metaAt ? ` (${r.metaAt} UTC)` : ""}` },
+  ];
+}
+
+// the trail row's height for the grid's width: four steps in a row, wrapped in two lines, or stacked in two columns
+export const trailHeight = (w) => (w > 0 && w < 560 ? 196 : w < 900 ? 110 : 74);
+
+// the grid's rows with a trail row under each payment the owner opened
+export function withTrail(list, open) {
+  return list.flatMap((r) => (!r.isGroup && open.has(r.capture_id) ? [r, { isDetail: true, detailId: `trail:${r.capture_id}`, of: r }] : [r]));
 }
 
 // the owner's Decision cell: what it shows and what it may change to; a refunded row has nothing left to decide
