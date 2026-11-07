@@ -127,8 +127,9 @@ export default function App({ first = null }) {
   const markDistinct = useCallback(async (id) => {
     const reason = window.prompt("Why is this a separate order and not a double payment? (for example: a second child)");
     if (!reason) return;
-    try { await api("/api/duplicates/distinct", { capture_id: id, reason }); await load(csv); } catch (e) { setError(e.message); }
-  }, [load, csv]);
+    // the answer shows as a notice beside the ledger, where the owner clicked (the server explains a refusal)
+    try { await api("/api/duplicates/distinct", { capture_id: id, reason }); await load(csv); flash("Counted as a separate order: the ad, Meta and the commission count it again."); } catch (e) { flash(e.message); }
+  }, [load, csv]); // eslint-disable-line react-hooks/exhaustive-deps
   // the last checked recommendation and the decisions on it come back after a reload
   useEffect(() => {
     fetch("/api/recommendation").then((r) => r.json()).then(({ latest, mine, shared, decisions: ds = [], decision_count = 0, my_decision_count = 0 }) => {

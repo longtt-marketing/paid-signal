@@ -23,8 +23,10 @@ The real shop's whole book (735 payments) as an AG Grid pivot in Studio: ad grou
 
 ![The shop's book as a pivot](img/studio-shop-book.png)
 
-And on the dashboard, the PayPal ledger as an AG Grid table (Community): grouped by ad with a subtotal row per ad, a
-pinned total row that follows the filters, CSV export, and an action on each payment row:
+And on the dashboard, the PayPal ledger as an AG Grid table (Community): an AG Charts bar chart of money kept, held and
+refunded per ad, whose bars filter the grid; the grid grouped by ad with a subtotal row per ad, a pinned total row that
+follows the filters, CSV export, and the owner's Decision column, edited in the cell (Refund… on a paid payment,
+Separate order… on a held one; the server checks each, and previews refunds on the seeded demo payments). Here the testimonial ad's bar is picked:
 
 ![PayPal ledger in AG Grid](img/dashboard-ledger-grid.png)
 

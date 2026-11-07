@@ -6,6 +6,16 @@
 
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
+**For the AG Grid judges, where each piece is** (all live, no login; screenshots in [docs/AG-STUDIO.md](docs/AG-STUDIO.md)):
+
+| What | See it | Code |
+|---|---|---|
+| Money-flow widget: a band runs from an ad's share of leads to its share of PayPal money; a click filters the page and shows the budget agent's checked verdict to approve | [/studio](https://paid-signal.thelongmarketing.workers.dev/studio), first page | `web/src/MoneyFlowWidget.jsx` |
+| AG Grid ledger: grouped by ad with subtotals, a Decision column edited in the cell (Refund… or Separate order…, checked by the server), an AG Charts bar chart whose bars filter the grid | [Dashboard](https://paid-signal.thelongmarketing.workers.dev/#payments), PayPal ledger | `web/src/LedgerGrid.jsx`, `web/src/gridTotals.js` |
+| The real shop's 735 payments as an AG Grid pivot in Studio | /studio, page "Real shop: October" | `web/src/studio.js` |
+| Studio agents that write to PayPal (draft invoices, send reminders) within limits set in code | /studio, the assistant | `web/src/agentTools.js`, `web/src/claudeAdapter.js` |
+| Recorded runs played back through Studio's own agent loop, no model call | /studio, the assistant: Replay a budget run | `web/src/history.js`, `web/src/replay-budget.json` |
+
 Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:52): https://www.youtube.com/watch?v=jLqSAY67n9c ([script](docs/video-script.md)) · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
 
 **One real shop's October** (a gift shop that sells in chat; the author runs its Meta ads; 260M VND, about $10,000, of spend; figures reported by the author; the shop's book is published in docs/proof (invoices, payments, refunds, anonymised ids) and `node scripts/eval-shop-replay.mjs` runs it through the same ledger code: 705 paid orders and 1,317M VND, as the accountant found, and its 7 double transfers held (each a second payment for the same order); paid by bank transfer and matched to orders by the shop's accountant, ad group taken from the chat that started each order): the ad with 69.4% of the chats brought 19.3% of the money, and the ad with 20.7% of the chats brought 56.3%. By cost per chat the ads rank A, B, C; by money kept per ad dollar, B, C, A. Numbers: [docs/proof/merchant-case-2026-10.json](docs/proof/merchant-case-2026-10.json), read by [src/merchantCase.js](src/merchantCase.js).
@@ -177,7 +187,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 178 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 191 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

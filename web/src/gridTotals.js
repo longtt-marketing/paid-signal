@@ -21,3 +21,24 @@ export function groupByAd(rows) {
   groups.sort((a, b) => b.head.kept - a.head.kept);
   return groups.flatMap((g) => [g.head, ...g.list]);
 }
+
+// one bar per ad for the AG Charts chart above the grid: money kept, money held as a possible double payment, money
+// refunded (full or part), most kept first; the three parts add up to what the ad's payments brought in
+export function byAdChart(rows) {
+  const by = new Map();
+  for (const r of rows) {
+    const b = by.get(r.ad) || { ad: r.ad, kept: 0, held: 0, refunded: 0, payments: 0 };
+    b.payments += 1;
+    if (r.held) b.held += r.amount; else { b.kept += r.kept; b.refunded += r.amount - r.kept; }
+    by.set(r.ad, b);
+  }
+  const round = (v) => Math.round(v * 100) / 100;
+  return [...by.values()].map((b) => ({ ...b, kept: round(b.kept), held: round(b.held), refunded: round(b.refunded) })).sort((a, b) => b.kept - a.kept || a.ad.localeCompare(b.ad));
+}
+
+// the owner's Decision cell: what it shows and what it may change to; a refunded row has nothing left to decide
+export function decisionOf(row) {
+  if (row.held) return { value: "Hold", options: ["Hold", "Separate order…"] };
+  if (row.refundable) return { value: "Keep", options: ["Keep", "Refund…"] };
+  return { value: row.status === "Refunded" ? "Refunded" : "", options: [] };
+}
