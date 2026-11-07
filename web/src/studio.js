@@ -74,7 +74,7 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
     const gross = Number(p.amount), back = Number(p.refunded_amount || 0), hold = back < gross && held.has(p.capture_id);
     const m = sent[p.capture_id], inv = invoices.find((i) => i.id === p.order_id);
     // what the ad platform learned about this payment, in the owner's words
-    const meta = m?.ok && m.events_received > 0 ? "Received by Meta" : back >= gross ? "Held: fully refunded" : hold ? "Held: possible duplicate" : m?.held ? `Held: ${m.held}` : !p.click_id ? "Held: no ad click" : "Not sent yet";
+    const meta = m?.ok && m.events_received > 0 ? "Received by Meta" : back >= gross ? "Not sent: refunded" : hold ? "Not sent: possible double payment" : m?.held ? `Not sent: ${m.held}` : !p.click_id ? "Not sent: no ad click" : "Not sent yet";
     return {
       via: p.via === "invoice" ? "PayPal invoice" : "PayPal checkout", lead: inv ? inv.lead.replace(" (fictional)", "") : p.via === "invoice" ? "Invoice lead" : "Shop visitor", meta,
       metaAt: m?.ok ? String(m.at).slice(0, 19).replace("T", " ") : "",
@@ -135,16 +135,26 @@ export const initialReport = {
   panels: { filters: { collapsed: true }, data: { collapsed: true }, ai: { collapsed: true } },
   pages: [
     {
+      // the first page is the path a judge follows: the report's claim against PayPal's money, every payment behind it
+      // (filtered by the same click), and the agents acting on PayPal; the per-ad detail is on the next page
       id: "overview", name: "Ads vs PayPal",
+      widgets: {
+        flow: { type: "money-flow", dataMapping: { category: [{ id: "ads.name" }], reported: [sum("ads.leads")], money: [sum("ads.revenue")] }, format: { title: { enabled: true, text: "1 · Leads in the ad report → money PayPal confirms" } } },
+        // the PayPal ledger, one row per capture; a band click in the flow narrows it to that ad (adPick.js)
+        pays: { type: "paypal-ledger", dataMapping: { ad: [{ id: "captures.adName" }], id: [{ id: "captures.id" }], status: [{ id: "captures.status" }], via: [{ id: "captures.via" }], meta: [{ id: "captures.meta" }], source: [{ id: "captures.source" }], date: [{ id: "captures.date" }], gross: [sum("captures.gross")], refunded: [sum("captures.refunded")], net: [sum("captures.net")], held: [sum("captures.held")] },
+          format: { title: { enabled: true, text: "2 · PayPal ledger: every payment, filtered with the page" } } },
+        owes: { type: "who-still-owes", dataMapping: { who: [{ id: "invoices.who" }], status: [{ id: "invoices.status" }], amount: [sum("invoices.amount")], days: [{ id: "invoices.days", aggregation: "max" }], nudge: [{ id: "invoices.nudge" }] },
+          format: { title: { enabled: true, text: "3 · Who still owes: the nudge agent sends PayPal reminders" } } },
+      },
+      widgetLayout: { flow: at(0, 0, 24, 16), pays: at(0, 16, 24, 28), owes: at(0, 44, 24, 24) },
+    },
+    {
+      id: "perad", name: "Per ad",
       widgets: {
         leads: kpi("Leads (ads)", sum("ads.leads")),
         payers: kpi("Paid orders", sum("ads.payers")),
         rpd: kpi("Revenue per $1 of ads", { id: "revenuePerDollar" }),
         nopayer: kpi("Ad spend per paid order", { id: "costPerPayer" }),
-        flow: { type: "money-flow", dataMapping: { category: [{ id: "ads.name" }], reported: [sum("ads.leads")], money: [sum("ads.revenue")] }, format: { title: { enabled: true, text: "Leads in the ad report → money PayPal confirms" } } },
-        // the PayPal ledger as an AG Grid table right under the money flow: a band click narrows it to that ad
-        pays: { type: "paypal-ledger", dataMapping: { ad: [{ id: "captures.adName" }], id: [{ id: "captures.id" }], status: [{ id: "captures.status" }], via: [{ id: "captures.via" }], meta: [{ id: "captures.meta" }], source: [{ id: "captures.source" }], date: [{ id: "captures.date" }], gross: [sum("captures.gross")], refunded: [sum("captures.refunded")], net: [sum("captures.net")], held: [sum("captures.held")] },
-          format: { title: { enabled: true, text: "PayPal ledger: every payment, filtered with the page" } } },
         claim: { type: "claim-vs-confirmed", dataMapping: { category: [{ id: "ads.name" }], claimed: [sum("ads.leads")], confirmed: [sum("ads.payers")] }, format: { title: { enabled: true, text: "What each ad claims vs what PayPal confirms" } } },
         table: {
           type: "grid",
@@ -154,7 +164,7 @@ export const initialReport = {
         },
         funnel: { type: "lead-funnel", dataMapping: { category: [{ id: "ads.name" }], leads: [sum("ads.leads")], invoiced: [sum("ads.invoiced")], paid: [sum("ads.payers")] }, format: { title: { enabled: true, text: "Leads, PayPal invoices and paid orders, per ad" } } },
       },
-      widgetLayout: { leads: at(0, 0, 6, 7), payers: at(6, 0, 6, 7), rpd: at(12, 0, 6, 7), nopayer: at(18, 0, 6, 7), flow: at(0, 7, 24, 16), pays: at(0, 23, 24, 28), claim: at(0, 51, 24, 13), table: at(0, 64, 24, 18), funnel: at(0, 82, 24, 13) },
+      widgetLayout: { leads: at(0, 0, 6, 7), payers: at(6, 0, 6, 7), rpd: at(12, 0, 6, 7), nopayer: at(18, 0, 6, 7), claim: at(0, 7, 24, 13), table: at(0, 20, 24, 18), funnel: at(0, 38, 24, 13) },
     },
     {
       id: "captures", name: "PayPal captures",
@@ -273,10 +283,11 @@ export const phoneReport = {
   ...initialReport,
   pages: initialReport.pages.map((pg) => ({
     ...pg,
-    ...(pg.id === "overview" ? { widgets: { ...pg.widgets, rpd: kpi("Revenue per $1", { id: "revenuePerDollar" }), nopayer: kpi("Per paid order", { id: "costPerPayer" }) } } : {}),
+    ...(pg.id === "perad" ? { widgets: { ...pg.widgets, rpd: kpi("Revenue per $1", { id: "revenuePerDollar" }), nopayer: kpi("Per paid order", { id: "costPerPayer" }) } } : {}),
     ...(pg.id === "shop" ? { widgets: { ...pg.widgets, chats: kpi("Chats", { id: "sChats" }), kept: kpi("Orders kept", { id: "sKept" }), money: kpi("Kept, M VND", { id: "sMoneyM" }), spend: kpi("Spend, M VND", { id: "sSpendM" }) } } : {}),
-    widgetLayout: pg.id === "overview"
-      ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), flow: at(0, 14, 24, 16), pays: at(0, 30, 24, 30), claim: at(0, 60, 24, 16), table: at(0, 76, 24, 20), funnel: at(0, 96, 24, 16) }
+    widgetLayout: pg.id === "overview" ? { flow: at(0, 0, 24, 16), pays: at(0, 16, 24, 30), owes: at(0, 46, 24, 34) }
+      : pg.id === "perad"
+      ? { leads: at(0, 0, 12, 7), payers: at(12, 0, 12, 7), rpd: at(0, 7, 12, 7), nopayer: at(12, 7, 12, 7), claim: at(0, 14, 24, 16), table: at(0, 30, 24, 20), funnel: at(0, 50, 24, 16) }
       : pg.id === "ledger" ? { path: at(0, 0, 24, 20), ledger: at(0, 20, 24, 24) }
       : pg.id === "owes" ? { board: at(0, 0, 24, 34), list: at(0, 34, 24, 20) }
       : pg.id === "mine" ? {}

@@ -68,6 +68,9 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
     addEventListener(AD_PICK, on); return () => removeEventListener(AD_PICK, on);
   }, [widgetApi, cat]);
   const selected = new Set((widgetApi.getCrossFilterSelections?.() || []).flatMap((s) => (s.type === "value" ? s.values : [])));
+  // a filter set some other way (the assistant's filter_page_to_ad tool, a saved layout) reaches the ledger too
+  const ownKey = [...selected].map(String).sort().join("|");
+  useEffect(() => { if (ownKey !== getPick().join("|")) setPick(ownKey ? ownKey.split("|") : [], "flow"); }, [ownKey]);
   const choose = (r) => (e) => { widgetApi.toggleCrossFilter({ type: "value", value: r.value, field: cat, group: 0, reset: !(e.metaKey || e.ctrlKey) }); setPick(nextPick(getPick(), r.value), "flow"); e.stopPropagation(); };
 
   const one = selected.size === 1 ? rows.find((r) => selected.has(r.value)) : null;
@@ -124,8 +127,8 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
                 <path d={d} fill={ahead ? PAID : CLAIMED} opacity={on ? 0.7 : ahead ? 0.42 : 0.5} />
                 <rect x={0} y={ya} width={x0} height={L.h} rx="3" fill={CLAIMED} />
                 <rect x={x1} y={yb} width={w - x1} height={R.h} rx="3" fill={ahead ? PAID : FADED} />
-                {L.h >= 15 && <text x={8} y={ya + Math.min(L.h / 2 + 4, 17)} fontSize={fs} fontWeight="600" fill={INK}>{label(r, "l")}</text>}
-                {R.h >= 15 && <text x={x1 + 8} y={yb + Math.min(R.h / 2 + 4, 17)} fontSize={fs} fontWeight="600" fill={ahead ? SHEET : INK}>{label(r, "r")}</text>}
+                {L.h >= 9 && <text x={8} y={ya + Math.min(L.h / 2 + 4, 17)} fontSize={Math.max(8, Math.min(fs, L.h - 1))} fontWeight="600" fill={INK}>{label(r, "l")}</text>}
+                {R.h >= 9 && <text x={x1 + 8} y={yb + Math.min(R.h / 2 + 4, 17)} fontSize={Math.max(8, Math.min(fs, R.h - 1))} fontWeight="600" fill={ahead ? SHEET : INK}>{label(r, "r")}</text>}
                 {on && <path d={d} fill="none" stroke={INK} strokeWidth="1.5" />}
               </g>
             );

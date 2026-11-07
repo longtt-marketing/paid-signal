@@ -13,8 +13,7 @@ A click on the testimonial ad's band filters the page and shows the budget agent
 
 Right under it, the PayPal ledger widget (AG Grid, Community) narrowed by that same click to the testimonial ad, with one
 payment's trail open (ad click → PayPal capture → ledger → what Meta heard) and the owner's Decision per payment. A click
-on an ad's subtotal row filters the page back. Studio's cross-filter is on the ads table and does not reach each capture, so the two
-widgets also share the picked ad (`web/src/adPick.js`):
+on an ad's subtotal row filters the page back; the two widgets share the picked ad (`web/src/adPick.js`):
 
 ![PayPal ledger widget in Studio](img/studio-ledger-widget.png)
 
@@ -67,7 +66,7 @@ totals equal the ledger's and the shop book's (705 kept orders, 1,317M VND, 12,1
 
 ## Report
 
-Six pages: Ads vs PayPal, PayPal captures, Ad → PayPal → Meta, Who still owes, Real shop: October, and a blank Your page.
+Seven pages: Ads vs PayPal (the money flow, the PayPal ledger and Who still owes), Per ad, PayPal captures, Ad → PayPal → Meta, Who still owes, Real shop: October, and a blank Your page.
 A phone layout re-flows every page. **Save layout** keeps the owner's version in the browser; **Reset** restores it.
 
 ## Theme
@@ -88,9 +87,10 @@ All read through Studio's widget API (`widgetApi.getData`), so page filters and 
 | Reported share vs money share | `ShareGapWidget.jsx` | each ad's share of what the report counts against its share of the money | a click filters the page; edit panel: when to flag an overrated ad |
 | Payment timeline | `TimelineWidget.jsx` | every capture on a time line per ad: paid, partly refunded, refunded | |
 | Leads → invoices → paid | `FunnelWidget.jsx` | per ad, leads, PayPal invoices and paid orders | |
+| PayPal ledger | `LedgerWidget.jsx` | every PayPal capture grouped by ad (AG Grid, Community), a subtotal row per ad, a pinned total | a click on an ad's subtotal row filters the page (through the money flow, `adPick.js`); ▸ opens a payment's trail; a Decision per payment (Refund… / Separate order…, checked by the server) |
 | Who still owes | `OwesWidget.jsx` | every sent invoice, days waiting, the last kind reminder | **Nudge who is waiting**: the click is the owner's approval; the chase agent sends PayPal reminders (at most three, unpaid only) |
 
-Each declares an `ai` description so Studio's agents can place and configure it, and the two with settings declare a
+Each declares an `ai` description so Studio's agents can place and configure it, and the three with settings declare a
 format shape (`widgetForm.js`) so those settings are part of the widget's state.
 
 ## Studio Agent Framework with Claude

@@ -6,15 +6,15 @@
 
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
-**For the AG Grid judges, where each piece is** (all live, no login; screenshots in [docs/AG-STUDIO.md](docs/AG-STUDIO.md)):
+**For the AG Grid judges, where each piece is** (all live, no login; screenshots in [docs/AG-STUDIO.md](docs/AG-STUDIO.md)). The agents in this Studio report do not only read: they write to PayPal, inside limits set in code. /studio opens on three widgets, read top to bottom: the money flow, the PayPal ledger under it, and Who still owes.
 
 | What | See it | Code |
 |---|---|---|
+| Studio agents that write to PayPal (draft invoices, send reminders) within limits set in code | /studio, the assistant | `web/src/agentTools.js`, `web/src/claudeAdapter.js` |
 | Money-flow widget: a band runs from an ad's share of leads to its share of PayPal money; a click filters the page and shows the budget agent's checked verdict to approve | [/studio](https://paid-signal.thelongmarketing.workers.dev/studio), first page | `web/src/MoneyFlowWidget.jsx` |
 | PayPal ledger widget in Studio, right under the money flow: an AG Grid table grouped by ad; a band click narrows it to that ad and a click on an ad's subtotal row filters the page back; ▸ opens a payment's trail (ad click → PayPal capture → ledger → what Meta heard); a Decision per payment | /studio, first page | `web/src/LedgerWidget.jsx`, `web/src/adPick.js` |
 | AG Grid ledger on the dashboard: grouped by ad with subtotals, the same trail row and Decision column (Refund… or Separate order…, checked by the server), an AG Charts bar chart whose bars filter the grid | [Dashboard](https://paid-signal.thelongmarketing.workers.dev/#payments), PayPal ledger | `web/src/LedgerGrid.jsx`, `web/src/gridTotals.js` |
 | The real shop's 735 payments as an AG Grid pivot in Studio | /studio, page "Real shop: October" | `web/src/studio.js` |
-| Studio agents that write to PayPal (draft invoices, send reminders) within limits set in code | /studio, the assistant | `web/src/agentTools.js`, `web/src/claudeAdapter.js` |
 | Recorded runs played back through Studio's own agent loop, no model call | /studio, the assistant: Replay a budget run | `web/src/history.js`, `web/src/replay-budget.json` |
 
 Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:52): https://www.youtube.com/watch?v=jLqSAY67n9c ([script](docs/video-script.md)) · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)

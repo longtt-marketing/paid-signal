@@ -125,7 +125,7 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           const studio = typeof window !== "undefined" ? window.__studio : null;
           if (!studio) return ctx.success("The report is not open.", { applied: false });
           const st = studio.getState(), shop = /^[ABC]$/.test(String(args.ad || "").toUpperCase());
-          const pageId = shop ? "shop" : "overview", widgetId = shop ? "gap" : "claim", field = shop ? "shopGroups.name" : "ads.name";
+          const pageId = shop ? "shop" : "overview", widgetId = shop ? "gap" : "flow", field = shop ? "shopGroups.name" : "ads.name";
           const SHOP = { A: "A · Attention video", B: "B · Customer reviews", C: "C · Personalised for an occasion" };
           const value = shop ? SHOP[String(args.ad).toUpperCase()] : adName(String(args.ad || ""));
           const pages = st.pages.map((pg) => pg.id !== pageId ? pg : { ...pg, crossFilter: args.clear ? { values: {} } : { values: { [widgetId]: [{ type: "value", field: { id: field }, group: 0, values: [value] }] } } });
