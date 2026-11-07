@@ -64,8 +64,9 @@ export async function route({ request, env, url, pp, orders, ip }) {
     // "Agents → PayPal" shows PayPal's own status next to what the agent did.
     if (url.pathname === "/api/agent-actions") {
       const cached = await env.LEDGER.get("actions:v3", "json");
-      if (cached && Date.now() - Date.parse(cached.checked_at) < 600000) return json({ ...cached, cached: true });
-      const stop = await guard(env, request, "PayPal readbacks", 20, 300); if (stop) return json({ error: stop }, 429);
+      // ?fresh=1 after an agent acted (the Nudge button): read PayPal again now, within the same rate limit
+      if (cached && !url.searchParams.has("fresh") && Date.now() - Date.parse(cached.checked_at) < 600000) return json({ ...cached, cached: true });
+      const stop = await guard(env, request, "PayPal readbacks", 20, 300); if (stop) return json(cached ? { ...cached, cached: true } : { error: stop }, cached ? 200 : 429);
       const [invoices, payments, payouts] = await Promise.all([cachedList(env, "inv:"), listPayments(env), cachedList(env, "commission:")]);
       const list = agentActions({ invoices, payments, payouts }).slice(0, 40);
       const reads = new Map();

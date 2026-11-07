@@ -6,7 +6,7 @@
 
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
-**For the AG Grid judges, where each piece is** (all live, no login; screenshots in [docs/AG-STUDIO.md](docs/AG-STUDIO.md)). The agents in this Studio report do not only read: they write to PayPal, inside limits set in code. /studio opens on three widgets, read top to bottom: the money flow, the PayPal ledger under it, and Who still owes.
+**For the AG Grid judges, where each piece is** (all live, no login; screenshots in [docs/AG-STUDIO.md](docs/AG-STUDIO.md)). The agents in this Studio report do not only read: they write to PayPal, inside limits set in code. /studio opens on four widgets: the money flow, the PayPal ledger under it, then Who still owes beside the latest agent actions read back from PayPal (after "Nudge who is waiting" sends reminders, the page reads PayPal again, so they come first).
 
 | What | See it | Code |
 |---|---|---|
@@ -19,6 +19,19 @@ Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers
 | Recorded runs played back through Studio's own agent loop, no model call | /studio, the assistant: Replay a budget run | `web/src/history.js`, `web/src/replay-budget.json` |
 
 Licences: the two ledger tables are AG Grid Community; their grouping by ad, subtotal rows and trail rows are built in our code (`web/src/gridTotals.js`) and use no AG Grid Enterprise feature. The pivots, cross-filters and agent framework are AG Studio's (which bundles AG Grid Enterprise), under its own licence key.
+
+**AG Studio features used**
+
+| Studio feature | How Paid Signal uses it | Code |
+|---|---|---|
+| Custom widgets (`createWidgets`, `additionalTypes`) | seven: money flow, PayPal ledger, claimed vs confirmed, share gap, payment timeline, funnel, Who still owes | `web/src/*Widget.jsx`, `web/src/StudioPanel.jsx` |
+| Widget API: `getData`, `toggleCrossFilter`, `getCrossFilterSelections` | every custom widget reads through Studio, so page filters apply; a click in the flow, the claim chart or the share gap filters the page (a click on a ledger subtotal row does the same, through the money flow) | the widget files |
+| Widget settings in the edit panel (form sections, format shape) | three widgets have their own settings that Studio's agents can read and set | `web/src/widgetForm.js` |
+| Built-in widgets: grid, pivot grid, value, line and column charts | the agent actions grid, the shop's 735-payment pivot and the Ad → PayPal → Meta pivot, KPI tiles, weekly money kept (line), share of spend October vs Paid Signal's rule (columns) | `web/src/studio.js` |
+| Data model: sources, relations, measures, calendar | ads, PayPal captures, invoices, agent actions, the shop's groups and payments | `buildData` in `web/src/studio.js` |
+| Theme (`studioTheme.withParams`) and a phone layout | the ledger-paper look; a separate phone report | `web/src/studio.js` |
+| AI harness: custom LLM adapter, custom agents, tools, tool cards | Claude through a custom LLM adapter (Studio's `AgLlmAdapter` shape); budget and nudge agents; tools that draft invoices and send reminders on PayPal; a card per tool | `web/src/claudeAdapter.js`, `web/src/agentTools.js`, `web/src/toolDisplay.jsx` |
+| Report state (`getState`, `setState`, `selectedPageId`) | the filter_page_to_ad tool, the page tabs above the report, Save layout and Reset | `web/src/agentTools.js`, `web/src/StudioPanel.jsx` |
 
 Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:52): https://www.youtube.com/watch?v=jLqSAY67n9c ([script](docs/video-script.md)) · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
 

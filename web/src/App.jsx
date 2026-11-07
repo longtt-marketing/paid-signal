@@ -539,7 +539,7 @@ export default function App({ first = null }) {
             <li className="js-k">For AG Grid judges</li>
             <li><b>1</b> Click a band in the money flow: the page filters, approve the budget verdict</li>
             <li><b>2</b> In the PayPal ledger under it: ▸ opens a payment's trail; decide a payment</li>
-            <li><b>3</b> <button type="button" className="js-link" onClick={openAssistant}>Open the assistant</button>: Replay a budget run (recorded)</li>
+            <li><b>3</b> Nudge who still owes: the reminders appear beside it, read back from PayPal; or <button type="button" className="js-link" onClick={openAssistant}>open the assistant</button> to replay a budget run</li>
           </ol>}
           <div className="studio-pages" role="tablist" aria-label="Report pages">
             {[["overview", "Ads vs PayPal"], ["agents", "Agents → PayPal"], ["perad", "Per ad"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["shop", "Real shop: October"], ["mine", "Your page"]].map(([id, label]) => (

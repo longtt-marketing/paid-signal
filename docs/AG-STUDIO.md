@@ -71,7 +71,7 @@ totals equal the ledger's and the shop book's (705 kept orders, 1,317M VND, 12,1
 
 ## Report
 
-Eight pages: Ads vs PayPal (the money flow, the PayPal ledger and Who still owes), Agents → PayPal, Per ad, PayPal captures, Ad → PayPal → Meta, Who still owes, Real shop: October, and a blank Your page.
+Eight pages: Ads vs PayPal (the money flow, the PayPal ledger, Who still owes and the latest agent actions read back from PayPal), Agents → PayPal, Per ad, PayPal captures, Ad → PayPal → Meta, Who still owes, Real shop: October, and a blank Your page.
 A phone layout re-flows every page. **Save layout** keeps the owner's version in the browser; **Reset** restores it.
 
 ## Theme

@@ -31,9 +31,15 @@ const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, 
     .then(([c, csv]) => setShop(shopSources(c.read, csv))).catch(() => {}); }, []);
   // every thing an agent wrote to PayPal, read back from PayPal (the server caches the read-backs for ten minutes)
   const [actions, setActions] = useState([]);
-  useEffect(() => { fetch("/api/agent-actions").then((r) => r.json()).then((d) => setActions(d.items || [])).catch(() => {}); }, []);
+  useEffect(() => {
+    const load = (fresh) => fetch(`/api/agent-actions${fresh ? "?fresh=1" : ""}`).then((r) => r.json()).then((d) => d.items && setActions(d.items)).catch(() => {});
+    load(false);
+    // an agent acted from the report (the Nudge button): read PayPal again, now and twice more while the ledger settles (KV lists can lag)
+    const on = () => [2000, 15000, 45000].forEach((ms) => setTimeout(() => load(true), ms));
+    addEventListener("paid-signal:refresh", on); return () => removeEventListener("paid-signal:refresh", on);
+  }, []);
   const data = useMemo(() => (state ? buildData(state.reconciliation, state.payments, invoices, state.duplicates, state.metaSends, shop, actions) : undefined), [state, invoices, shop, actions]);
-  const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() + (invoices || []).map((i) => i.id + i.status + (i.reminded_at || "")).join() + `|shop${shop.sources[1].data.length}|acts${actions.length}` }), [state, invoices, shop, actions]);
+  const context = useMemo(() => ({ dataVersion: (state?.payments || []).map((p) => p.capture_id + p.refunded_amount).join() + (invoices || []).map((i) => i.id + i.status + (i.reminded_at || "")).join() + `|shop${shop.sources[1].data.length}|acts${actions.length}:${actions[0]?.at || ""}` }), [state, invoices, shop, actions]);
   // tell custom widgets the data changed, once Studio has taken the new data in
   useEffect(() => { if (!data) return; const t = setTimeout(() => dispatchEvent(new Event(DATA_EVENT)), 400); return () => clearTimeout(t); }, [data]);
   const widgets = useMemo(() => (defaults) => createWidgets({ additionalTypes: [claimWidgetDefinition, timelineWidgetDefinition, funnelWidgetDefinition, owesWidgetDefinition, shareGapWidgetDefinition, moneyFlowWidgetDefinition, ledgerWidgetDefinition], menu: [...defaults.menu, { label: "Paid Signal", widgetIds: ["claim-vs-confirmed", "payment-timeline", "lead-funnel", "who-still-owes", "share-gap", "money-flow", "paypal-ledger"] }] }), []);

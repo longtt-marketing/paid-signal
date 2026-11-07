@@ -41,7 +41,7 @@ export function OwesWidget({ dataMapping, widgetApi, context }) {
     if (!window.confirm("Send kind PayPal reminders now? The chase agent picks who to remind (at most three, unpaid invoices only).")) return;
     setBusy(true); setSaid("The chase agent is reading the unpaid invoices from PayPal…");
     try {
-      const r = await fetch("/api/agent/chase", { method: "POST" }), d = await r.json();
+      const r = await fetch("/api/agent/chase", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }), d = await r.json();
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
       setSaid(d.reminded?.length ? `Sent ${d.reminded.length} PayPal reminder${d.reminded.length === 1 ? "" : "s"}: ${d.reminded.map((x) => x.id).join(", ")}.` : d.summary || "Nobody needed a reminder.");
       dispatchEvent(new Event("paid-signal:refresh"));
