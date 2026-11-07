@@ -97,7 +97,7 @@ test("claim cell and search: leads against paid orders on a subtotal row; search
 });
 
 test("shop weeks: an October date gets its October week, a late November payment a November week", async () => {
-  const { weekOf } = await import("../web/src/studio.js");
+  const { weekOf } = await import("../web/src/shopWeek.js");
   assert.equal(weekOf("2026-10-03"), "W1 · 1-7 Oct");
   assert.equal(weekOf("2026-10-30"), "W5 · 29-31 Oct");
   assert.equal(weekOf("2026-11-02"), "W6 · 1-7 Nov");
