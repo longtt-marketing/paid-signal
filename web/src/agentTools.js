@@ -182,7 +182,8 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           });
           if (args.reset) return ctx.success("The ledger is back to every payment, grouped by ad.", { applied: true });
           if (!out) return ctx.success("The ledger grid did not answer; it may not be on screen.", { applied: false });
-          return ctx.success(`The ledger grid now shows ${out.shown} payment(s): ${label}.`, { applied: true, view: label, ...out });
+          const { ids, ...rest } = out; // every capture id the grid now shows, in its order (the eval compares them with the ledger)
+          return ctx.success(`The ledger grid now shows ${out.shown} payment(s): ${label}.`, { applied: true, view: label, ...rest, capture_ids: ids });
         },
       }),
       api.defineAiTool({

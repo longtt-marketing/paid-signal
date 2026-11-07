@@ -159,7 +159,7 @@ export const initialReport = {
       widgets: {
         flow: { type: "money-flow", dataMapping: { category: [{ id: "ads.name" }], reported: [sum("ads.leads")], money: [sum("ads.revenue")] }, format: { title: { enabled: true, text: "1 · Leads in the ad report → money PayPal confirms" } } },
         // the PayPal ledger, one row per capture; a band click in the flow narrows it to that ad (adPick.js)
-        pays: { type: "paypal-ledger", dataMapping: { ad: [{ id: "captures.adName" }], id: [{ id: "captures.id" }], status: [{ id: "captures.status" }], via: [{ id: "captures.via" }], meta: [{ id: "captures.meta" }], source: [{ id: "captures.source" }], date: [{ id: "captures.date" }], gross: [sum("captures.gross")], refunded: [sum("captures.refunded")], net: [sum("captures.net")], held: [sum("captures.held")] },
+        pays: { type: "paypal-ledger", dataMapping: { ad: [{ id: "captures.adName" }], id: [{ id: "captures.id" }], status: [{ id: "captures.status" }], via: [{ id: "captures.via" }], meta: [{ id: "captures.meta" }], source: [{ id: "captures.source" }], date: [{ id: "captures.date" }], at: [{ id: "captures.capturedAt" }], gross: [sum("captures.gross")], refunded: [sum("captures.refunded")], net: [sum("captures.net")], held: [sum("captures.held")] },
           format: { title: { enabled: true, text: "2 · PayPal ledger: every payment, filtered with the page" } } },
         owes: { type: "who-still-owes", dataMapping: { who: [{ id: "invoices.who" }], status: [{ id: "invoices.status" }], amount: [sum("invoices.amount")], days: [{ id: "invoices.days", aggregation: "max" }], nudge: [{ id: "invoices.nudge" }] },
           format: { title: { enabled: true, text: "3 · Who still owes: the nudge agent sends PayPal reminders" } } },

@@ -35,7 +35,8 @@ const STATUS_TEST = {
   refunded_or_held: (r) => r.held || r.status === "Refunded" || r.back > 0,
   paid: (r) => !r.held && r.status !== "Refunded",
 };
-const SORT_COL = { amount_desc: ["amount", "desc"], amount_asc: ["amount", "asc"], kept_desc: ["kept", "desc"], date_desc: ["date", "desc"] };
+// newest first sorts by the capture's time, not only its day, so payments on the same day keep their real order
+const SORT_COL = { amount_desc: ["amount", "desc"], amount_asc: ["amount", "asc"], kept_desc: ["kept", "desc"], date_desc: ["at", "desc"] };
 export function viewMatches(r, view) {
   if (r?.isDetail) r = r.of; // a payment's open trail goes with its payment
   if (!view || !r || r.isGroup) return true;
@@ -70,18 +71,20 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
   }, []);
   const m = Object.fromEntries(KEYS.map((k) => [k, dataMapping?.[k]?.[0]]));
   const ready = KEYS.every((k) => m[k]);
+  const atField = dataMapping?.at?.[0]; // optional: a layout saved before it existed still works
 
   useEffect(() => {
     if (!ready) { widgetApi.setDisplayState("incompleteDataMapping"); return; }
     let live = true;
     widgetApi.setDisplayState("loading");
-    widgetApi.getData({ fields: KEYS.map((k) => m[k]) }).then((res) => {
+    widgetApi.getData({ fields: [...KEYS.map((k) => m[k]), ...(atField ? [atField] : [])] }).then((res) => {
       if (!live) return;
       const out = (res.results?.rows || []).map((r) => {
         const v = Object.fromEntries(KEYS.map((k, i) => [k, pick(r, m[k], i)]));
+        const at = atField ? String(pick(r, atField, KEYS.length) ?? "") : "";
         const gross = Number(v.gross) || 0, back = Number(v.refunded) || 0, held = Number(v.held) > 0, st = String(v.status);
         return {
-          capture_id: String(v.id), ad: String(v.ad), adValue: v.ad, amount: gross, kept: Number(v.net) || 0, back, held,
+          capture_id: String(v.id), at: at || day(v.date), ad: String(v.ad), adValue: v.ad, amount: gross, kept: Number(v.net) || 0, back, held,
           via: String(v.via).replace("PayPal ", ""), source: String(v.source) === "Other" ? "" : String(v.source), date: day(v.date),
           status: held && /dispute/i.test(String(v.meta)) ? "Held: dispute" : held ? "Held: double?" : st === "REFUNDED" ? "Refunded" : back > 0 ? `Paid, ${money(back)} back` : "Paid",
           meta: String(v.meta), why: held && /dispute/i.test(String(v.meta)) ? "Held out of revenue: a PayPal dispute is open, or the buyer won it." : held ? "Held out of paid orders as a possible double payment: same payer and ad minutes apart. Separate order… counts it." : "",
@@ -92,7 +95,7 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
       widgetApi.setDisplayState(out.length ? "displayed" : "noData");
     }).catch(() => live && widgetApi.setDisplayState("noData"));
     return () => { live = false; };
-  }, [ready, widgetApi, context?.dataVersion, tick, ...KEYS.map((k) => m[k]?.id)]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ready, widgetApi, context?.dataVersion, tick, atField?.id, ...KEYS.map((k) => m[k]?.id)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = useMemo(() => (id) => setOpen((cur) => { const n = new Set(cur); n.has(id) ? n.delete(id) : n.add(id); return n; }), []);
   // the owner decides; the server checks; the report reloads from the ledger
@@ -136,7 +139,7 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
       if (!view.reply) return; // scroll and flash once, when the agent asks; later data refreshes only re-filter
       if (nodes.length) { api.ensureIndexVisible(0, "top"); api.flashCells({ rowNodes: nodes.slice(0, 6), columns: ["ad", "kept", "status"], flashDuration: 1400, fadeDuration: 900 }); }
       box.current?.closest(".ag-studio-layout-widget")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      const reply = view.reply; view.reply = null; reply({ shown: nodes.length, top: nodes.slice(0, 5).map((n) => ({ capture: n.data.capture_id, ad: n.data.ad, captured_usd: n.data.amount.toFixed(2), kept_usd: n.data.kept.toFixed(2), status: n.data.status })) });
+      const reply = view.reply; view.reply = null; reply({ shown: nodes.length, ids: nodes.map((n) => n.data.capture_id), top: nodes.slice(0, 5).map((n) => ({ capture: n.data.capture_id, ad: n.data.ad, captured_usd: n.data.amount.toFixed(2), kept_usd: n.data.kept.toFixed(2), status: n.data.status })) });
     }, 120);
     return () => clearTimeout(t);
   }, [view, data]);
@@ -157,7 +160,7 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
     // not shown, exported: the CSV carries the capture date, click source, refunded amount and why a payment is held
     { field: "date", headerName: "Captured (UTC date)", hide: true }, { field: "source", headerName: "Click source", hide: true },
     { field: "back", headerName: "Refunded", hide: true, valueFormatter: (p) => money(p.value) }, { field: "why", headerName: "Why held", hide: true },
-    { field: "amount", headerName: "Captured", hide: true, valueFormatter: (p) => money(p.value) }, { field: "capture_id", headerName: "PayPal capture", hide: true }, { field: "via", headerName: "Paid through", hide: true },
+    { field: "amount", headerName: "Captured", hide: true, valueFormatter: (p) => money(p.value) }, { field: "capture_id", headerName: "PayPal capture", hide: true }, { field: "at", headerName: "Captured at (UTC)", hide: true }, { field: "via", headerName: "Paid through", hide: true },
   ], [narrow, act, flat]);
 
   return (
@@ -200,6 +203,7 @@ export const ledgerWidgetDefinition = {
     id: field("The PayPal capture id."), status: field("PayPal's capture status."), via: field("Paid through: invoice or checkout."),
     meta: field("What Meta heard about the payment."), source: field("The click source."), date: field("The capture date."),
     gross: field("Amount captured.", ["numeric"]), refunded: field("Amount refunded.", ["numeric"]), net: field("Money kept (0 when held).", ["numeric"]), held: field("1 when held as a possible double payment.", ["numeric"]),
+    at: { type: "field", supportedRoles: ["category"], requires: { per: "dataMapping.ad", cardinality: "many" }, required: false, aiDescription: "Optional: the capture's time, so newest first keeps payments on the same day in order." },
   },
   form: (params) => params.createDefaults({ dataMappingItems: [{ key: "ad", label: "Ad" }, { key: "id", label: "Capture" }, { key: "status", label: "Status" }, { key: "via", label: "Paid through" }, { key: "meta", label: "Meta" }, { key: "source", label: "Click source" }, { key: "date", label: "Date" }, { key: "gross", label: "Captured" }, { key: "refunded", label: "Refunded" }, { key: "net", label: "Kept" }, { key: "held", label: "Held" }] }),
   formatShape: widgetFormat((s) => s.object({})),

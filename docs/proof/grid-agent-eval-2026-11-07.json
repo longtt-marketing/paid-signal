@@ -1,0 +1,653 @@
+{
+ "run": "2026-11-07",
+ "base": "http://localhost:8791",
+ "cases": 24,
+ "understood": 24,
+ "grid_ok": 24,
+ "both": 24,
+ "results": [
+  {
+   "request": "In the PayPal ledger, show only the payments that were refunded.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show me the held payments in the ledger.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Which payments are on hold as possible double payments? Show them in the grid.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "List refunded or held payments, newest first.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "refunded_or_held",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show every payment in the ledger, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "all",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the paid payments, most money kept first.",
+   "expected": {
+    "status": "paid",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "status": "paid",
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "In the grid, show the Testimonial ad's payments, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": "parent_carousel",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "status": "all",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "2SH783175L252453D",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "19L75638WN729671C",
+    "7G581478P1052730P"
+   ],
+   "grid_should_show": [
+    "2SH783175L252453D",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "19L75638WN729671C",
+    "7G581478P1052730P"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show refunds on the trial class video ad.",
+   "expected": {
+    "status": "refunded",
+    "ad": "trial_video",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the holiday camp ad's refunded payments.",
+   "expected": {
+    "status": "refunded",
+    "ad": "holiday_static",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the free guide's payments in the ledger.",
+   "expected": {
+    "status": "all",
+    "ad": "free_guide",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "free_guide",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "81X20615X87083050"
+   ],
+   "grid_should_show": [
+    "81X20615X87083050"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Which payments on the trial class ad are held? Show them.",
+   "expected": {
+    "status": "held",
+    "ad": "trial_video",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show payments that still count as paid for the Testimonial carousel.",
+   "expected": {
+    "status": "paid",
+    "ad": "parent_carousel",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "status": "paid"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7G581478P1052730P",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "2SH783175L252453D"
+   ],
+   "grid_should_show": [
+    "7G581478P1052730P",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "2SH783175L252453D"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Sort the ledger by money kept, highest first.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "sort": "kept_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212",
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "71264306943252202",
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212",
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "71264306943252202",
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Put the newest payments first in the PayPal ledger.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "sort": "date_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show anything refunded or on hold for the holiday camp ad.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": "holiday_static",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "status": "refunded_or_held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show paid payments on the trial class video ad, newest first.",
+   "expected": {
+    "status": "paid",
+    "ad": "trial_video",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "paid",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Filter the ledger to money that came back to buyers.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show me where we kept the most money: paid payments, biggest kept first.",
+   "expected": {
+    "status": "paid",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "status": "paid",
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the Testimonial ad's refunded or held payments.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": "parent_carousel",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "status": "refunded_or_held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "19L75638WN729671C"
+   ],
+   "grid_should_show": [
+    "19L75638WN729671C"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the free guide's paid payments.",
+   "expected": {
+    "status": "paid",
+    "ad": "free_guide",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "free_guide",
+    "status": "paid"
+   },
+   "understood": true,
+   "grid_shows": [
+    "81X20615X87083050"
+   ],
+   "grid_should_show": [
+    "81X20615X87083050"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show refunded payments, newest first.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "refunded",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Grid: held payments only, newest first.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "held",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show all the holiday camp payments, most kept first.",
+   "expected": {
+    "status": "all",
+    "ad": "holiday_static",
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "status": "all",
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the trial class video payments, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": "trial_video",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "all",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  }
+ ],
+ "note": "Run on a local wrangler dev with remote bindings (the live KV ledger and real Claude through the Worker's proxy), after the fix that sorts newest first by capture time. The first run of this eval found that bug: the grid sorted by day only, so payments on the same day came out of order (4 of the date_desc cases failed)."
+}
