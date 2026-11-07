@@ -36,6 +36,9 @@ export const HAS_REPLAY = Object.keys(RUNS[0].turns).length > 0, HAS_PAGE_REPLAY
 let REPLAY = { turns: {} }, RUN_PROMPT = "";
 const hash = (s) => { let h = 5381; for (const ch of String(s)) h = ((h << 5) + h + ch.charCodeAt(0)) | 0; return (h >>> 0).toString(36); };
 const firstUser = (items) => text((items || []).find((it) => it.type === "message" && it.kind === "input")?.content);
+const lastUser = (items) => text([...(items || [])].reverse().find((it) => it.type === "message" && it.kind === "input")?.content);
+// the lead agent is the one Paid Signal extends (agentTools.js EXTRA); its newest user message says whether a replay is on
+const LEAD_MARK = "You also act for a small shop that sells through PayPal";
 let used = {}, replaying = false;
 
 const toolChoice = (c) => (!c || c === "auto" ? undefined : c === "none" ? { type: "none" } : c === "required" ? { type: "any" } : { type: "tool", name: c.name });
@@ -61,6 +64,9 @@ export function claudeAdapter({ endpoint = "/api/ai/turn", model = "claude-sonne
         // the agent, by the opening of its instructions (the rest carries live page state that differs between runs)
         const key = hash(String(request.instructions || "").slice(0, 160));
         const items = request.input || [];
+        // a replay stopped halfway must not answer the next live question: a lead turn whose newest user message is not a
+        // replay prompt ends it
+        if (replaying && String(request.instructions || "").includes(LEAD_MARK) && !RUNS.some((r) => lastUser(items).startsWith(r.prompt))) replaying = false;
         const run0 = RUNS.find((r) => firstUser(items).startsWith(r.prompt));
         if (run0 && !items.some((it) => it.kind === "output")) { used = {}; replaying = true; REPLAY = run0; RUN_PROMPT = run0.prompt; }
         let data;

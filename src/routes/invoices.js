@@ -201,14 +201,20 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const rec = await env.LEDGER.get(`inv:${id}`, "json");
       if (!rec) return json({ error: "Unknown invoice." }, 404);
       if (rec.status !== "DRAFT") return json({ error: `Invoice is ${rec.status}, not a draft.` }, 400);
+      // two clicks at once (the Approvals panel and a chat card): the first marks the draft as being sent, the second stops
+      if (rec.approving && Date.now() - Date.parse(rec.approving) < 120000) return json({ error: "This draft is already being sent." }, 409);
       // per visitor first, then a shared budget, so one visitor cannot send every draft before the judges arrive
       const stop = await claudeGuard(env, request, "invoice sends", 3, 30); if (stop) return json({ error: stop }, 429);
+      const mark = new Date().toISOString();
+      await env.LEDGER.put(`inv:${id}`, JSON.stringify({ ...rec, approving: mark }));
+      const again = await env.LEDGER.get(`inv:${id}`, "json");
+      if (again?.approving !== mark) return json({ error: "This draft is already being sent." }, 409);
       const tools = toolkitTools(env, { invoices: { get: true, send: true } });
       const llm = anthropicLLM({ apiKey: env.ANTHROPIC_API_KEY, workspaceId: env.ANTHROPIC_WORKSPACE_ID, model: env.MODEL || undefined, system: SEND_SYSTEM, tools: SEND_TOOLS });
       const approvedAt = new Date().toISOString();
       const agent = await runSendAgent({ llm, tools, approved: { id, lead: rec.lead, ad: rec.ad, amount: String(rec.amount || "49.00") } });
       const fresh = await pp.getInvoice(id);
-      Object.assign(rec, { approved_visitor: visitorId(request), status: fresh.status, approved_at: approvedAt, pay_url: fresh.detail?.metadata?.recipient_view_url || rec.pay_url || null,
+      Object.assign(rec, { approving: null, approved_visitor: visitorId(request), status: fresh.status, approved_at: approvedAt, pay_url: fresh.detail?.metadata?.recipient_view_url || rec.pay_url || null,
         // "sent by the agent" only when PayPal itself no longer shows a draft
         ...(agent.sent && fresh.status && fresh.status !== "DRAFT" ? { sent_at: new Date().toISOString(), sent_by: "send agent (Claude + PayPal Agent Toolkit)" } : {}) });
       await env.LEDGER.put(`inv:${id}`, JSON.stringify(rec)); await forget("inv:");
