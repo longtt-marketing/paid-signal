@@ -7,6 +7,8 @@
 2. **You pay.** Ask to book: Claude drafts a real PayPal invoice through the Agent Toolkit. You came in from the testimonial ad (a test click), so when you pay as the sandbox buyer the ad gains your order (its count goes 4 → 5), the budget rule re-runs and Meta gets a Purchase test event.
 3. **Undo.** PayPal refunds it and the count goes back to 4.
 
+**Agents that write, checked by PayPal:** 35 of 35 agent writes in the shared demo ledger (invoice drafts, sends, latest reminder per invoice, a refund, a payout; judges' Try runs not included) point to PayPal objects that PayPal returned on 2026-11-07: 14 invoices with their current status, the refund COMPLETED and the payout SUCCESS: [live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions), Studio page Agents → PayPal.
+
 **Real data:** in a Vietnamese gift shop, the ad with 69% of the chats brought 19% of the money; its published book reruns through the same ledger code to the same 705 orders ([see it run](https://paid-signal.thelongmarketing.workers.dev/audit#shop)).
 
 **Also:** double payments refunded, the ad's creator paid per paid order, Meta told only what PayPal confirms, /audit for your own files, AG Studio where the agents act on PayPal, and a Verify with PayPal button that reads every ledger payment back from PayPal at click time. A person approves every money move; code holds every amount.

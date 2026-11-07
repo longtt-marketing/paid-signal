@@ -4,6 +4,8 @@
 
 **The ad report says the free guide wins (31 leads). PayPal says the testimonial ad makes the money (4 paid orders against 1). Paid Signal's AI agents act only on what PayPal confirms, and every money movement is checked in code.**
 
+**35 of 35** agent writes in the shared demo ledger (invoice drafts, sends, latest reminder per invoice, a refund, a payout; judges' Try runs not included) point to PayPal objects that PayPal returned on 2026-11-07: 14 invoices with their current status, the refund COMPLETED and the payout SUCCESS: [live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions), Studio page Agents → PayPal.
+
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
 **For the AG Grid judges, where each piece is** (all live, no login; screenshots in [docs/AG-STUDIO.md](docs/AG-STUDIO.md)). The agents in this Studio report do not only read: they write to PayPal, inside limits set in code. /studio opens on four widgets: the money flow, the PayPal ledger under it, then Who still owes beside the latest agent actions read back from PayPal (after "Nudge who is waiting" sends reminders, the page reads PayPal again, so they come first).

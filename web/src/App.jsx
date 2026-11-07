@@ -197,6 +197,9 @@ export default function App({ first = null }) {
   }, []);
   const [studioPage, setStudioPage] = useState("overview");
   const [morePages, setMorePages] = useState(false);
+  // the headline on /studio: how many of the agents' PayPal writes PayPal reports back right now
+  const [readBack, setReadBack] = useState(null);
+  useEffect(() => { if (STUDIO_PAGE) fetch("/api/agent-actions").then((r) => r.json()).then((d) => d.total && setReadBack(d)).catch(() => {}); }, []);
   const [layoutNote, setLayoutNote] = useState("");
   const [allInv, setAllInv] = useState(false);
   const [allAct, setAllAct] = useState(false);
@@ -538,6 +541,7 @@ export default function App({ first = null }) {
           </div>
           {STUDIO_PAGE && <ol className="judge-strip" aria-label="For AG Grid judges: three clicks">
             <li className="js-k">For AG Grid judges</li>
+            {readBack && <li><button type="button" className="js-link js-count" onClick={() => { setStudioPage("agents"); studio.current?.selectPage("agents"); }}>{readBack.read_back}/{readBack.total} agent writes found in PayPal</button></li>}
             <li><b>1</b> Click a band, approve the verdict</li>
             <li><b>2</b> ▸ a payment's trail, decide it</li>
             <li><b>3</b> Nudge: PayPal confirms beside it</li>
