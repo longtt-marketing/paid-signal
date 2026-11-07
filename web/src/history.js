@@ -1,6 +1,6 @@
 // The Studio assistant's conversations for this visit, kept in memory, opening with recorded runs of real agent turns
 // (saved-threads.json: recorded from the live app, replaying them calls no model). A judge who has not typed anything
-// still sees the agents work: the budget agent through the evidence gate, invoices drafted, reminders sent.
+// still sees the agents work: the budget agent through the evidence gate, reminders sent, and the revenue agent refusing an injection.
 import SAVED from "./saved-threads.json";
 
 export function seededHistory() {

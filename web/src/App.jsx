@@ -196,6 +196,7 @@ export default function App({ first = null }) {
     if (Object.keys(by).length) setInvoices((cur) => cur.map((i) => (by[i.id] ? { ...i, reminded_at: at, reminder: { subject: by[i.id].subject, note: by[i.id].note } } : i)));
   }, []);
   const [studioPage, setStudioPage] = useState("overview");
+  const [morePages, setMorePages] = useState(false);
   const [layoutNote, setLayoutNote] = useState("");
   const [allInv, setAllInv] = useState(false);
   const [allAct, setAllAct] = useState(false);
@@ -537,14 +538,17 @@ export default function App({ first = null }) {
           </div>
           {STUDIO_PAGE && <ol className="judge-strip" aria-label="For AG Grid judges: three clicks">
             <li className="js-k">For AG Grid judges</li>
-            <li><b>1</b> Click a band in the money flow: the page filters, approve the budget verdict</li>
-            <li><b>2</b> In the PayPal ledger under it: ▸ opens a payment's trail; decide a payment</li>
-            <li><b>3</b> Nudge who still owes: the reminders appear beside it, read back from PayPal; or <button type="button" className="js-link" onClick={openAssistant}>open the assistant</button> to replay a budget run</li>
+            <li><b>1</b> Click a band, approve the verdict</li>
+            <li><b>2</b> ▸ a payment's trail, decide it</li>
+            <li><b>3</b> Nudge: PayPal confirms beside it</li>
+            <li><button type="button" className="js-link" onClick={openAssistant}>Assistant: replay a run</button></li>
           </ol>}
           <div className="studio-pages" role="tablist" aria-label="Report pages">
-            {[["overview", "Ads vs PayPal"], ["agents", "Agents → PayPal"], ["perad", "Per ad"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["shop", "Real shop: October"], ["mine", "Your page"]].map(([id, label]) => (
+            {/* three pages carry the story; the rest fold under More pages */}
+            {[["overview", "Ads vs PayPal"], ["agents", "Agents → PayPal"], ["shop", "Real shop: October"], ...(morePages || !["overview", "agents", "shop"].includes(studioPage) ? [["perad", "Per ad"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["mine", "Your page"]] : [])].map(([id, label]) => (
               <button key={id} role="tab" aria-selected={studioPage === id} className={studioPage === id ? "on" : ""} onClick={() => { setStudioPage(id); studio.current?.selectPage(id); }}>{label}</button>
             ))}
+            {!morePages && ["overview", "agents", "shop"].includes(studioPage) && <button type="button" className="more-pages" onClick={() => setMorePages(true)}>More pages (5) ▾</button>}
           </div>
           <div className="studio">
             {studioOn && license !== undefined

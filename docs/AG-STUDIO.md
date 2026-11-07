@@ -71,7 +71,7 @@ totals equal the ledger's and the shop book's (705 kept orders, 1,317M VND, 12,1
 
 ## Report
 
-Eight pages: Ads vs PayPal (the money flow, the PayPal ledger, Who still owes and the latest agent actions read back from PayPal), Agents → PayPal, Per ad, PayPal captures, Ad → PayPal → Meta, Who still owes, Real shop: October, and a blank Your page.
+Eight pages. Three are in the tab bar: Ads vs PayPal (the money flow, the PayPal ledger, Who still owes and the latest agent actions read back from PayPal), Agents → PayPal, and Real shop: October. Five are under More pages: Per ad, PayPal captures, Ad → PayPal → Meta, Who still owes, and a blank Your page.
 A phone layout re-flows every page. **Save layout** keeps the owner's version in the browser; **Reset** restores it.
 
 ## Theme
@@ -110,7 +110,7 @@ format shape (`widgetForm.js`) so those settings are part of the widget's state.
 - **Paid Signal's tools in Studio:** read the reconciliation, list unpaid leads, draft PayPal invoices (Agent Toolkit,
   drafts wait for approval), who still owes, send kind reminders, check the ledger against Transaction Search, submit a
   budget recommendation, and filter the page to one ad. Each has its own chat card (`toolDisplay.jsx`).
-- **Recorded runs:** the assistant opens on three recorded real runs (`history.js`, `saved-threads.json`), and **Replay a
+- **Recorded runs:** the assistant opens on four recorded real runs (`history.js`, `saved-threads.json`), and **Replay a
   budget run** plays a recorded run back through Studio's own agent loop (`claudeAdapter.js`, `replay-budget.json`):
   no model is called, and Studio carries out the recorded tool calls itself, so the page agent adds the chart again.
   Recorded with `scripts/record-studio-chats.py`.

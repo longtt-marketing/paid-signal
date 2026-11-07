@@ -55,7 +55,7 @@ def record(pw, label):
     t = slim(json.loads(last))
     t["summary"]["title"] = TITLES.get(label, label)
     t["messages"].append({"id": f"note-{t['summary']['threadId']}", "role": "assistant", "createdAt": len(t["messages"]),
-        "parts": [{"type": "text", "text": f"_Recorded from the live app on {date.today().isoformat()}; opening it calls no model." + (" To watch Studio carry it out again, chart included, pick Replay a budget run (no model call)._" if label == "Review ad budgets" else " Ask again to watch it happen live._")}]})
+        "parts": [{"type": "text", "text": f"_Recorded from the live app on {date.today().isoformat()}; opening it calls no model." + (" To watch Studio carry it out again, chart included, pick Replay a budget run (no model call)._" if label == "Review ad budgets" else " What it drafts, and the drafts, sends and reminders already made, are on Studio's Agents → PayPal page, read back from PayPal; ask again to watch it happen live._" if label == "Invoice warm leads" else " Ask again to watch it happen live._")}]})
     return t
 
 
