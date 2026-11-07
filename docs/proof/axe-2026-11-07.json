@@ -1,0 +1,103 @@
+{
+ "base": "https://paid-signal.thelongmarketing.workers.dev",
+ "checked_at": "2026-11-07T10:16:03Z",
+ "axe": "4.10.2",
+ "tags": [
+  "wcag2a",
+  "wcag2aa",
+  "wcag21a",
+  "wcag21aa"
+ ],
+ "pages": [
+  {
+   "path": "/studio",
+   "width": 390,
+   "violations": []
+  },
+  {
+   "path": "/",
+   "width": 390,
+   "violations": []
+  },
+  {
+   "path": "/judge",
+   "width": 390,
+   "violations": []
+  },
+  {
+   "path": "/trail",
+   "width": 390,
+   "violations": []
+  },
+  {
+   "path": "/audit",
+   "width": 390,
+   "violations": []
+  },
+  {
+   "path": "/proof",
+   "width": 390,
+   "violations": []
+  },
+  {
+   "path": "/connect",
+   "width": 390,
+   "violations": []
+  },
+  {
+   "path": "/data",
+   "width": 390,
+   "violations": []
+  },
+  {
+   "path": "/scenarios",
+   "width": 390,
+   "violations": []
+  },
+  {
+   "path": "/studio",
+   "width": 1440,
+   "violations": []
+  },
+  {
+   "path": "/",
+   "width": 1440,
+   "violations": []
+  },
+  {
+   "path": "/judge",
+   "width": 1440,
+   "violations": []
+  },
+  {
+   "path": "/trail",
+   "width": 1440,
+   "violations": []
+  },
+  {
+   "path": "/audit",
+   "width": 1440,
+   "violations": []
+  },
+  {
+   "path": "/proof",
+   "width": 1440,
+   "violations": []
+  },
+  {
+   "path": "/connect",
+   "width": 1440,
+   "violations": []
+  },
+  {
+   "path": "/data",
+   "width": 1440,
+   "violations": []
+  },
+  {
+   "path": "/scenarios",
+   "width": 1440,
+   "violations": []
+  }
+ ]
+}

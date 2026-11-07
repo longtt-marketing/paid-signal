@@ -46,6 +46,10 @@ test("chart above the grid: kept, held and refunded per ad add up to what came i
   assert.deepEqual([c[1].kept, c[1].held], [49, 49]);
   assert.equal(c[2].refunded, 49);
   for (const b of c) assert.equal(b.kept + b.held + b.refunded, 49 * b.payments);
+  // a held payment partly refunded: the rest is held, the refund counts as refunded
+  const h = byAdChart([{ ad: "X", amount: 100, kept: 0, held: true, back: 25 }, { ad: "Y", amount: 49, kept: 0, held: false, disputed: true }]);
+  assert.deepEqual([h.find((b) => b.ad === "X").held, h.find((b) => b.ad === "X").refunded], [75, 25]);
+  assert.deepEqual([h.find((b) => b.ad === "Y").held, h.find((b) => b.ad === "Y").refunded], [49, 0]);
 });
 
 test("decision cell: held rows can be counted, paid rows refunded, refunded rows are done", () => {
@@ -79,4 +83,22 @@ test("picked ad: a click picks that ad alone, a second click on it clears the pi
   assert.deepEqual(nextPick([], "Testimonial"), ["Testimonial"]);
   assert.deepEqual(nextPick(["Testimonial"], "Testimonial"), []);
   assert.deepEqual(nextPick(["Testimonial"], "Free guide"), ["Free guide"]);
+});
+
+test("claim cell and search: leads against paid orders on a subtotal row; search over ad, capture, status, Meta", async () => {
+  const { claimCell, searchRows } = await import("../web/src/adClaims.js");
+  assert.deepEqual(claimCell({ leads: 31, paid: 1 }), { text: "31 leads → 1 paid", share: 1 / 31 });
+  assert.equal(claimCell({ leads: 0, paid: 0 }).share, 0);
+  assert.equal(claimCell(undefined), null);
+  const rows = [{ ad: "Testimonial", capture_id: "7G58", status: "Paid", meta: "Received" }, { ad: "Free guide", capture_id: "19L7", status: "Refunded", meta: "Not sent: refunded" }];
+  assert.deepEqual(searchRows(rows, "refund").map((r) => r.ad), ["Free guide"]);
+  assert.equal(searchRows(rows, "7g5").length, 1);
+  assert.equal(searchRows(rows, " ").length, 2);
+});
+
+test("shop weeks: an October date gets its October week, a late November payment a November week", async () => {
+  const { weekOf } = await import("../web/src/studio.js");
+  assert.equal(weekOf("2026-10-03"), "W1 · 1-7 Oct");
+  assert.equal(weekOf("2026-10-30"), "W5 · 29-31 Oct");
+  assert.equal(weekOf("2026-11-02"), "W6 · 1-7 Nov");
 });

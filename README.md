@@ -4,7 +4,7 @@
 
 **The ad report says the free guide wins (31 leads). PayPal says the testimonial ad makes the money (4 paid orders against 1). Paid Signal's AI agents act only on what PayPal confirms, and every money movement is checked in code.**
 
-**35 of 35** agent writes in the shared demo ledger (invoice drafts, sends, latest reminder per invoice, a refund, a payout; judges' Try runs not included) point to PayPal objects that PayPal returned on 2026-11-07: 14 invoices with their current status, the refund COMPLETED and the payout SUCCESS: [live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions), Studio page Agents → PayPal.
+**36 of 36** agent writes in the shared demo ledger (invoice drafts, sends, latest reminder per invoice, a refund, a payout; judges' Try runs not included) point to PayPal objects that PayPal returned on 2026-11-07: 15 invoices with their current status, the refund COMPLETED and the payout SUCCESS: [live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions), Studio page Agents → PayPal.
 
 Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge#customer): Claude drafts a real PayPal sandbox invoice, you approve it, the send agent sends it, you pay it on PayPal, and the page shows PayPal's PAID. Then give Claude the same double charge from two buyers and watch it decline one and refund the other.
 
@@ -16,9 +16,11 @@ Be the customer on the [judge path](https://paid-signal.thelongmarketing.workers
 | Page "Agents → PayPal": each invoice draft, send, latest reminder, refund and payout an agent made in the shared demo ledger (newest 40; judges' own Try runs are not listed), each read back from PayPal with its status and the API it came through (refreshed at most every ten minutes) | /studio, second page | `src/agentActions.js`, `/api/agent-actions` in `src/routes/judge.js` |
 | Money-flow widget: a band runs from an ad's share of leads to its share of PayPal money; a click filters the page and shows the budget agent's checked verdict to approve | [/studio](https://paid-signal.thelongmarketing.workers.dev/studio), first page | `web/src/MoneyFlowWidget.jsx` |
 | PayPal ledger widget in Studio, right under the money flow: an AG Grid table grouped by ad; a band click narrows it to that ad and a click on an ad's subtotal row filters the page back; ▸ opens a payment's trail (ad click → PayPal capture → ledger → what Meta heard); a Decision per payment | /studio, first page | `web/src/LedgerWidget.jsx`, `web/src/adPick.js` |
-| AG Grid ledger on the dashboard: grouped by ad with subtotals, the same trail row and Decision column (Refund… or Separate order…, checked by the server), an AG Charts bar chart whose bars filter the grid | [Dashboard](https://paid-signal.thelongmarketing.workers.dev/#payments), PayPal ledger | `web/src/LedgerGrid.jsx`, `web/src/gridTotals.js` |
+| AG Grid ledger on the dashboard: grouped by ad with subtotals, a search box, an "Ad report → PayPal" cell on each ad's subtotal row (for example 31 leads → 1 paid), the same trail row and Decision column (Refund… or Separate order…, checked by the server), an AG Charts bar chart whose bars filter the grid | [Dashboard](https://paid-signal.thelongmarketing.workers.dev/#payments), PayPal ledger | `web/src/LedgerGrid.jsx`, `web/src/gridTotals.js` |
 | The real shop's 735 payments as an AG Grid pivot in Studio | /studio, page "Real shop: October" | `web/src/studio.js` |
 | Recorded runs played back through Studio's own agent loop, no model call | /studio, the assistant: Replay a budget run | `web/src/history.js`, `web/src/replay-budget.json` |
+
+Accessibility: axe-core 4.10.2 (WCAG 2.1 A and AA rules) reported 0 violations on nine pages of the live site at 390 px and 1440 px wide on 2026-11-07 ([report](docs/proof/axe-2026-11-07.json), `scripts/axe-check.py`); the money-flow bands work from the keyboard.
 
 Licences: the two ledger tables are AG Grid Community; their grouping by ad, subtotal rows and trail rows are built in our code (`web/src/gridTotals.js`) and use no AG Grid Enterprise feature. The pivots, cross-filters and agent framework are AG Studio's (which bundles AG Grid Enterprise), under its own licence key.
 
@@ -206,7 +208,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 196 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 198 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

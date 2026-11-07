@@ -3,7 +3,7 @@
 :root{
   --bg:#F7F7F5;--card:#FFFFFF;--ink:#111111;--ink2:#3A3A3A;--mute:#5E5E5E;--faint:#70706C;
   --line:#E6E6E3;--line2:#F0F0EE;--soft:#F1F1EE;
-  --paid:#0F8A4B;--paid-ink:#0B6E3B;--paid-bg:#E7F6EE;--go:#2BD47D;--go-ink:#0B1F14;
+  --paid:#0B7A42;--paid-ink:#0B6E3B;--paid-bg:#E7F6EE;--go:#2BD47D;--go-ink:#0B1F14;
   --bad:#B4232A;--bad-bg:#FBECEC;--warn:#8A4B00;--warn-bg:#FFF4E0;--link:#111111;
   --r-sm:10px;--r:16px;--r-lg:20px;--r-xl:24px;
   --sans:"Inter Tight",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;

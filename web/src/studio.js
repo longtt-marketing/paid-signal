@@ -1,6 +1,7 @@
 // AG Studio configuration: data sources built from the reconciliation the Worker computes, the default report, and a
 // theme that follows the design tokens in styles.css. Money arithmetic stays on the server (src/ledger.js); Studio only
 // groups and sums rows the server already settled.
+import { disputeState } from "../../src/ledger.js";
 import { studioTheme } from "ag-studio";
 
 import { AD_NAMES, adName } from "./names.js";
@@ -19,8 +20,14 @@ const csvRows = (text) => {
   const keys = head ? head.split(",") : [];
   return lines.map((l) => Object.fromEntries(l.split(",").map((v, i) => [keys[i], v])));
 };
-// October weeks as labels that sort in order: "W1 · 1-7 Oct" ... "W5 · 29-31 Oct"
-const weekOf = (d) => { const day = Number(d.slice(8, 10)) || 1, w = Math.min(5, Math.ceil(day / 7)), a = (w - 1) * 7 + 1, b = Math.min(31, w * 7); return `W${w} · ${a}-${b} Oct`; };
+// October weeks as labels that sort in order: "W1 · 1-7 Oct" ... "W5 · 29-31 Oct"; a late payment in November goes on to
+// "W6 · 1-7 Nov", so it is never filed under an October week
+const weekOf = (d) => {
+  const day = Number(d.slice(8, 10)) || 1, nov = d.slice(5, 7) === "11";
+  const w = nov ? 5 + Math.ceil(day / 7) : Math.min(5, Math.ceil(day / 7)), k = nov ? w - 5 : w, a = (k - 1) * 7 + 1, b = Math.min(nov ? 30 : 31, k * 7);
+  return `W${w} · ${a}-${b} ${nov ? "Nov" : "Oct"}`;
+};
+export { weekOf };
 /** Two tables from the real shop: its three ad groups (from the ad account and the order book), and every payment in its book. */
 export function shopSources(read, paymentsCsv) {
   // Studio only takes data updates for tables it had from the start: the tables always exist, empty until the files load
@@ -72,14 +79,15 @@ export function buildData(rec, payments, invoices = [], duplicates = [], metaSen
   const sent = Object.fromEntries(metaSends.map((m) => [m.capture_id, m]));
   const caps = payments.map((p) => {
     const gross = Number(p.amount), back = Number(p.refunded_amount || 0), hold = back < gross && held.has(p.capture_id);
+    const ds = disputeState(p), disputed = ds === "open" || ds === "unclear" || ds === "lost";
     const m = sent[p.capture_id], inv = invoices.find((i) => i.id === p.order_id);
     // what the ad platform learned about this payment, in the owner's words
-    const meta = m?.ok && m.events_received > 0 ? "Received by Meta" : back >= gross ? "Not sent: refunded" : hold ? "Not sent: possible double payment" : m?.held ? `Not sent: ${m.held}` : !p.click_id ? "Not sent: no ad click" : "Not sent yet";
+    const meta = m?.ok && m.events_received > 0 ? "Received by Meta" : back >= gross ? "Not sent: refunded" : disputed ? "Not sent: PayPal dispute" : hold ? "Not sent: possible double payment" : m?.held ? `Not sent: ${m.held}` : !p.click_id ? "Not sent: no ad click" : "Not sent yet";
     return {
       via: p.via === "invoice" ? "PayPal invoice" : "PayPal checkout", lead: inv ? inv.lead.replace(" (fictional)", "") : p.via === "invoice" ? "Invoice lead" : "Shop visitor", meta,
       metaAt: m?.ok ? String(m.at).slice(0, 19).replace("T", " ") : "",
       id: p.capture_id, ad: known.has(p.ad) ? p.ad : "(not in export)", adName: known.has(p.ad) ? adName(p.ad) : "No ad click", status: p.status, source: p.source === "fb" ? "Meta click" : p.source === "g" ? "Google click" : "Other",
-      gross, refunded: back, net: hold ? 0 : Math.max(0, gross - back), paid: back >= gross || hold ? 0 : 1, held: hold ? 1 : 0, date: String(p.captured_at).slice(0, 10), capturedAt: p.captured_at,
+      gross, refunded: back, net: hold || disputed ? 0 : Math.max(0, gross - back), paid: back >= gross || hold || disputed ? 0 : 1, held: hold || disputed ? 1 : 0, date: String(p.captured_at).slice(0, 10), capturedAt: p.captured_at,
     };
   });
   // every invoice the shop sent, for the "who still owes" scoreboard; drafts are not owed yet
@@ -168,7 +176,7 @@ export const initialReport = {
         reads: kpi("Read back from PayPal now", sum("actions.read")),
         moved: kpi("Money moved: refunds, payouts", sum("actions.moved")),
         list: { type: "grid", dataMapping: { cols: [{ id: "actions.when" }, { id: "actions.agent" }, { id: "actions.did" }, { id: "actions.kind" }, { id: "actions.id" }, { id: "actions.amount" }, { id: "actions.paypal" }, { id: "actions.through" }] },
-          sort: [{ field: { id: "actions.when" }, direction: "desc" }], format: { title: { enabled: true, text: "Every agent action, and what PayPal says about it now" }, style: { headerRow: { wrapText: true } } } },
+          sort: [{ field: { id: "actions.when" }, direction: "desc" }], format: { title: { enabled: true, text: "Agent actions, newest first (up to 40), and what PayPal says about each now" }, style: { headerRow: { wrapText: true } } } },
       },
       widgetLayout: { acts: at(0, 0, 8, 7), reads: at(8, 0, 8, 7), moved: at(16, 0, 8, 7), list: at(0, 7, 24, 30) },
     },

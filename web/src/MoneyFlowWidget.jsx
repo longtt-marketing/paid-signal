@@ -112,7 +112,7 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
   return (
     <div className="flow-w" ref={ref} onClick={(e) => { if (e.target === e.currentTarget || e.target.tagName === "svg") { widgetApi.resetCrossFilter(); setPick([], "flow"); } }}>
       {w > 0 && rows.length > 0 && (
-        <svg width={w} height={h} role="img" aria-label={rows.map((r) => `${r.name}: ${pct(r.sa)} of what the ad report counts, ${pct(r.sb)} of the money`).join("; ")}>
+        <svg width={w} height={h} role="group" aria-label={rows.map((r) => `${r.name}: ${pct(r.sa)} of what the ad report counts, ${pct(r.sb)} of the money`).join("; ")}>
           <text x={0} y={13} fontSize="12" fontWeight="600" fill={LABEL}>{narrow ? brief(leftLabel) : leftLabel}</text>
           <text x={w} y={13} fontSize="12" fontWeight="600" fill={LABEL} textAnchor="end">{narrow ? brief(rightLabel) : rightLabel}</text>
           {rows.map((r) => {
@@ -122,7 +122,9 @@ export function MoneyFlowWidget({ dataMapping, format, widgetApi, context }) {
             const ahead = r.sb >= r.sa;
             const d = `M${x0},${ya} C${mid},${ya} ${mid},${yb} ${x1},${yb} L${x1},${yb + R.h} C${mid},${yb + R.h} ${mid},${ya + L.h} ${x0},${ya + L.h} Z`;
             return (
-              <g key={r.name} className="flow-band" opacity={dim ? 0.45 : 1} onClick={choose(r)} style={{ cursor: "pointer" }}>
+              <g key={r.name} className="flow-band" opacity={dim ? 0.45 : 1} onClick={choose(r)} style={{ cursor: "pointer" }}
+                role="button" tabIndex={0} aria-pressed={on} aria-label={`${r.name}: ${pct(r.sa)} of what the ad report counts, ${pct(r.sb)} of the money. Filter the page to this ad`}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(r)(e); } }}>
                 <title>{`${r.name}: ${pct(r.sa)} of what the ad report counts → ${pct(r.sb)} of the money. Click to filter the page.`}</title>
                 <path d={d} fill={ahead ? PAID : CLAIMED} opacity={on ? 0.7 : ahead ? 0.42 : 0.5} />
                 <rect x={0} y={ya} width={x0} height={L.h} rx="3" fill={CLAIMED} />

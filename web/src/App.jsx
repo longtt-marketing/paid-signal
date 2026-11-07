@@ -1,3 +1,4 @@
+import { setClaims } from "./adClaims.js";
 import { Component, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 // /studio opens the app straight on the AG Studio report (the judges' link) and skips the invoice sync on open
@@ -199,6 +200,8 @@ export default function App({ first = null }) {
   const [morePages, setMorePages] = useState(false);
   // the headline on /studio: how many of the agents' PayPal writes PayPal reports back right now
   const [readBack, setReadBack] = useState(null);
+  // what each ad claims and what PayPal confirms, for the "Ad report → PayPal" cell on the ledger grids' subtotal rows
+  useEffect(() => { const list = state?.reconciliation?.ads; if (list) setClaims(Object.fromEntries(list.map((r) => [adName(r.ad), { leads: r.leads, paid: r.paid }]))); }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (STUDIO_PAGE) fetch("/api/agent-actions").then((r) => r.json()).then((d) => d.total && setReadBack(d)).catch(() => {}); }, []);
   const [layoutNote, setLayoutNote] = useState("");
   const [allInv, setAllInv] = useState(false);
@@ -541,16 +544,16 @@ export default function App({ first = null }) {
           </div>
           {STUDIO_PAGE && <ol className="judge-strip" aria-label="For AG Grid judges: three clicks">
             <li className="js-k">For AG Grid judges</li>
-            {readBack && <li><button type="button" className="js-link js-count" onClick={() => { setStudioPage("agents"); studio.current?.selectPage("agents"); }}>{readBack.read_back}/{readBack.total} agent writes found in PayPal</button></li>}
+            {readBack && <li><button type="button" className="js-link js-count" onClick={() => { setStudioPage("agents"); studio.current?.selectPage("agents"); }}>{readBack.read_back}/{readBack.total} agent writes found in PayPal</button>{readBack.checked_at && <span className="js-at"> · read {String(readBack.checked_at).slice(11, 16)} UTC{readBack.stale ? ", limit reached: older read" : ""}</span>}</li>}
             <li><b>1</b> Click a band, approve the verdict</li>
             <li><b>2</b> ▸ a payment's trail, decide it</li>
             <li><b>3</b> Nudge: PayPal confirms beside it</li>
             <li><button type="button" className="js-link" onClick={openAssistant}>Assistant: replay a run</button></li>
           </ol>}
-          <div className="studio-pages" role="tablist" aria-label="Report pages">
+          <div className="studio-pages" role="group" aria-label="Report pages">
             {/* three pages carry the story; the rest fold under More pages */}
             {[["overview", "Ads vs PayPal"], ["agents", "Agents → PayPal"], ["shop", "Real shop: October"], ...(morePages || !["overview", "agents", "shop"].includes(studioPage) ? [["perad", "Per ad"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["mine", "Your page"]] : [])].map(([id, label]) => (
-              <button key={id} role="tab" aria-selected={studioPage === id} className={studioPage === id ? "on" : ""} onClick={() => { setStudioPage(id); studio.current?.selectPage(id); }}>{label}</button>
+              <button key={id} type="button" aria-pressed={studioPage === id} className={studioPage === id ? "on" : ""} onClick={() => { setStudioPage(id); studio.current?.selectPage(id); }}>{label}</button>
             ))}
             {!morePages && ["overview", "agents", "shop"].includes(studioPage) && <button type="button" className="more-pages" onClick={() => setMorePages(true)}>More pages (5) ▾</button>}
           </div>

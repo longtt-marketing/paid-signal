@@ -110,7 +110,7 @@ format shape (`widgetForm.js`) so those settings are part of the widget's state.
 - **Paid Signal's tools in Studio:** read the reconciliation, list unpaid leads, draft PayPal invoices (Agent Toolkit,
   drafts wait for approval), who still owes, send kind reminders, check the ledger against Transaction Search, submit a
   budget recommendation, and filter the page to one ad. Each has its own chat card (`toolDisplay.jsx`).
-- **Recorded runs:** the assistant opens on four recorded real runs (`history.js`, `saved-threads.json`), and **Replay a
+- **Recorded runs:** the assistant opens on four recorded real runs (`history.js`, `saved-threads.json`), one of them the revenue agent drafting PayPal invoice INV2-2EJR-A4ZY-BNZU-XVYK, and **Replay a
   budget run** plays a recorded run back through Studio's own agent loop (`claudeAdapter.js`, `replay-budget.json`):
   no model is called, and Studio carries out the recorded tool calls itself, so the page agent adds the chart again.
   Recorded with `scripts/record-studio-chats.py`.

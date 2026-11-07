@@ -11,6 +11,8 @@ import { AgCharts, BarSeriesModule, CategoryAxisModule, LegendModule, ModuleRegi
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
 import { byAdChart, decisionOf, groupByAd, totalsOf, trailHeight, trailSteps, withTrail } from "./gridTotals.js";
+import { AD_CLAIMS, claimCell, getClaims, searchRows } from "./adClaims.js";
+import { disputeState } from "../../src/ledger.js";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 ChartModules.registerModules([BarSeriesModule, CategoryAxisModule, NumberAxisModule, LegendModule]);
@@ -33,6 +35,28 @@ function CaptureCell({ value, node, data }) {
   if (!data || node.rowPinned || data.isGroup) return null;
   return <a className="grid-id" href={trail(value)} title="Open its money trail">{value}</a>;
 }
+// what each ad claims against what PayPal confirms, kept current from the dashboard's reconciliation
+export function useClaims() {
+  const [claims, setClaims] = useState(getClaims());
+  useEffect(() => { const on = (e) => setClaims(e.detail || {}); addEventListener(AD_CLAIMS, on); return () => removeEventListener(AD_CLAIMS, on); }, []);
+  return claims;
+}
+// on an ad's subtotal row: "31 leads → 1 paid" and a bar of how much of the ad report's claim PayPal confirms
+export function ClaimCell({ data, context }) {
+  if (!data?.isGroup) return null;
+  const c = claimCell(context.claims?.[String(data.ad).replace(/ \(\d+\)$/, "")]);
+  if (!c) return null;
+  return (
+    <span className="claim-cell" title={`The ad report counts ${c.text.split(" → ")[0]}; PayPal confirms ${c.text.split(" → ")[1]}`}>
+      <span className="claim-bar" aria-hidden="true"><i style={{ width: `${Math.max(3, Math.round(c.share * 100))}%` }} /></span>{c.text}
+    </span>
+  );
+}
+// the search box over the payments; the grid groups what matches
+export function SearchBox({ value, onChange }) {
+  return <input type="search" className="grid-search" value={value} onChange={(e) => onChange(e.target.value)} placeholder="Search payments: ad, capture, status, Meta" aria-label="Search payments" />;
+}
+
 // the ▸ that opens a payment's trail row under it
 export function TrailToggle({ data, context }) {
   const on = context.open?.has(data.capture_id);
@@ -105,6 +129,8 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
   const [grouped, setGrouped] = useState(true);
   const [pick, setPick] = useState("");
   const [open, setOpen] = useState(() => new Set());
+  const [q, setQ] = useState("");
+  const claims = useClaims();
   const toggle = useMemo(() => (id) => setOpen((cur) => { const n = new Set(cur); n.has(id) ? n.delete(id) : n.add(id); return n; }), []);
   const onPick = useMemo(() => (ad) => setPick((cur) => (cur === ad ? "" : ad)), []);
   const [width, setWidth] = useState(0);
@@ -118,23 +144,26 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
   const rows = useMemo(() => payments.slice().reverse().map((p) => {
     const held = Boolean(dup[p.capture_id]);
     const part = Number(p.refunded_amount) > 0 && p.status !== "REFUNDED";
+    // a PayPal dispute: open or unclear is held out of revenue, lost is money gone (the same rule as the reconciliation)
+    const ds = disputeState(p), disputed = ds === "open" || ds === "unclear", lost = ds === "lost";
     return {
       raw: p, capture_id: p.capture_id, ad: p.ad && p.ad !== "direct" ? adName(p.ad) : "No ad click", amount: Number(p.amount),
       via: p.via === "invoice" ? "invoice" : "checkout",
-      status: held ? "Held: double?" : p.status === "REFUNDED" ? "Refunded" : part ? `Paid, ${money(p.refunded_amount)} back` : "Paid",
+      status: lost ? "Dispute lost" : disputed ? "Held: dispute" : held ? "Held: double?" : p.status === "REFUNDED" ? "Refunded" : part ? `Paid, ${money(p.refunded_amount)} back` : "Paid",
       meta: metaSent[p.capture_id]?.ok ? "Received" : p.status === "REFUNDED" ? "No purchase" : "Not sent",
       source: p.source === "fb" ? "Meta click" : p.source === "g" ? "Google click" : "", date: String(p.captured_at || "").slice(0, 10),
       metaAt: metaSent[p.capture_id]?.ok && metaSent[p.capture_id].at ? String(metaSent[p.capture_id].at).slice(0, 16).replace("T", " ") : "",
-      kept: held || p.status === "REFUNDED" ? 0 : Number(p.amount) - Number(p.refunded_amount || 0),
-      held, why: held ? `Held out of paid orders: same payer and ad as ${dup[p.capture_id].first}, ${dup[p.capture_id].seconds} s apart. Count it if it is a separate order.` : "", refundable: !held && (p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED"),
+      kept: held || disputed || lost || p.status === "REFUNDED" ? 0 : Number(p.amount) - Number(p.refunded_amount || 0), back: Number(p.refunded_amount || 0), disputed: disputed || lost,
+      held, why: disputed ? "Held out of revenue: the buyer opened a PayPal dispute." : lost ? "The buyer won a PayPal dispute: the money is gone." : held ? `Held out of paid orders: same payer and ad as ${dup[p.capture_id].first}, ${dup[p.capture_id].seconds} s apart. Count it if it is a separate order.` : "", refundable: !held && !disputed && !lost && (p.status === "COMPLETED" || p.status === "PARTIALLY_REFUNDED"),
     };
   }), [payments, dup, metaSent, adName]);
   // grouped: one subtotal row per ad, then its payments; sorting and filtering are for the ungrouped view
   // a bar picked in the chart narrows the grid to that ad (the total row follows)
-  const shown = useMemo(() => (pick ? rows.filter((r) => r.ad === pick) : rows), [rows, pick]);
+  const shown = useMemo(() => searchRows(pick ? rows.filter((r) => r.ad === pick) : rows, q), [rows, pick, q]);
   const data = useMemo(() => withTrail(grouped ? groupByAd(shown) : shown, open), [shown, grouped, open]);
   const cols = useMemo(() => [
-    { headerName: "Ad click", children: [{ field: "ad", headerName: grouped ? "Ad, then each payment" : "Ad", flex: 1.4, minWidth: grouped ? 150 : 100, cellRenderer: AdCell }] },
+    { headerName: "Ad click", children: [{ field: "ad", headerName: grouped ? "Ad, then each payment" : "Ad", flex: 1.4, minWidth: grouped ? 150 : 100, cellRenderer: AdCell },
+      { colId: "claim", headerName: "Ad report → PayPal", width: 196, cellRenderer: ClaimCell, sortable: false, filter: false, hide: !grouped || narrow, headerTooltip: "Leads the ad report counts, against orders PayPal confirms paid" }] },
     { headerName: "PayPal", children: [
       { field: "amount", headerName: "Amount", width: 92, valueFormatter: (p) => money(p.value), type: "rightAligned", hide: narrow && grouped },
       { field: "via", headerName: "Via", width: 100, hide: narrow || grouped },
@@ -142,7 +171,7 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
     ] },
     { headerName: "Ledger", children: [
       { field: "kept", headerName: "Kept", width: 92, valueFormatter: (p) => money(p.value), type: "rightAligned", headerTooltip: "Money kept after refunds; held double payments count 0" },
-      { field: "status", headerName: "Status", width: narrow ? 140 : 190, cellRenderer: StatusCell, tooltipValueGetter: (p) => p.data?.why || null },
+      { field: "status", headerName: "Status", width: narrow ? 140 : 190, hide: tiny, cellRenderer: StatusCell, tooltipValueGetter: (p) => p.data?.why || null },
     ] },
     { headerName: "Meta", children: [{ field: "meta", headerName: "Purchase event", width: 140, hide: narrow }] },
     { headerName: "Decision", colId: "decision", width: tiny ? 112 : 150, minWidth: 104, pinned: tiny ? null : "right", sortable: false, filter: false, suppressHeaderMenuButton: true,
@@ -160,9 +189,10 @@ export default function LedgerGrid({ payments, dup, metaSent, adName, onRefund, 
   return (
     <div className="ledger-grid" ref={box}>
       <KeptByAd rows={rows} pick={pick} onPick={onPick} narrow={narrow} />
+      <SearchBox value={q} onChange={setQ} />
       {pick && <div className="grid-pick"><button type="button" className="chip-x" onClick={() => setPick("")} aria-label={`Show every ad, not only ${pick}`}>Showing: {pick} ×</button><span className="muted">the total row follows the filter</span></div>}
       <div style={{ height: data.length > 10 ? 520 : "auto" }}>
-        <AgGridReact ref={grid} theme={theme} rowData={data} columnDefs={cols} context={{ narrow, grouped, open, toggle }}
+        <AgGridReact ref={grid} theme={theme} rowData={data} columnDefs={cols} context={{ narrow, grouped, open, toggle, claims }}
           defaultColDef={{ sortable: !grouped, filter: !grouped, resizable: true, suppressMovable: true }}
           domLayout={data.length > 10 ? "normal" : "autoHeight"} getRowId={(p) => p.data?.detailId || p.data?.capture_id || p.data?.groupId || "total"} getRowHeight={(p) => (p.data?.isDetail ? trailHeight(width) : 44)}
           isFullWidthRow={(p) => Boolean(p.rowNode.data?.isDetail)} fullWidthCellRenderer={TrailRow}

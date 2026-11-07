@@ -66,7 +66,8 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const cached = await env.LEDGER.get("actions:v3", "json");
       // ?fresh=1 after an agent acted (the Nudge button): read PayPal again now, within the same rate limit
       if (cached && !url.searchParams.has("fresh") && Date.now() - Date.parse(cached.checked_at) < 600000) return json({ ...cached, cached: true });
-      const stop = await guard(env, request, "PayPal readbacks", 20, 300); if (stop) return json(cached ? { ...cached, cached: true } : { error: stop }, cached ? 200 : 429);
+      const stop = await guard(env, request, "PayPal readbacks", 20, 300); if (stop) return json(cached ? { ...cached, cached: true, stale: true, note: stop } : { error: stop }, cached ? 200 : 429);
+      const startedAt = new Date().toISOString();
       const [invoices, payments, payouts] = await Promise.all([cachedList(env, "inv:"), listPayments(env), cachedList(env, "commission:")]);
       const list = agentActions({ invoices, payments, payouts }).slice(0, 40);
       const reads = new Map();
@@ -80,7 +81,10 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const items = await Promise.all(list.map(async (a) => ({ ...a, paypal: await read(a) })));
       const out = { checked_at: new Date().toISOString(), total: items.length, read_back: items.filter((i) => i.paypal.status).length,
         moved: Math.round(items.filter((i) => i.kind !== "invoice").reduce((n, i) => n + i.amount, 0) * 100) / 100, items };
-      await env.LEDGER.put("actions:v3", JSON.stringify(out), { expirationTtl: 3600 });
+      // two reads at once: the one that started later wins, so an older list never overwrites a newer one
+      out.started_at = startedAt;
+      const now = await env.LEDGER.get("actions:v3", "json");
+      if (!now || !now.started_at || now.started_at <= startedAt) await env.LEDGER.put("actions:v3", JSON.stringify(out), { expirationTtl: 3600 });
       return json(out);
     }
 

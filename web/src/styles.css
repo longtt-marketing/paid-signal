@@ -1,5 +1,5 @@
 :root{--paper:#F7F7F5;--card:#fff;--ink:#111111;--mute:#5E5E5E;--faint:#6B6B67;--line:#E6E6E3;--line2:#F0F0EE;--head:#F1F1EE;
---paid:#0F8A4B;--paid-bg:#E7F6EE;--gap:#8A4B00;--gap-bg:#FFF4E0;--gap-line:#f1d29b;--go:#2BD47D;--go-ink:#0B1F14;--link:#111111;--claimed:#D9D9D5;--bad:#B4232A;
+--paid:#0B7A42;--paid-bg:#E7F6EE;--gap:#8A4B00;--gap-bg:#FFF4E0;--gap-line:#f1d29b;--go:#2BD47D;--go-ink:#0B1F14;--link:#111111;--claimed:#D9D9D5;--bad:#B4232A;
 --night:#0e1116;--night2:#161a22;--night-line:#262c38;--night-mute:#a3aab8;
 --sans:"Inter Tight",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:var(--sans);--code:ui-monospace,"Cascadia Mono",Consolas,monospace;
 --r:16px;--shadow:none}
@@ -42,7 +42,7 @@ button:disabled{opacity:.55;cursor:default}
 .duo{margin:0;display:flex;flex-direction:column;gap:0}
 .n{font:700 clamp(52px,6.4vw,84px)/.98 var(--sans);letter-spacing:-.04em;animation:nudge .6s cubic-bezier(.2,.7,.2,1) both}
 @keyframes nudge{from{transform:translateY(10px)}to{transform:none}}
-.n.claimed{color:#9A9A96}.n.paid{color:var(--ink);animation-delay:.12s}
+.n.claimed{color:#767672}.n.paid{color:var(--ink);animation-delay:.12s}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .pitch{margin:0;font:400 clamp(17px,1.6vw,20px)/1.4 var(--sans);color:#3A3A3A;max-width:32ch}
 .hero-actions{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center}
@@ -349,3 +349,7 @@ details.ev summary{cursor:pointer;font-size:12px;color:var(--mute);list-style:no
 .ledger-w-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.ledger-w .chip-x,.ledger-w-foot .chip-x{border:0;background:#14130F;color:#FFFDF7;border-radius:99px;padding:4px 11px;font:600 12.5px var(--sans);cursor:pointer;min-height:28px}
 .studio-pages .more-pages{border:1px dashed #B9AE92;background:none;color:var(--muted,#5E5E5E);border-radius:99px;padding:0 14px;min-height:40px;font:500 14px var(--sans);cursor:pointer}
 .judge-strip .js-count{color:#8FD3A8;font-weight:700}
+.grid-search{width:100%;max-width:360px;box-sizing:border-box;border:1px solid #D6D6D2;border-radius:10px;padding:8px 12px;font:500 13px var(--sans);background:#fff;color:var(--ink)}
+.ledger-w .grid-search{max-width:320px;padding:6px 10px;border-color:#DDD4BF;background:#FFFDF7}
+.claim-cell{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:12.5px}.claim-bar{display:inline-block;width:44px;height:8px;background:#E9E3D3;border-radius:4px;overflow:hidden;flex:none}.claim-bar i{display:block;height:100%;background:#0B6B3A}
+.judge-strip .js-at{color:#C9C3B4;font-size:12px}

@@ -6,7 +6,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
-import { AdCell, DecisionCell, DecisionEditor, StatusCell, TrailRow, money } from "./LedgerGrid.jsx";
+import { AdCell, ClaimCell, DecisionCell, DecisionEditor, SearchBox, StatusCell, TrailRow, money, useClaims } from "./LedgerGrid.jsx";
+import { searchRows } from "./adClaims.js";
 import { decisionOf, groupByAd, totalsOf, trailHeight, withTrail } from "./gridTotals.js";
 import { widgetFormat } from "./widgetForm.js";
 import { DATA_EVENT } from "./OwesWidget.jsx";
@@ -37,6 +38,8 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
   const [tick, setTick] = useState(0);
   const [open, setOpen] = useState(() => new Set());
   const [said, setSaid] = useState("");
+  const [q, setQ] = useState("");
+  const claims = useClaims();
   const [width, setWidth] = useState(0);
   const box = useRef(null);
   useEffect(() => { const on = () => setTick((t) => t + 1); addEventListener(DATA_EVENT, on); return () => removeEventListener(DATA_EVENT, on); }, []);
@@ -60,8 +63,8 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
         return {
           capture_id: String(v.id), ad: String(v.ad), adValue: v.ad, amount: gross, kept: Number(v.net) || 0, held,
           via: String(v.via).replace("PayPal ", ""), source: String(v.source) === "Other" ? "" : String(v.source), date: day(v.date),
-          status: held ? "Held: double?" : st === "REFUNDED" ? "Refunded" : back > 0 ? `Paid, ${money(back)} back` : "Paid",
-          meta: String(v.meta), why: held ? "Held out of paid orders as a possible double payment: same payer and ad minutes apart. Separate order… counts it." : "",
+          status: held && /dispute/i.test(String(v.meta)) ? "Held: dispute" : held ? "Held: double?" : st === "REFUNDED" ? "Refunded" : back > 0 ? `Paid, ${money(back)} back` : "Paid",
+          meta: String(v.meta), why: held && /dispute/i.test(String(v.meta)) ? "Held out of revenue: a PayPal dispute is open, or the buyer won it." : held ? "Held out of paid orders as a possible double payment: same payer and ad minutes apart. Separate order… counts it." : "",
           refundable: !held && (st === "COMPLETED" || st === "PARTIALLY_REFUNDED"), raw: { capture_id: String(v.id), amount: gross, refunded_amount: back },
         };
       });
@@ -94,13 +97,14 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
   const [picked, setPicked] = useState(getPick());
   useEffect(() => { const on = (e) => setPicked(e.detail?.list || []); addEventListener(AD_PICK, on); return () => removeEventListener(AD_PICK, on); }, []);
   const narrow = width > 0 && width < 640;
-  const shown = useMemo(() => (picked.length ? rows.filter((r) => picked.includes(r.ad)) : rows), [rows, picked]);
+  const shown = useMemo(() => searchRows(picked.length ? rows.filter((r) => picked.includes(r.ad)) : rows, q), [rows, picked, q]);
   const data = useMemo(() => withTrail(groupByAd(shown), open), [shown, open]);
   const total = useMemo(() => totalsOf(shown.map((r) => ({ ...r, raw: { refunded_amount: r.amount - r.kept } })), narrow), [shown, narrow]);
   // a click on an ad's row picks it: the money flow then filters the page with its own field, as a band click does
   const filterTo = (ad) => setPick(nextPick(getPick(), ad), "ledger");
   const cols = useMemo(() => [
     { field: "ad", headerName: "Ad, then each payment", flex: 1.5, minWidth: narrow ? 120 : 170, cellRenderer: AdCell },
+    { colId: "claim", headerName: "Ad report → PayPal", width: 196, cellRenderer: ClaimCell, sortable: false, hide: narrow, headerTooltip: "Leads the ad report counts, against orders PayPal confirms paid" },
     { field: "kept", headerName: "Kept", width: 92, valueFormatter: (p) => money(p.value), type: "rightAligned", headerTooltip: "Money kept after refunds; a held double payment counts 0" },
     { field: "status", headerName: "Status", width: 180, cellRenderer: StatusCell, tooltipValueGetter: (p) => p.data?.why || null, hide: narrow },
     { field: "meta", headerName: "What Meta heard", flex: 1, minWidth: 150, hide: narrow },
@@ -112,8 +116,9 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
 
   return (
     <div className="ledger-w" ref={box}>
+      <SearchBox value={q} onChange={setQ} />
       <div className="ledger-w-grid">
-        <AgGridReact theme={theme} rowData={data} columnDefs={cols} context={{ grouped: true, open, toggle }}
+        <AgGridReact theme={theme} rowData={data} columnDefs={cols} context={{ grouped: true, open, toggle, claims }}
           defaultColDef={{ sortable: false, resizable: true, suppressMovable: true }}
           getRowId={(p) => p.data?.detailId || p.data?.capture_id || p.data?.groupId || "total"}
           getRowHeight={(p) => (p.data?.isDetail ? trailHeight(width) : 40)} isFullWidthRow={(p) => Boolean(p.rowNode.data?.isDetail)} fullWidthCellRenderer={TrailRow}

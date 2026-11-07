@@ -4,7 +4,7 @@ const money = (v) => `$${Number(v || 0).toFixed(2)}`;
 // totals of the rows the filters leave showing, for the pinned row at the bottom
 export function totalsOf(list, short = false) {
   const n = (f) => list.filter(f).length;
-  const kept = list.reduce((s, r) => s + (r.held || r.status === "Refunded" ? 0 : r.amount - Number(r.raw?.refunded_amount || 0)), 0);
+  const kept = list.reduce((s, r) => s + (typeof r.kept === "number" ? r.kept : r.held || r.status === "Refunded" ? 0 : r.amount - Number(r.raw?.refunded_amount || 0)), 0);
   return { ad: `Total · ${list.length} shown`, amount: list.reduce((s, r) => s + r.amount, 0), via: "", meta: `${n((r) => String(r.meta).startsWith("Received"))} received`,
     kept, status: short ? `${n((r) => r.held)} held · ${n((r) => r.status === "Refunded")} back` : `${n((r) => r.held)} held · ${n((r) => r.status === "Refunded")} refunded`, capture_id: "",
     why: `${money(kept)} kept after refunds · ${n((r) => r.held)} held as possible double payments · ${n((r) => r.status === "Refunded")} refunded` };
@@ -29,7 +29,8 @@ export function byAdChart(rows) {
   for (const r of rows) {
     const b = by.get(r.ad) || { ad: r.ad, kept: 0, held: 0, refunded: 0, payments: 0 };
     b.payments += 1;
-    if (r.held) b.held += r.amount; else { b.kept += r.kept; b.refunded += r.amount - r.kept; }
+    // a held payment (possible double, or a dispute): what is still held, and what was already refunded of it
+    if (r.held || r.disputed) { const back = Number(r.back) || 0; b.held += r.amount - back; b.refunded += back; } else { b.kept += r.kept; b.refunded += r.amount - r.kept; }
     by.set(r.ad, b);
   }
   const round = (v) => Math.round(v * 100) / 100;

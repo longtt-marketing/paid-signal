@@ -37,7 +37,7 @@ export default function FlowChart({ ads, payments, sends, held, worst }) {
   const end = (i) => (i === STAGES.length - 1 ? "end" : "start");
   return (
     <figure className="flow" aria-label={`Leads ${totals.leads}, paid ${totals.paid}, received by Meta ${totals.sent}`}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Leads ${totals.leads}, paid ${totals.paid}, received by Meta ${totals.sent}`}>
         {STAGES.map(([k, label, shortLabel], i) => (
           <g key={k}>
             <text x={xs[i] + (i === STAGES.length - 1 ? colW : 0)} y={12} className={`fl-n ${k}`} textAnchor={end(i)}>{totals[k]}</text>
