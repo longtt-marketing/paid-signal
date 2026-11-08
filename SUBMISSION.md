@@ -3,7 +3,7 @@
 Project name: Paid Signal
 
 Tagline (200 characters max):
-Know which ads bring PayPal money, not just chats. AI agents in AG Grid tie each payment to its ad, then invoice, chase, refund and move ad budget. Nothing goes out until the owner approves.
+Know which ads bring PayPal money, not just chats. AI agents in AG Grid act on it, and nothing goes out until the owner approves.
 
 Built with: paypal-agent-toolkit, paypal-server-sdk, apimatic, mcp, paypal-orders-v2, paypal-invoicing, paypal-webhooks, paypal-transaction-search, paypal-js-sdk, meta-conversions-api, claude, anthropic, ag-studio, ag-grid, react, vite, cloudflare-workers, workers-kv, javascript
 
@@ -12,7 +12,7 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 ---
 
 <!-- devpost-story -->
-**Small shops pay for ads that bring chats, but only some chats turn into money. Paid Signal ties each PayPal payment to the ad click behind it, and AI agents work from that ledger inside AG Grid: they invoice buyers who are ready, chase late payers, refund double charges and move ad money to the ads that sell. Nothing goes out until the owner approves.**
+**Small shops pay for ads that bring chats, but only some chats turn into money. Paid Signal ties each PayPal payment to the ad click behind it, so the shop sees which ads bring money. AI agents then act on that ledger inside AG Grid, from invoices to refunds to ad budget, and nothing goes out until the owner approves.**
 
 **Try it in 90 seconds** ([open the workspace](https://paid-signal.thelongmarketing.workers.dev/studio), no login):
 1. In the chart at the top, click the Testimonial ad. The page and the PayPal ledger under it narrow to that ad, and the budget agent's suggestion waits for your Approve.
@@ -23,14 +23,15 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 Want to pay as a customer? The [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) lets you pay a sandbox invoice the agent drafted for you, see what it changes in the ad's numbers, and undo it with a PayPal refund.
 
 ### In numbers
+- **$0.41 against $2.73:** in the demo, the ad with the most leads (31) brings $0.41 of PayPal revenue per $1 of ads, and the testimonial ad brings $2.73. The budget agent proposes growing the one that pays; the owner approves.
 - **36 of 36** PayPal actions the agents took are found again in PayPal, each with PayPal's own status (8 Nov, [live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions)).
 - **117 of 120** runs right when the owner asks the ledger grid for something in plain words (40 requests, each run 3 times; the AI Toolkit's groups and totals: 27 of 30).
 - **0** invoices or reminders sent without the owner's click: no agent tool can send one, and a test checks it.
 
 ### Why it fits each prize
-- **PayPal + AI:** six AI agents do invoicing, reminders, refunds and creator payouts through the PayPal Agent Toolkit and APIs, and code checks what they hand over: the budget agent's numbers and payment ids against the PayPal ledger, invoice prices and recipients set in code.
-- **Agentic commerce:** agents act on a shop's money, within limits written in code, and hand the final click to the owner.
-- **AG Grid:** the agents work inside an AG Studio workspace and drive the PayPal ledger grid with AG Grid's AI Toolkit.
+- **PayPal + AI:** six agents work through the PayPal Agent Toolkit and APIs; code checks what they hand over.
+- **Agentic commerce:** agents act on a shop's money within limits in code; the owner gives the final click.
+- **AG Grid:** the agents work in an AG Studio workspace and drive the ledger grid with the AI Toolkit.
 
 ## Inspiration
 
