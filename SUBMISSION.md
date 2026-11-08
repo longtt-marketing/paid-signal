@@ -3,7 +3,7 @@
 Project name: Paid Signal
 
 Tagline (200 characters max):
-A PayPal back office for small shops, run by agents in AG Grid: they invoice ready buyers, chase late payers, refund double charges and find ads that sell. Nothing goes out until the owner approves.
+Know which ads bring PayPal money, not just chats. AI agents in AG Grid tie each payment to its ad, then invoice, chase, refund and move ad budget. Nothing goes out until the owner approves.
 
 Built with: paypal-agent-toolkit, paypal-server-sdk, apimatic, mcp, paypal-orders-v2, paypal-invoicing, paypal-webhooks, paypal-transaction-search, paypal-js-sdk, meta-conversions-api, claude, anthropic, ag-studio, ag-grid, react, vite, cloudflare-workers, workers-kv, javascript
 
@@ -12,7 +12,7 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 ---
 
 <!-- devpost-story -->
-**A PayPal back office for small shops, run by agents in AG Grid: one invoices the buyers who are ready, one chases late payers, one refunds double charges, one finds the ads that sell. Each agent drafts its step; the owner approves, and every action is checked against PayPal.**
+**Small shops pay for ads that bring chats, but only some chats turn into money. Paid Signal ties each PayPal payment to the ad click behind it, and AI agents work from that ledger inside AG Grid: they invoice buyers who are ready, chase late payers, refund double charges and move ad money to the ads that sell. Nothing goes out until the owner approves.**
 
 **Try it in 90 seconds** ([open the workspace](https://paid-signal.thelongmarketing.workers.dev/studio), no login):
 1. In the chart at the top, click the Testimonial ad. The page and the PayPal ledger under it narrow to that ad, and the budget agent's suggestion waits for your Approve.
@@ -23,9 +23,8 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 Want to pay as a customer? The [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) lets you pay a sandbox invoice the agent drafted for you, see what it changes in the ad's numbers, and undo it with a PayPal refund.
 
 ### In numbers
-- **36 of 36** PayPal actions the agents took (invoices, reminders, a refund, a payout) found again in PayPal on 8 Nov, each with the status PayPal reports ([live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions)).
-- Over two runs of a held-out set of leads: **24 of 24** ready-to-buy decisions invoiced, **20 of 20** not-ready leads left alone, **0 of 16** prompt-injection attempts invoiced.
-- **117 of 120** runs right when the owner asks the assistant, in plain words, to filter, sort, group or total the PayPal ledger grid: 40 hand-written requests (10 of them groups and totals through AG Grid's AI Toolkit, 6 it must not act on), each run 3 times; the check reads what the grid itself shows.
+- **36 of 36** PayPal actions the agents took are found again in PayPal, each with PayPal's own status (8 Nov, [live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions)).
+- **117 of 120** runs right when the owner asks the ledger grid for something in plain words (40 requests, each run 3 times; the AI Toolkit's groups and totals: 27 of 30).
 - **0** invoices or reminders sent without the owner's click: no agent tool can send one, and a test checks it.
 
 ### Why it fits each prize
@@ -41,10 +40,10 @@ Agents and money are an obvious risk: an agent can quote a number that is not tr
 
 ## What it does
 
+- **Ad money for the ads that sell.** Each PayPal payment is matched to the ad click behind it; refunds come off, and a possible double payment or an open dispute is put on hold. The budget agent suggests which ads to grow, keep or cut from this ledger; every number and payment id it quotes is checked in code, and an ad with fewer than 3 paid orders is never moved. In the demo, the free guide ad shows 31 leads in the ad report and 1 paid order in PayPal.
 - **Invoices for buyers who are ready.** The revenue agent reads what each lead wrote, picks the ones ready to buy and drafts a PayPal invoice through the Agent Toolkit; code sets the price and the recipient. The owner approves, and the send agent reads the draft from PayPal again before it sends it.
 - **Kind reminders for late payers.** The chase agent prepares reminders for unpaid invoices, at most three a run, and sends them when the owner clicks Send.
 - **Refunds for double charges, payouts for creators.** The refund agent returns a double payment once the owner approves. The payout agent pays the ad's creator per PayPal-confirmed order, not per lead.
-- **Ad money for the ads that sell.** Each PayPal payment is matched to the ad click behind it; refunds come off, and a possible double payment or an open dispute is put on hold. The budget agent suggests which ads to grow, keep or cut from this ledger; every number and payment id it quotes is checked in code, and an ad with fewer than 3 paid orders is never moved. On the demo shop, the free guide ad has 31 leads in the ad report and 1 paid order in PayPal.
 
 ## AG Grid and AG Studio
 
@@ -72,12 +71,12 @@ AG Studio is the shop's workspace, and the PayPal ledger is an AG Grid table the
 
 - **Agents that make up numbers.** The fix was to let agents draft and code decide: a check rejects any number or payment id that is not in the ledger. Against 11 kinds of planted error, 100 of each, it caught all of them, and it rejected 0 of 500 correct recommendations.
 - **Matching money to ads.** A PayPal payment arrives from an order, an invoice or a webhook, sometimes twice. We match each one to its ad click, take refunds off and hold look-alike double payments until a person decides.
-- **An assistant that must reach the right grid.** AG Studio can keep a hidden copy of a widget, so a request sent to one copy could go unanswered; every copy now listens and the one on screen answers. And while the ledger shows its own ad groups, its columns cannot group or filter, so the AI Toolkit's schema came back empty and the model had to guess; the grid now switches to its flat view before the schema is read. The grid evals found both.
+- **An assistant you can trust on the grid.** Only measuring caught it: the grid evals found two silent failures (a hidden widget copy that never answered, and an empty AI Toolkit schema while the ledger showed its ad groups). Both are fixed, and the eval was rerun after each fix.
 
 ## Accomplishments that we're proud of
 
 - Real sandbox money, end to end: a $49 double payment refunded (COMPLETED), $15 paid to the ad's creator for 3 paid orders (SUCCESS), and every agent action found again in PayPal.
-- 117 of 120 runs right when the assistant drives the ledger grid (filters, sorts, AI Toolkit groups and totals, refusals), and a browser check of both ledgers that passes 7 of 7.
+- Over two runs of a held-out set of leads, the revenue agent invoiced 24 of 24 ready-to-buy decisions, left 20 of 20 not-ready leads alone and invoiced 0 of 16 prompt-injection attempts; a browser check of both ledgers passes 7 of 7.
 - 0 accessibility violations on nine pages, phone and desktop (axe-core).
 
 ## What we learned
@@ -92,7 +91,7 @@ AG Studio is the shop's workspace, and the PayPal ledger is an AG Grid table the
 ## Limits
 
 - The demo shop's ads and leads are fictional, PayPal runs in the sandbox, and Meta receives test events. The ledger holds 13 sandbox payments.
-- Approve buttons are open in the demo; a real shop would put them behind its own login.
+- Approve buttons are open so judges can try every step without an account; a real shop would sign in first.
 - The gift shop was paid by bank transfer, not PayPal: it is why Paid Signal exists, not a result of it.
 - AG Grid Enterprise runs on a trial licence.
 

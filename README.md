@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**A PayPal back office for small shops, run by agents in AG Grid: one invoices the buyers who are ready, one chases late payers, one refunds double charges, one finds the ads that sell. Each agent drafts its step; the owner approves, and every action is checked against PayPal.**
+**Small shops pay for ads that bring chats, but only some chats turn into money. Paid Signal ties each PayPal payment to the ad click behind it, and AI agents work from that ledger inside AG Grid: they invoice buyers who are ready, chase late payers, refund double charges and move ad money to the ads that sell. Nothing goes out until the owner approves.**
 
 ![AG Studio, 30 seconds: a click on an ad filters the page; the PayPal ledger (AG Grid) narrows to it; a payment opens its history; the owner decides in the cell](docs/img/studio-tour.gif)
 
