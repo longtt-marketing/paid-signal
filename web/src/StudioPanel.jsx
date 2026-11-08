@@ -6,6 +6,7 @@ import { buildAi } from "./agentTools.js";
 import { buildData, initialReport, phoneReport, phoneTheme, shopSources, theme } from "./studio.js";
 import { shareGapWidgetDefinition } from "./ShareGapWidget.jsx";
 import { toolDisplay } from "./toolDisplay.jsx";
+import { enableGridEnterprise } from "./gridModules.js";
 import { claimWidgetDefinition } from "./ClaimWidget.jsx";
 import { moneyFlowWidgetDefinition } from "./ClaimToCashFlowWidget.jsx";
 import { timelineWidgetDefinition } from "./TimelineWidget.jsx";
@@ -21,7 +22,9 @@ const LAYOUT_KEY = "ps-studio-layout-v1";
 const savedLayout = () => { try { const s = JSON.parse(localStorage.getItem(LAYOUT_KEY) || "null"); return s?.pages?.length ? s : null; } catch { return null; } };
 const narrow = () => typeof matchMedia === "function" && matchMedia("(max-width: 760px)").matches;
 
-const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, csvRef, onInvoices, onRecommendation, onNudge }, ref) {
+const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, gridEnterprise, csvRef, onInvoices, onRecommendation, onNudge }, ref) {
+  // AG Grid Enterprise (AI Toolkit, row grouping) for the ledger widget, when licensed
+  useEffect(() => { if (gridEnterprise?.on) enableGridEnterprise(gridEnterprise.license); }, [gridEnterprise?.on, gridEnterprise?.license]);
   const studio = useRef(null);
   const [phone] = useState(narrow); // chosen once at mount; Studio keeps its own layout state after that
   const ai = useMemo(() => buildAi({ getCsv: () => csvRef.current, onInvoices, onRecommendation, onNudge }), [csvRef, onInvoices, onRecommendation, onNudge]);

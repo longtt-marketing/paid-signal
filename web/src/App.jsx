@@ -94,7 +94,8 @@ export default function App({ first = null }) {
   const csvRef = useRef("");
   csvRef.current = csv;
 
-  useEffect(() => { api("/api/config").then((c) => setLicense(c.ag_studio_license || null)).catch(() => setLicense(null)); }, []);
+  const [gridEnterprise, setGridEnterprise] = useState({ on: false, license: null });
+  useEffect(() => { api("/api/config").then((c) => { setLicense(c.ag_studio_license || null); setGridEnterprise({ on: Boolean(c.ag_grid_enterprise), license: c.ag_grid_license || null }); }).catch(() => setLicense(null)); }, []);
   // when approvals grow while someone works in AG Studio, the page must not jump: keep the Studio where it was on screen
   const studioTop = useRef(null);
   const pinStudio = useCallback(() => {
@@ -562,7 +563,7 @@ export default function App({ first = null }) {
 
         <section id="studio" className="card studio-card" ref={studioBox} aria-label="AG Studio">
           <div className="card-head">
-            <div><h2>{view === "report" ? "Report · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2><p className="muted">{STUDIO_PAGE ? "Seven custom widgets on one ledger; the agents act on PayPal." : "Seven custom widgets, a real shop's book, cross-filters, Claude in the assistant."}{layoutNote ? ` ${layoutNote}.` : ""}</p></div>
+            <div><h2>{view === "report" ? "The shop's PayPal workspace · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2><p className="muted">{STUDIO_PAGE ? "AI agents do the PayPal work here; nothing reaches a customer until you click." : "Seven custom widgets, a real shop's book, cross-filters, Claude in the assistant."}{layoutNote ? ` ${layoutNote}.` : ""}</p></div>
             <div className="row">
               {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {myDecisionCount > 0 && <span className="count">{myDecisionCount}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
               <button className="btn" onClick={() => setLayoutNote(studio.current?.saveLayout() ? "Saved in this browser" : "Could not save")}>Save layout</button>
@@ -570,13 +571,13 @@ export default function App({ first = null }) {
               <button className="btn dark" onClick={openAssistant}>Open the Studio assistant</button>
             </div>
           </div>
-          {STUDIO_PAGE && <ol className="judge-strip" aria-label="For AG Grid judges: three clicks">
-            <li className="js-k">For AG Grid judges</li>
-            {readBack && <li><button type="button" className="js-link js-count" onClick={() => { setStudioPage("agents"); studio.current?.selectPage("agents"); }}>{readBack.read_back}/{readBack.total} agent writes found in PayPal</button>{readBack.checked_at && <span className="js-at"> · read {String(readBack.checked_at).slice(11, 16)} UTC{readBack.stale ? ", limit reached: older read" : ""}</span>}</li>}
-            <li><button type="button" className="js-link" onClick={() => pointTo("Ad report vs PayPal: leads → paid money|1 · Leads", "[role=button][aria-label^='Testimonial']")}><b>1</b>Click a band</button></li>
-            <li><button type="button" className="js-link" onClick={() => pointTo("PayPal ledger (AG Grid)|2 · PayPal ledger", ".trail-toggle, button[aria-expanded]")}><b>2</b>Open a payment's trail</button></li>
-            <li><button type="button" className="js-link" onClick={() => pointTo("Who still owes", ".owes-act button")}><b>3</b>Nudge, PayPal confirms</button></li>
-            <li><button type="button" className="js-link" onClick={openReplay}>Assistant: replay a run</button></li>
+          {STUDIO_PAGE && <ol className="judge-strip" aria-label="Try it: three clicks">
+            <li className="js-k">Try it</li>
+            {readBack && <li><button type="button" className="js-link js-count" onClick={() => { setStudioPage("agents"); studio.current?.selectPage("agents"); }}>{readBack.read_back} of {readBack.total} agent actions found in PayPal</button>{readBack.checked_at && <span className="js-at"> · read {String(readBack.checked_at).slice(11, 16)} UTC{readBack.stale ? ", limit reached: older read" : ""}</span>}</li>}
+            <li><button type="button" className="js-link" onClick={() => pointTo("Ad report vs PayPal: leads → paid money|1 · Leads", "[role=button][aria-label^='Testimonial']")}><b>1</b>Click an ad in the chart</button></li>
+            <li><button type="button" className="js-link" onClick={() => pointTo("PayPal ledger (AG Grid)|2 · PayPal ledger", ".trail-toggle, button[aria-expanded]")}><b>2</b>Open a payment's history</button></li>
+            <li><button type="button" className="js-link" onClick={() => pointTo("Who still owes", ".owes-act button")}><b>3</b>Send a kind reminder</button></li>
+            <li><button type="button" className="js-link" onClick={openReplay}>Ask the assistant</button></li>
           </ol>}
           <div className="studio-pages" role="group" aria-label="Report pages">
             {/* three pages carry the story; the rest fold under More pages */}
@@ -587,7 +588,7 @@ export default function App({ first = null }) {
           </div>
           <div className="studio">
             {studioOn && license !== undefined
-              ? <StudioGuard><Suspense fallback={<div className="studio-wait">Loading AG Studio…</div>}><StudioPanel ref={studio} state={state} invoices={invoices} license={license} csvRef={csvRef} onInvoices={onStudioInvoices} onNudge={onNudge} onRecommendation={onRecommendation} /></Suspense></StudioGuard>
+              ? <StudioGuard><Suspense fallback={<div className="studio-wait">Loading AG Studio…</div>}><StudioPanel ref={studio} state={state} invoices={invoices} license={license} gridEnterprise={gridEnterprise} csvRef={csvRef} onInvoices={onStudioInvoices} onNudge={onNudge} onRecommendation={onRecommendation} /></Suspense></StudioGuard>
               : <a className="studio-wait" href="#report">Open the AG Studio report</a>}
           </div>
         </section>

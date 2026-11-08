@@ -109,6 +109,14 @@ export const toolDisplay = {
     label: (p) => ({ text: p.args?.reset ? "Put the PayPal ledger back to every payment" : "Filtered and sorted the PayPal ledger grid", pill: data(p).shown != null ? `${data(p).shown} shown` : undefined }),
     detail: body((d) => (d.top || []).map((r) => [`${r.ad} · ${r.capture}`, `${usd(r.kept_usd)} kept of ${usd(r.captured_usd)} · ${r.status}`, /Held|Refunded/.test(r.status) ? "gap" : ""])),
   },
+  get_ledger_grid_schema: {
+    label: (p) => ({ text: "Read the ledger grid's schema (AG Grid AI Toolkit)", pill: data(p).available === false ? "not available" : data(p).schema ? "schema" : undefined }),
+  },
+  set_ledger_grid_state: {
+    label: (p) => ({ text: "Applied a grid state to the ledger (AG Grid AI Toolkit)", pill: data(p).shown != null ? `${data(p).shown} rows${data(p).groups?.length ? `, ${data(p).groups.length} groups` : ""}` : undefined }),
+    detail: body((d) => [...(d.groups || []).map((g) => [g.group, Object.entries(g).filter(([k]) => k !== "group").map(([k, v]) => `${k} ${v}`).join(" · ")]),
+      ...(d.grid_state ? [["Grid state", JSON.stringify(d.grid_state).slice(0, 160)]] : [])]),
+  },
   open_page: {
     label: (p) => ({ text: "Opened a report page", pill: data(p).name || undefined }),
   },

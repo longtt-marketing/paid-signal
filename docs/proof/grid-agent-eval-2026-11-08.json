@@ -2,14 +2,16 @@
  "run": "2026-11-08",
  "base": "http://localhost:8792",
  "repeats": 3,
- "requests": 30,
- "cases": 90,
- "stable": 30,
+ "requests": 40,
+ "cases": 120,
+ "stable": 39,
  "negative_ok": 18,
  "negative_runs": 18,
- "understood": 90,
- "grid_ok": 90,
- "both": 90,
+ "toolkit_ok": 27,
+ "toolkit_runs": 30,
+ "understood": 117,
+ "grid_ok": 117,
+ "both": 117,
  "results": [
   {
    "request": "In the PayPal ledger, show only the payments that were refunded.",
@@ -371,8 +373,8 @@
     "sort": "date_desc"
    },
    "agent_call": {
-    "status": "all",
-    "sort": "date_desc"
+    "sort": "date_desc",
+    "status": "all"
    },
    "understood": true,
    "grid_shows": [
@@ -462,8 +464,7 @@
     "sort": null
    },
    "agent_call": {
-    "status": "refunded",
-    "sort": "amount_desc"
+    "status": "refunded"
    },
    "understood": true,
    "grid_shows": [
@@ -611,8 +612,8 @@
    },
    "agent_call": {
     "ad": "holiday_static",
-    "sort": "kept_desc",
-    "status": "all"
+    "status": "all",
+    "sort": "kept_desc"
    },
    "understood": true,
    "grid_shows": [
@@ -729,6 +730,436 @@
    "grid_shows": null,
    "understood": true,
    "grid_ok": true
+  },
+  {
+   "request": "In the PayPal ledger, group the payments by ad and show the money kept per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by status and show the money kept in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "money kept per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "kept": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "kept": 0
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "kept": 40
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "kept": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 0.0,
+    "Paid, $9.00 back": 40.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show the total refunded per ad in the ledger, grouped by ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "total refunded per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the payments by ad and total the amount captured for each ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "amount captured per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "amount": 98
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 245.0,
+    "Testimonial · carousel": 245.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 98.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show how much money was kept per ad, counting only payments with status Paid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null}]}}},\"sort\":null}",
+    "label": "money kept per ad, status Paid only"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "How much money went back to buyers for each ad? Group the grid that way.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "money back to buyers per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the ledger grid, total what buyers paid in each status group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "amount buyers paid per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "amount": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "amount": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 49.0,
+    "Held: double?": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group by status and add up the refunds in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "refunds per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "back": 0
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "back": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "back": 9
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "back": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 0.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 9.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by ad and add up the money we kept.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "For refunded payments only, total the amount captured per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": "Refunded"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "show_payments_in_ledger",
+    "delegate_to"
+   ],
+   "agent_call": {},
+   "grid_groups": [],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Holiday camp · static": 49.0
+   },
+   "understood": false,
+   "grid_ok": false
   },
   {
    "request": "In the PayPal ledger, show only the payments that were refunded.",
@@ -1090,8 +1521,8 @@
     "sort": "date_desc"
    },
    "agent_call": {
-    "status": "all",
-    "sort": "date_desc"
+    "sort": "date_desc",
+    "status": "all"
    },
    "understood": true,
    "grid_shows": [
@@ -1156,8 +1587,8 @@
     "sort": "date_desc"
    },
    "agent_call": {
-    "ad": "trial_video",
     "status": "paid",
+    "ad": "trial_video",
     "sort": "date_desc"
    },
    "understood": true,
@@ -1329,8 +1760,8 @@
    },
    "agent_call": {
     "ad": "holiday_static",
-    "sort": "kept_desc",
-    "status": "all"
+    "status": "all",
+    "sort": "kept_desc"
    },
    "understood": true,
    "grid_shows": [
@@ -1447,6 +1878,444 @@
    "grid_shows": null,
    "understood": true,
    "grid_ok": true
+  },
+  {
+   "request": "In the PayPal ledger, group the payments by ad and show the money kept per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by status and show the money kept in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "money kept per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "kept": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "kept": 0
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "kept": 40
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "kept": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 0.0,
+    "Paid, $9.00 back": 40.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show the total refunded per ad in the ledger, grouped by ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "total refunded per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the payments by ad and total the amount captured for each ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "amount captured per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "amount": 98
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 245.0,
+    "Testimonial · carousel": 245.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 98.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show how much money was kept per ad, counting only payments with status Paid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad, status Paid only"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "How much money went back to buyers for each ad? Group the grid that way.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "money back to buyers per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the ledger grid, total what buyers paid in each status group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"status\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "amount buyers paid per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "amount": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "amount": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 49.0,
+    "Held: double?": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group by status and add up the refunds in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "refunds per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "back": 0
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "back": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "back": 9
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "back": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 0.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 9.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by ad and add up the money we kept.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "For refunded payments only, total the amount captured per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": "Refunded"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "show_payments_in_ledger",
+    "show_payments_in_ledger",
+    "show_payments_in_ledger",
+    "show_payments_in_ledger",
+    "show_payments_in_ledger",
+    "show_payments_in_ledger",
+    "show_payments_in_ledger",
+    "show_payments_in_ledger",
+    "show_payments_in_ledger",
+    "show_payments_in_ledger"
+   ],
+   "agent_call": {},
+   "grid_groups": [],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Holiday camp · static": 49.0
+   },
+   "understood": false,
+   "grid_ok": false
   },
   {
    "request": "In the PayPal ledger, show only the payments that were refunded.",
@@ -1628,8 +2497,8 @@
    },
    "agent_call": {
     "ad": "parent_carousel",
-    "status": "all",
-    "sort": "date_desc"
+    "sort": "date_desc",
+    "status": "all"
    },
    "understood": true,
    "grid_shows": [
@@ -1808,8 +2677,8 @@
     "sort": "date_desc"
    },
    "agent_call": {
-    "status": "all",
-    "sort": "date_desc"
+    "sort": "date_desc",
+    "status": "all"
    },
    "understood": true,
    "grid_shows": [
@@ -1899,8 +2768,7 @@
     "sort": null
    },
    "agent_call": {
-    "status": "refunded",
-    "sort": "amount_desc"
+    "status": "refunded"
    },
    "understood": true,
    "grid_shows": [
@@ -2166,7 +3034,436 @@
    "grid_shows": null,
    "understood": true,
    "grid_ok": true
+  },
+  {
+   "request": "In the PayPal ledger, group the payments by ad and show the money kept per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by status and show the money kept in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "money kept per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "kept": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "kept": 0
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "kept": 40
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "kept": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 0.0,
+    "Paid, $9.00 back": 40.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show the total refunded per ad in the ledger, grouped by ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "total refunded per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the payments by ad and total the amount captured for each ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "amount captured per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "amount": 98
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 245.0,
+    "Testimonial · carousel": 245.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 98.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show how much money was kept per ad, counting only payments with status Paid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad, status Paid only"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "How much money went back to buyers for each ad? Group the grid that way.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "money refunded per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the ledger grid, total what buyers paid in each status group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"status\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "amount buyers paid per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "amount": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "amount": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 49.0,
+    "Held: double?": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group by status and add up the refunds in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "refunds per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "back": 0
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "back": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "back": 9
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "back": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 0.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 9.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by ad and add up the money we kept.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "For refunded payments only, total the amount captured per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": "Refunded"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "show_payments_in_ledger",
+    "read_paid_signal"
+   ],
+   "agent_call": {},
+   "grid_groups": [],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Holiday camp · static": 49.0
+   },
+   "understood": false,
+   "grid_ok": false
   }
- ],
- "note": "30 hand-written requests (24 grid requests and 6 the agent must not act on), each run 3 times with real Claude through the Worker's proxy, on a local wrangler dev whose KV holds a copy of the live ledger's 13 payments (scripts/seed-local.py). Earlier runs that night found and led to fixes: newest first sorted by day only; an unknown ad name was swapped for a similar one; a request to invoice people who had already paid once led to drafts. Each run reads only the reply to its own request, in a fresh chat."
+ ]
 }

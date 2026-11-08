@@ -1,81 +1,86 @@
-## Paid Signal in brief
 
-**An AG Studio workspace where Claude agents read the PayPal ledger in AG Grid, filter it on request, and draft PayPal invoices that go out only on the owner's click. Why it matters: the ad report says the free guide ad brought 31 leads; PayPal says that ad has 1 paid order.**
+**A PayPal back office for small shops, run by agents in AG Grid: one invoices the buyers who are ready, one chases late payers, one refunds double charges, one finds the ads that sell. Each agent drafts its step; the owner approves, and every action is checked against PayPal.**
 
-**For AG Grid judges, 90 seconds** ([/studio](https://paid-signal.thelongmarketing.workers.dev/studio), no login):
-1. In the money-flow chart, click the Testimonial ad's band: the page filters, the PayPal ledger (an AG Grid widget) narrows to that ad, and the budget agent's checked verdict waits for Approve.
-2. Press ▸ on a payment: its trail opens inside the grid, from the ad click to PayPal to what Meta heard.
-3. Open the assistant and pick **Show refunded or held payments**: AG Grid filters, sorts and flashes them. **Replay Studio building a page** shows Studio's own agents building a page (no model call).
-4. Open **Agents → PayPal**: the invoices, reminders, refund and payout the agents made, each with the status PayPal returns for it, read back when the page loads.
+**Try it in 90 seconds** ([open the workspace](https://paid-signal.thelongmarketing.workers.dev/studio), no login):
+1. In the chart at the top, click the Testimonial ad. The page and the PayPal ledger under it narrow to that ad, and the budget agent's suggestion waits for your Approve.
+2. Open the assistant and pick **Group the ledger by ad (AI Toolkit)**, or ask in your own words. AG Grid's AI Toolkit turns the request into a grid state, and the grid groups the payments and totals the money kept.
+3. Pick **Invoice warm leads**. The revenue agent drafts real PayPal sandbox invoices and puts each one in the chat as a card; nothing is sent until you press Approve.
+4. Open **Agents → PayPal**: every invoice, reminder, refund and payout the agents made, with the status PayPal reports for it now.
 
-**Agents that write, checked by PayPal:** invoice drafts, sends, reminders, a refund and a payout made by the agents, each read back from PayPal ([live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions); what is counted: docs/AG-STUDIO.md).
+Want to pay as a customer? The [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) lets you pay a sandbox invoice the agent drafted for you, see what it changes in the ad's numbers, and undo it with a PayPal refund.
 
-**Links, no login:** [Judge path](https://paid-signal.thelongmarketing.workers.dev/judge) · [AG Studio report](https://paid-signal.thelongmarketing.workers.dev/studio) · [Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit) · [Dashboard](https://paid-signal.thelongmarketing.workers.dev) · [Proof](https://paid-signal.thelongmarketing.workers.dev/proof) · [Code](https://github.com/longtt-marketing/paid-signal)
+### In numbers
+- **36 of 36** PayPal actions the agents took (invoices, reminders, a refund, a payout) found again in PayPal on 8 Nov, each with the status PayPal reports ([live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions)).
+- Over two runs of a held-out set of leads: **24 of 24** ready-to-buy decisions invoiced, **20 of 20** not-ready leads left alone, **0 of 16** prompt-injection attempts invoiced.
+- **117 of 120** runs right when the owner asks the assistant, in plain words, to filter, sort, group or total the PayPal ledger grid: 40 hand-written requests (10 of them groups and totals through AG Grid's AI Toolkit, 6 it must not act on), each run 3 times; the check reads what the grid itself shows.
+- **0** invoices or reminders sent without the owner's click: no agent tool can send one, and a test checks it.
 
-## AG Grid: AG Studio as the agent workspace
+### Why it fits each prize
+- **PayPal + AI:** six AI agents do invoicing, reminders, refunds and creator payouts through the PayPal Agent Toolkit and APIs, and code checks what they hand over: the budget agent's numbers and payment ids against the PayPal ledger, invoice prices and recipients set in code.
+- **Agentic commerce:** agents act on a shop's money, within limits written in code, and hand the final click to the owner.
+- **AG Grid:** the agents work inside an AG Studio workspace and drive the PayPal ledger grid with AG Grid's AI Toolkit.
 
-| What a judge sees | AG Grid / AG Studio API | Where to click |
-|---|---|---|
-| The assistant filters, sorts and flashes the PayPal ledger | `doesExternalFilterPass`, `applyColumnState`, `postSortRows`, `ensureIndexVisible`, `flashCells` | assistant: Show refunded or held payments |
-| Studio's own agents build a page from one request | Studio AI harness: the lead delegates to the page, widget and data agents | assistant: Replay Studio building a page |
-| A click on a band filters the page and the ledger | custom widget, `toggleCrossFilter`, `getCrossFilterSelections` | Ads vs PayPal: the Testimonial band |
-| Invoice drafts and reminders as cards with Approve or Send | `defineAiTool` tools with their own `aiToolDisplay` cards | assistant: Invoice warm leads, Nudge who still owes |
-| A payment's trail inside the grid | full-width rows (`isFullWidthRow`, `fullWidthCellRenderer`) | ▸ on a payment |
-| Writes per agent by PayPal status, filtering the list | Studio stacked bar chart and cross-filter | Agents → PayPal |
-| Recorded runs replayed through Studio's agent loop | a custom `AgLlmAdapter` for Claude | assistant: Replay a budget run |
+## Inspiration
 
-Claude drives the grid through AG Grid's own APIs (external filter, column state, sort, flashCells), and an eval of 30 hand-written requests, each run 3 times, checks the rows AG Grid actually shows against the ledger: 90 of 90.
+Small shops that sell through ads live between two numbers: the leads the ad platform reports and the money that actually arrives. They rarely agree. In a real gift shop's October, with about $10,000 of ads, the ad that brought 69% of the chats brought 19% of the money. That shop takes bank transfers, so we built the same check on PayPal, where every payment is confirmed, and gave the daily money work to agents.
 
-- **The assistant drives the grid:** ask "show me the payments that were refunded or are held, newest first". The show_payments_in_ledger tool makes the PayPal ledger (an AG Grid table) list payments flat, and AG Grid itself filters them (external filter), sorts them (column state), scrolls to them and flashes them; an open ▸ trail stays under its payment, and × goes back to the grouped ledger. An eval of 30 hand-written requests (6 of them the agent must not act on, such as a refund or an ad that does not exist), each run 3 times with real Claude on a local copy of the ledger's 13 payments, checks what the agent asked for and the rows AG Grid then shows: 90 of 90 runs right (`scripts/eval-grid-agent.py`, docs/proof/grid-agent-eval-2026-11-08.json; earlier runs found three faults, now fixed). A browser check of both ledgers passes 6 of 6 (`scripts/e2e-grid.py`). A cell also flashes when a payment's kept amount or status changes.
-- **PayPal writes that reach a customer wait for the owner's click:** the revenue agent drafts real PayPal sandbox invoices; the drafts, and the reminders the nudge agent proposes, come back into the chat as cards. No Studio tool sends an invoice or a reminder by itself (a test checks it): Approve runs the send agent, which re-reads the draft first; Send runs the chase agent, at most three unpaid invoices a run.
-- **Proof, read back from PayPal:** the Agents → PayPal page lists each invoice draft, send, reminder, refund and payout an agent made (newest 40), with the status PayPal returns for it, the API it came through and each agent's limit as written in code (for example: unpaid only, at most 3 a run); a chart of writes per agent by PayPal status filters the list.
-- **The money flow and the ledger under it:** each ad's band runs from its share of the ad report's leads to its share of PayPal-confirmed revenue (the free guide's 50% shrinks to 11%, the testimonial ad's 18% grows to 45%). A click filters the page, narrows the ledger and shows the budget agent's checked verdict, which the owner approves or dismisses (the decision is recorded; no live ad budget changes). In the ledger, ▸ opens a payment's trail (ad click → PayPal capture → ledger → what Meta heard), and the Decision cell sends Refund… or Separate order… to server routes that check it.
-- **The report:** eight pages (three in the tab bar, one blank for your own views), tables joined by relations with measures, a ledger-paper theme and a phone layout; a test checks that Studio's totals equal the ledger's and the shop book's. The real-shop page adds an AG Grid pivot of the shop's 735 payments by ad group and week. The dashboard has the same ledger as an AG Grid table, with an AG Charts bar chart that filters it, search and CSV export; the dashboard's own ledger and chart use AG Grid and AG Charts Community only.
-- **Studio's agents build a page:** ask Build a page with Studio's agents and the lead opens the blank Your page; Studio's page, widget and data agents add a value widget, a column chart of money refunded per ad and a grid of the captures, then read the numbers back.
-- **Recorded runs:** the assistant opens on five real runs (budget, nudge, the real shop, invoicing, the page build). Replay a budget run and Replay Studio building a page play two of them back through Studio's own agent loop, so Studio carries out the recorded tool calls (the chart, the whole page) with no model call. How it is built: docs/AG-STUDIO.md.
-
-Open it first: [AG Studio report](https://paid-signal.thelongmarketing.workers.dev/studio) (opens the report straight away and only reads). Screenshots and the agents' write limits: docs/AG-STUDIO.md.
-
-## The judge path: one loop with PayPal
-
-**On the [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) (sandbox, a few minutes):**
-1. **Claude says no.** The owner asks to raise the free guide; with 1 paid order, Claude refuses, and the rule in code refuses it too.
-2. **You pay.** Ask to book: Claude drafts a real PayPal invoice through the Agent Toolkit. You came in from the testimonial ad (a test click), so when you pay as the sandbox buyer the ad gains your order (its count goes 4 → 5), the budget rule re-runs and Meta gets a Purchase test event.
-3. **Undo.** PayPal refunds it and the count goes back to 4.
+Agents and money are an obvious risk: an agent can quote a number that is not true, or send something it should not. So in Paid Signal the agents draft and code checks: the numbers and payment ids they quote are checked against the ledger, prices are set in code, and every action that reaches a customer or moves money waits for the owner.
 
 ## What it does
 
-The core loop, in three steps:
+- **Invoices for buyers who are ready.** The revenue agent reads what each lead wrote, picks the ones ready to buy and drafts a PayPal invoice through the Agent Toolkit; code sets the price and the recipient. The owner approves, and the send agent reads the draft from PayPal again before it sends it.
+- **Kind reminders for late payers.** The chase agent prepares reminders for unpaid invoices, at most three a run, and sends them when the owner clicks Send.
+- **Refunds for double charges, payouts for creators.** The refund agent returns a double payment once the owner approves. The payout agent pays the ad's creator per PayPal-confirmed order, not per lead.
+- **Ad money for the ads that sell.** Each PayPal payment is matched to the ad click behind it; refunds come off, and a possible double payment or an open dispute is put on hold. The budget agent suggests which ads to grow, keep or cut from this ledger; every number and payment id it quotes is checked in code, and an ad with fewer than 3 paid orders is never moved. On the demo shop, the free guide ad has 31 leads in the ad report and 1 paid order in PayPal.
 
-1. **Chat to PayPal invoice.** The revenue agent reads each lead's message and drafts the invoice with the Agent Toolkit's `create_invoice`; code sets the price and recipient inside the call. A person approves; the send agent sends; the chase agent reminds, within code limits.
-2. **Payment to ledger.** Payments are matched to ads from the capture, the invoice and signature-verified webhooks. Refunds come off; likely double payments and open disputes are held out. Transaction Search cross-checks the ledger against PayPal's history.
-3. **Budget by money.** The budget agent recommends moves from that ledger; an evidence gate in code checks every number, capture id and the direction of every move, and below 3 paid orders an ad's budget does not move. A person approves.
+## AG Grid and AG Studio
 
-**Real data:** in a Vietnamese gift shop with about $10,000 of October ads, the ad with 69% of the chats brought 19% of the money. The shop is paid by bank transfer, not PayPal; its published book reruns through the same ledger code to the same 705 orders ([see it run](https://paid-signal.thelongmarketing.workers.dev/audit#shop)).
+AG Studio is the shop's workspace, and the PayPal ledger is an AG Grid table the agents work in.
 
-**Also on the same ledger:** the refund agent returns a held double payment once a person approves (a real sandbox refund of $49, COMPLETED; on the judge path, live Claude declines one of two look-alike double charges and refunds the other, held-out test 13 of 14); the ad's creator is paid $5 per PayPal-confirmed paid order through Payouts, not per lead (per lead, the free guide would pay $155 for 1 paid order); a confirmed payment from a Meta ad goes back to Meta as a Purchase; and [/audit](https://paid-signal.thelongmarketing.workers.dev/audit) runs the ledger on your own Ads Manager export and PayPal download in the browser, nothing uploaded.
+| What you see | AG Grid / AG Studio feature | Where |
+|---|---|---|
+| Ask for groups and totals; the grid builds them | AG Grid AI Toolkit: `getStructuredSchema()` goes to the model, and the grid state it returns is applied with `setState()` (row grouping, sums, filters) | assistant: Group the ledger by ad (AI Toolkit) |
+| Ask for some payments; the grid filters, sorts and flashes them | `setFilterModel` (filters show in the column headers), `applyColumnState`, `flashCells` | assistant: Show refunded or held payments |
+| Studio's own agents build a page from one request | Studio's AI framework: the lead agent hands the work to its page, widget and data agents | assistant: Replay Studio building a page |
+| Invoice drafts and reminders as cards with Approve or Send | custom Studio tools with their own chat cards | assistant: Invoice warm leads, Nudge who still owes |
 
-## Built with PayPal
+- A click on an ad in the chart filters the whole page through Studio's cross-filter; seven custom widgets read the same data.
+- In the ledger, ▸ opens a payment's history (ad click, PayPal capture, ledger, what Meta was told), and the owner decides each payment in its Decision cell: refund it, or count it as a separate order.
+- Also in the workspace: an AG Grid pivot of the real shop's 735 payments, a page Studio's agents build on request, and recorded runs replayed with no model call. How it is built: docs/AG-STUDIO.md.
 
-Agent Toolkit (`create_invoice`, `get_invoice`, `send_invoice`, `send_invoice_reminder`, `create_refund`, `get_refund`, `list_disputes`, `get_dispute`), Server SDK (APIMatic), Orders v2, Invoicing v2, Payouts v1, Webhooks with signature checks, Transaction Search, JS SDK. Six Claude agents, every tool call checked against its schema; an MCP server with six read-only tools; Cloudflare Workers and KV; 198 unit tests in CI.
+## How we built it
 
-## How we tested it
+- **PayPal:** Agent Toolkit (`create_invoice`, `get_invoice`, `send_invoice`, `send_invoice_reminder`, `create_refund`, `get_refund`, `list_disputes`, `get_dispute`), Orders v2 through the Server SDK (APIMatic), Invoicing v2, Payouts v1, Webhooks with signature checks, Transaction Search, JS SDK.
+- **AI:** six agents on Claude, each with its own tools, every tool call checked against its schema; inside AG Studio they run through a custom model adapter. A read-only MCP server exposes the ledger.
+- **AG Grid:** AG Studio for the workspace, AG Grid Enterprise (AI Toolkit, row grouping) on the Studio ledger, AG Grid Community and AG Charts on the dashboard.
+- **Runs on** Cloudflare Workers and KV, with 204 tests in CI.
 
-- Accessibility: axe-core 4.10.2 (WCAG 2.1 A and AA rules) reported 0 violations on nine pages of the live site at 390 px and 1440 px wide on 2026-11-07 (docs/proof/axe-2026-11-07.json, scripts/axe-check.py); the money-flow bands work from the keyboard.
-- Revenue agent, 30 held-out leads run twice: 24/24 bookings invoiced right, 20/20 not-ready leads left alone, 0/16 prompt injections invoiced (Claude plus the code checks).
-- Evidence gate: 11 kinds of planted error, 100 of each, all caught; 0 of 500 good recommendations rejected.
-- Refund agent, 14 held-out pairs that differ only in what the buyer wrote: 6/6 double payments refunded, 7/8 others declined.
-- Real sandbox runs: a $49 double payment refunded (COMPLETED); $15 paid to the creator for 3 paid orders (SUCCESS).
-- Methods and scripts behind every number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof).
+## Challenges we ran into
+
+- **Agents that make up numbers.** The fix was to let agents draft and code decide: a check rejects any number or payment id that is not in the ledger. Against 11 kinds of planted error, 100 of each, it caught all of them, and it rejected 0 of 500 correct recommendations.
+- **Matching money to ads.** A PayPal payment arrives from an order, an invoice or a webhook, sometimes twice. We match each one to its ad click, take refunds off and hold look-alike double payments until a person decides.
+- **An assistant that must reach the right grid.** AG Studio can keep a hidden copy of a widget, so a request sent to one copy could go unanswered; every copy now listens and the one on screen answers. And while the ledger shows its own ad groups, its columns cannot group or filter, so the AI Toolkit's schema came back empty and the model had to guess; the grid now switches to its flat view before the schema is read. The grid evals found both.
+
+## Accomplishments that we're proud of
+
+- Real sandbox money, end to end: a $49 double payment refunded (COMPLETED), $15 paid to the ad's creator for 3 paid orders (SUCCESS), and every agent action found again in PayPal.
+- 117 of 120 runs right when the assistant drives the ledger grid (filters, sorts, AI Toolkit groups and totals, refusals), and a browser check of both ledgers that passes 7 of 7.
+- 0 accessibility violations on nine pages, phone and desktop (axe-core).
+
+## What we learned
+
+- Agents are most useful on the tedious part, reading messages and drafting, with the decision left to a click.
+- The number that matters to a shop is the one PayPal confirms, not the one an ad platform reports.
+
+## What's next
+
+- A pilot with a real shop on PayPal, and budget changes that reach the ad platform after the owner approves.
 
 ## Limits
 
-- Outside AG Studio the app uses AG Grid Community only; AG Grid's AI Toolkit is an Enterprise module, so the assistant drives the grid through Community APIs.
-- A demo shop: its ads and leads are fictional; PayPal is sandbox; Meta gets test events. Results are on 13 sandbox payments; the 3-order floor is a safety rule, not a significance test.
-- Meta accepted a lead-form Purchase for one Meta test lead; a Messenger Purchase has not been accepted with a real chat id yet.
-- Gift shop: paid by bank transfer, not PayPal; it is why Paid Signal exists, not a result of it. Chat counts are reported from the ad account, whose exports are no longer available; its order, payment and refund book is published. "Money" is revenue after refunds, before costs.
-- The 9% to 18% (about $4,625 to $8,960) assumes returns flatten as an ad gets more spend; if they did not, 48% is the upper bound (`whatIf`, src/merchantCase.js). One month, three ad groups, spend moved beyond what October tested: not a measured lift.
-- Judge path: your ad click is a test click made in your browser, and Meta gets test events only; only your view changes; the creator payout runs once per browser, up to 15 judges a day. A live run on 6 Nov: Meta received the Purchase test event (events_received 1), then Undo ended REFUNDED (docs/proof/judge-click-meta-2026-11-06.json).
-- Approve records a decision; it does not change a live Meta budget. Whether a live campaign then spends better is not measured.
-- Approve buttons are open in the demo; a real shop puts them behind its own login.
-- Meta has no retraction: a refund after the send is subtracted here, not at Meta.
+- The demo shop's ads and leads are fictional, PayPal runs in the sandbox, and Meta receives test events. The ledger holds 13 sandbox payments.
+- Approve buttons are open in the demo; a real shop would put them behind its own login.
+- The gift shop was paid by bank transfer, not PayPal: it is why Paid Signal exists, not a result of it.
+- AG Grid Enterprise runs on a trial licence.
+
+Methods and scripts behind every number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof).

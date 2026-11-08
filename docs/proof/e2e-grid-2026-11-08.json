@@ -1,8 +1,8 @@
 {
  "run": "2026-11-08",
  "base": "http://localhost:8792",
- "checks": 6,
- "passed": 6,
+ "checks": 7,
+ "passed": 7,
  "results": [
   {
    "check": "studio total row: every payment, money kept",
@@ -39,6 +39,38 @@
      "7Y943188M77480212",
      "19L75638WN729671C",
      "7A791792B60079253"
+    ]
+   }
+  },
+  {
+   "check": "assistant view: AG Grid's own filter model is set (read back with getFilterModel) and shows in the Status header",
+   "ok": true,
+   "detail": {
+    "filter_model": {
+     "status": {
+      "filterType": "text",
+      "operator": "OR",
+      "conditions": [
+       {
+        "filterType": "text",
+        "type": "equals",
+        "filter": "Refunded"
+       },
+       {
+        "filterType": "text",
+        "type": "contains",
+        "filter": " back"
+       },
+       {
+        "filterType": "text",
+        "type": "startsWith",
+        "filter": "Held"
+       }
+      ]
+     }
+    },
+    "filtered_headers": [
+     "status"
     ]
    }
   },

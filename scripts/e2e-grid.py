@@ -1,8 +1,9 @@
 """End-to-end check of the two AG Grid ledgers in a real browser, on a local wrangler dev seeded with scripts/seed-local.py
 (no Claude call, no live KV): each check renders the grid and reads what it shows.
   1. Studio ledger: the pinned total row shows every payment and the money kept the ledger computes.
-  2. The assistant's view (refunded or held, newest first): the total row follows the filter, and the ids the widget
-     reports from AG Grid's row model match the rows on screen, in order.
+  2. The assistant's view (refunded or held, newest first): AG Grid's own filter model is set and shows in the Status
+     header, the total row follows the filter, and the ids the widget reports from AG Grid's row model match the rows
+     on screen, in order.
   3. A payment's trail opened in that sorted view sits right under its payment.
   4. The Decision form: an amount over what is left keeps the button off; a valid one gets the server's answer.
   5. Dashboard ledger: the search box narrows the rows and the total row follows.
@@ -45,6 +46,10 @@ with sync_playwright() as pw:
     rows = [x for x in pg.evaluate(ROWS_JS, T) if not x["full"]]
     total = pg.evaluate(TOTAL_JS, T)
     check("assistant view: ids from the row model match the rows on screen and the ledger", r and r["ids"] == [x["id"] for x in rows] == exp, {"reported": r and r["ids"], "on_screen": [x["id"] for x in rows], "ledger": exp})
+    fm = (r or {}).get("filter_model") or {}
+    active = pg.evaluate("""(title) => { const w = [...document.querySelectorAll('.ag-studio-layout-widget')].find((x) => x.textContent.includes(title));
+      return [...w.querySelectorAll('.ag-header-cell')].filter((h) => h.querySelector('.ag-filter-icon:not(.ag-hidden)') || h.classList.contains('ag-header-cell-filtered')).map((h) => h.getAttribute('col-id')); }""", T)
+    check("assistant view: AG Grid's own filter model is set (read back with getFilterModel) and shows in the Status header", fm.get("status", {}).get("operator") == "OR" and "status" in active, {"filter_model": fm, "filtered_headers": active})
     vk = sum(kept(p) for p in pays if p["capture_id"] in exp)
     check("assistant view: total row follows the filter", f"{len(exp)} shown" in total and money(vk) in total, {"total_row": total, "expected": [f"{len(exp)} shown", money(vk)]})
 

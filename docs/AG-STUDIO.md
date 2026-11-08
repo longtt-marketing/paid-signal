@@ -119,8 +119,8 @@ format shape (`widgetForm.js`) so those settings are part of the widget's state.
   which proposes PayPal reminders as a card in the chat; the owner's Send runs the chase agent within code limits.
 - **Paid Signal's tools in Studio:** read the reconciliation, list unpaid leads, draft PayPal invoices (Agent Toolkit),
   show the drafts waiting for approval (cards with Approve), who still owes, propose reminders (a card with Send), show
-  payments in the ledger (AG Grid filters, sorts, scrolls to and flashes them; 30 hand-written requests, 6 not to act on, each run 3
-  times with real Claude: 90 of 90, `scripts/eval-grid-agent.py`, `docs/proof/grid-agent-eval-2026-11-08.json`), check the ledger against Transaction
+  payments in the ledger (AG Grid filters, sorts, scrolls to and flashes them; 40 hand-written requests, 6 not to act on and 10 grouping and totalling through the AI Toolkit, each run 3
+  times with real Claude: 117 of 120, `scripts/eval-grid-agent.py`, `docs/proof/grid-agent-eval-2026-11-08.json`), check the ledger against Transaction
   Search, submit a budget recommendation, and filter the page to one ad. Each has its own chat card (`toolDisplay.jsx`).
   No tool sends an invoice or a reminder by itself; the owner's click on a card does (`test/studio-tools.test.js`).
 - **Studio's agents build a page:** *Build a page with Studio's agents* has the lead open the blank Your page (`open_page`)

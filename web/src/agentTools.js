@@ -6,6 +6,7 @@ import { adName, AD_NAMES } from "./names.js";
 import { seededHistory } from "./history.js";
 import { REPLAY_PROMPT, HAS_REPLAY, PAGE_REPLAY_PROMPT, HAS_PAGE_REPLAY } from "./claudeAdapter.js";
 import { eligibleForReminder } from "../../src/chaseAgent.js";
+import { whenLedger } from "./ledgerView.js";
 
 const get = async (path, signal) => { const r = await fetch(path, { signal }); const d = await r.json(); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; };
 const post = async (path, body, signal) => { const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal }); const d = await r.json(); if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; };
@@ -17,6 +18,7 @@ export const PROMPT_STARTERS = [
   ...(HAS_REPLAY ? [{ label: "Replay a budget run (no model call)", prompt: `${REPLAY_PROMPT}: ask the budget agent which ads to cut or grow, and have it show the evidence on this page.` }] : []),
   ...(HAS_PAGE_REPLAY ? [{ label: "Replay Studio building a page (no model call)", prompt: `${PAGE_REPLAY_PROMPT}: ${BUILD_PAGE}` }] : []),
   { label: "Which ads bring paid orders?", prompt: "Using the Paid Signal tools, which ads bring paying customers and which only bring leads? Quote the numbers exactly." },
+  { label: "Group the ledger by ad (AI Toolkit)", prompt: "In the PayPal ledger, group the payments by ad and show the money kept per ad." },
   { label: "Invoice warm leads", prompt: "Have the revenue agent read what the unpaid leads wrote and draft PayPal invoices for the ones ready to pay. Tell me who it invoiced, for how much, and who it skipped or flagged and why, then show me the drafts here to approve." },
   { label: "Review ad budgets", prompt: "Ask the budget agent which ads to cut or grow, and have it show the evidence on this page." },
   { label: "Chart paid revenue by ad", prompt: "Add a bar chart of paid revenue by ad to this page." },
@@ -36,7 +38,7 @@ After drafting, or when the owner asks what waits for approval, call show_drafts
 check_paypal_ledger compares the webhook ledger with PayPal's Transaction Search.
 For budget questions (which ads to cut, keep or grow), delegate to the budget agent; it checks its numbers in code.
 For invoices that were sent and not paid, call who_still_owes, then propose_nudges yourself (not through another agent), so its card shows in this chat: the chase agent sends the reminders, within code limits, only when the owner presses Send on it. It also opens the "Who still owes" page.
-To show particular payments (refunded, held, one ad's, biggest first), call show_payments_in_ledger: the PayPal ledger grid filters, sorts and flashes them. If the owner names an ad that is not one of the four in the export (Free guide, Trial class, Testimonial, Holiday camp), say there is no such ad and name the four; never pick a similar-sounding one. To show one ad (or one shop ad group) across a page, call filter_page_to_ad; to build a new view, use the blank "Your page".
+To show particular payments (refunded, held, one ad's, biggest first), call show_payments_in_ledger: the PayPal ledger grid filters, sorts and flashes them. To group or total payments (money kept per ad, payments grouped by status), use AG Grid's AI Toolkit: call get_ledger_grid_schema, then set_ledger_grid_state with a state that matches it (a total per group is a rowGroup plus a sum aggregation on the column the owner named, picked by the column descriptions; filter only when the owner limits the rows); if the toolkit is not available, use show_payments_in_ledger. If the owner names an ad that is not one of the four in the export (Free guide, Trial class, Testimonial, Holiday camp), say there is no such ad and name the four; never pick a similar-sounding one. To show one ad (or one shop ad group) across a page, call filter_page_to_ad; to build a new view, use the blank "Your page".
 The tables "Real shop: ad groups" and "Real shop: payments" are a real Vietnamese gift shop's October book (VND, paid by bank transfer, not PayPal): the same gap between what the ad account counts and the money kept. Say so whenever you use them.
 Every amount in the PayPal tables is in US dollars: write $156.00, never a bare number.
 Answer the owner briefly: at most six short lines (for budgets: Grow, Keep, Cut, then one line on what the evidence gate decided). Never pass on widget health-check notes (Studio's check can flag "data mapping unmapped" on a widget that renders fine) or layout chatter, and never ask the owner to check the page.`;
@@ -180,16 +182,43 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           const words = { refunded: "refunded", held: "held", refunded_or_held: "refunded or held", paid: "paid" }[args.status] || "every payment";
           const order = { amount_desc: "biggest first", amount_asc: "smallest first", kept_desc: "most kept first", date_desc: "newest first" }[args.sort] || "";
           const label = [words, ad && `on ${ad}`, order].filter(Boolean).join(", ");
-          // the ledger widget may still be mounting after the page switch: ask again until it answers
-          const out = await new Promise((resolve) => {
-            let done = false; const reply = (r) => { if (!done) { done = true; resolve(r); } };
-            const ask = (n) => { if (done) return; dispatchEvent(new CustomEvent("paid-signal:ledger-view", { detail: args.reset ? { reset: true } : { status: args.status, ad, sort: args.sort, label, reply } })); if (args.reset) reply({ reset: true }); else if (n > 0) setTimeout(() => ask(n - 1), 600); else reply(null); };
-            ask(12);
-          });
+          // the ledger widget registers once its grid is ready (it may still be mounting after the page switch)
+          const apply = await whenLedger(8000);
+          const out = apply ? await Promise.race([apply(args.reset ? { reset: true } : { status: args.status, ad, sort: args.sort, label }), new Promise((r) => setTimeout(() => r(null), 8000))]) : null;
           if (args.reset) return ctx.success("The ledger is back to every payment, grouped by ad.", { applied: true });
           if (!out) return ctx.success("The ledger grid did not answer; it may not be on screen.", { applied: false });
           const { ids, ...rest } = out; // every capture id the grid now shows, in its order (the eval compares them with the ledger)
-          return ctx.success(`The ledger grid now shows ${out.shown} payment(s): ${label}.`, { applied: true, view: label, ...rest, capture_ids: ids });
+          return ctx.success(`The ledger grid now shows ${out.shown} payment(s): ${label}. AG Grid's filter model: ${JSON.stringify(out.filter_model)}.`, { applied: true, view: label, ...rest, capture_ids: ids });
+        },
+      }),
+      // AG Grid's AI Toolkit on the PayPal ledger: the grid describes the states it accepts (getStructuredSchema), Claude
+      // writes one, and the grid applies it (setState). Read only: it changes what the grid shows, never the ledger.
+      api.defineAiTool({
+        name: "get_ledger_grid_schema",
+        description: "AG Grid AI Toolkit: the PayPal ledger grid's structured schema from api.getStructuredSchema(): its columns, their values, and the JSON shape of the grid states it accepts (filter, sort, row grouping, aggregation). Call it before set_ledger_grid_state, for requests that group or total the payments (for example money kept per ad, or payments grouped by status). Read only.",
+        params: (s) => s.object({}),
+        execute: async (_args, ctx) => {
+          const st = window.__studio; if (st && st.getState().selectedPageId !== "overview") st.setState({ ...st.getState(), selectedPageId: "overview" });
+          const apply = await whenLedger(8000);
+          const schema = apply?.toolkit?.() ? await Promise.race([apply.schema(), new Promise((r) => setTimeout(() => r(null), 8000))]) : null;
+          if (!schema) return ctx.success("The AG Grid AI Toolkit is not available in this build; use show_payments_in_ledger instead.", { available: false });
+          return ctx.success("Here is the ledger grid's schema. Write a grid state that matches it and pass it to set_ledger_grid_state as JSON.", { available: true, schema });
+        },
+      }),
+      api.defineAiTool({
+        name: "set_ledger_grid_state",
+        description: "AG Grid AI Toolkit: apply a grid state to the PayPal ledger grid with api.setState(). Pass state_json, a JSON object that matches the schema from get_ledger_grid_schema (for example a rowGroup and an aggregation, a filter, a sort). Returns the rows and groups the grid then shows and the state it holds. Read only; it never changes the ledger.",
+        params: (s) => s.object({ state_json: s.string({ description: "The grid state as a JSON object, matching the schema." }), label: s.string({ description: "A few words for the owner, for example 'money kept per ad'." }).optional() }),
+        execute: async (args, ctx) => {
+          let state;
+          try { state = JSON.parse(args.state_json); } catch { return ctx.success("state_json is not valid JSON; nothing changed.", { applied: false }); }
+          if (!state || typeof state !== "object" || Array.isArray(state)) return ctx.success("The state must be a JSON object; nothing changed.", { applied: false });
+          const apply = await whenLedger(8000);
+          if (!apply?.setGridState || !apply.toolkit?.()) return ctx.success("The AG Grid AI Toolkit is not available in this build; nothing changed.", { applied: false });
+          const out = await Promise.race([apply.setGridState(state, args.label), new Promise((r) => setTimeout(() => r(null), 8000))]);
+          if (!out) return ctx.success("The ledger grid did not answer; it may not be on screen.", { applied: false });
+          const { ids, ...rest } = out;
+          return ctx.success(`The ledger grid now shows ${out.shown} payment(s)${out.groups?.length ? ` in ${out.groups.length} group(s)` : ""}.`, { applied: true, ...rest, capture_ids: ids });
         },
       }),
       api.defineAiTool({

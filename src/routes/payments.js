@@ -4,7 +4,9 @@ import { ordersSdk, isEvidence, visitorId, utc, PRODUCT, AD_KEYS, CLICK_ID, json
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
-    if (url.pathname === "/api/config") return json({ paypal_client_id: env.PAYPAL_CLIENT_ID, product: PRODUCT, environment: "sandbox", ag_studio_license: env.AG_STUDIO_LICENSE || null });
+    if (url.pathname === "/api/config") return json({ paypal_client_id: env.PAYPAL_CLIENT_ID, product: PRODUCT, environment: "sandbox", ag_studio_license: env.AG_STUDIO_LICENSE || null,
+      // AG Grid Enterprise (AI Toolkit, row grouping) on the Studio ledger: on with the licence, or on a local dev build
+      ag_grid_license: env.AG_GRID_LICENSE || null, ag_grid_enterprise: Boolean(env.AG_GRID_LICENSE || env.AG_GRID_ENTERPRISE_DEV) });
 
     if (url.pathname === "/api/checkout" && request.method === "POST") {
       const b = await request.json();

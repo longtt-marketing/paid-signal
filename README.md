@@ -2,26 +2,25 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**An AG Studio workspace where Claude agents read the PayPal ledger in AG Grid, filter it on request, and draft PayPal invoices that go out only on the owner's click. Why it matters: the ad report says the free guide ad brought 31 leads; PayPal says that ad has 1 paid order.**
+**A PayPal back office for small shops, run by agents in AG Grid: one invoices the buyers who are ready, one chases late payers, one refunds double charges, one finds the ads that sell. Each agent drafts its step; the owner approves, and every action is checked against PayPal.**
 
-![AG Studio, 30 seconds: a click on an ad filters the page; the PayPal ledger (AG Grid) narrows to it; a payment opens its trail; the owner decides in the cell](docs/img/studio-tour.gif)
+![AG Studio, 30 seconds: a click on an ad filters the page; the PayPal ledger (AG Grid) narrows to it; a payment opens its history; the owner decides in the cell](docs/img/studio-tour.gif)
 
-**For AG Grid judges, 90 seconds** (live, no login):
-1. Open [/studio](https://paid-signal.thelongmarketing.workers.dev/studio) and, in the money-flow chart, click the Testimonial ad's band: the page filters, the PayPal ledger (an AG Grid widget) narrows to that ad, and the budget agent's checked verdict waits for Approve.
-2. Press ▸ on a payment: its trail opens inside the grid, from the ad click to PayPal to what Meta heard.
-3. Open the assistant and pick **Show refunded or held payments**: AG Grid filters, sorts and flashes them. **Replay Studio building a page** shows Studio's own agents building a page (no model call).
-4. Open **Agents → PayPal**: the invoices, reminders, refund and payout the agents made, each with the status PayPal returns for it, read back now ([live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions)).
+**Try it in 90 seconds** ([open the workspace](https://paid-signal.thelongmarketing.workers.dev/studio), no login):
+1. In the chart at the top, click the Testimonial ad: the page and the PayPal ledger under it narrow to that ad, and the budget agent's suggestion waits for your Approve.
+2. Open the assistant and pick **Group the ledger by ad (AI Toolkit)**, or ask in your own words: AG Grid's AI Toolkit turns the request into a grid state, and the grid groups the payments and totals the money kept.
+3. Pick **Invoice warm leads**: the revenue agent drafts real PayPal sandbox invoices as cards in the chat; nothing is sent until you press Approve.
+4. Open **Agents → PayPal**: every invoice, reminder, refund and payout the agents made, with the status PayPal reports for it now ([live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions)).
 
-Or press **Assistant: replay a run** in the strip: Studio's own agent loop replays a recorded budget run, chart included, with no model call. Video (2:40, AG Studio first): https://www.youtube.com/watch?v=Fw7SqbTZCmo
-
-**A real shop:** in a gift shop with about $10,000 of October ads, the ad with 69% of the chats brought 19% of the money. That shop is paid by bank transfer, not PayPal; its book runs through the same ledger code ([details below](#one-real-shops-october)).
+Video (2:40): https://www.youtube.com/watch?v=Fw7SqbTZCmo · Pay as a customer: [judge path](https://paid-signal.thelongmarketing.workers.dev/judge)
 
 **Where each piece is** (screenshots in [docs/AG-STUDIO.md](docs/AG-STUDIO.md)):
 
 | What | See it | Code |
 |---|---|---|
+| AG Grid AI Toolkit on the PayPal ledger: ask in words, the grid groups and totals (eval: 27 of 30 runs) | /studio, the assistant: Group the ledger by ad (AI Toolkit) | `get_ledger_grid_schema`, `set_ledger_grid_state` in `web/src/agentTools.js`, `web/src/LedgerWidget.jsx` |
 | Agents draft invoices and propose reminders; sent only on the owner's chat-card click | /studio, the assistant: Invoice warm leads, Nudge who still owes | `web/src/agentTools.js`, `web/src/toolDisplay.jsx` |
-| The assistant drives the AG Grid ledger: filter, sort, scroll, flash (eval: 90 of 90 runs) | /studio, the assistant: Show refunded or held payments | `show_payments_in_ledger` in `web/src/agentTools.js`, `web/src/LedgerWidget.jsx` |
+| The assistant drives the AG Grid ledger: filter, sort, scroll, flash (eval: 72 of 72 runs, and 18 of 18 refusals) | /studio, the assistant: Show refunded or held payments | `show_payments_in_ledger` in `web/src/agentTools.js`, `web/src/LedgerWidget.jsx` |
 | Agents → PayPal page: every agent write, read back from PayPal with its status | /studio, second page | `src/agentActions.js`, `/api/agent-actions` in `src/routes/judge.js` |
 | Money-flow widget: a band click filters the page and shows the checked verdict | [/studio](https://paid-signal.thelongmarketing.workers.dev/studio), first page | `web/src/ClaimToCashFlowWidget.jsx` |
 | PayPal ledger in Studio (AG Grid): grouped by ad, ▸ trail, the owner's Decision | /studio, first page | `web/src/LedgerWidget.jsx`, `web/src/adPick.js` |
@@ -31,7 +30,7 @@ Or press **Assistant: replay a run** in the strip: Studio's own agent loop repla
 
 Accessibility: axe-core 4.10.2 (WCAG 2.1 A and AA rules) reported 0 violations on nine pages of the live site at 390 px and 1440 px wide on 2026-11-07 ([report](docs/proof/axe-2026-11-07.json), `scripts/axe-check.py`); the money-flow bands work from the keyboard.
 
-Licences: the two ledger tables are AG Grid Community; their grouping by ad, subtotal rows and trail rows are built in our code (`web/src/gridTotals.js`) and use no AG Grid Enterprise feature. The pivots, cross-filters and agent framework are AG Studio's (which bundles AG Grid Enterprise), under its own licence key.
+Licences: the dashboard ledger uses AG Grid and AG Charts Community; its grouping by ad, subtotal rows and history rows are built in our code (`web/src/gridTotals.js`). The Studio ledger adds AG Grid Enterprise (AI Toolkit, row grouping) under an AG Grid trial licence. The pivots, cross-filters and agent framework are AG Studio's, under its own licence key.
 
 **AG Studio features used**
 
@@ -217,7 +216,7 @@ pages carry a Content Security Policy and `frame-ancestors 'none'`; server error
 ```bash
 cp .dev.vars.example .dev.vars        # PayPal sandbox client id/secret, Anthropic key, webhook id
 npm install                           # PayPal Agent Toolkit and server SDK for the Worker
-npm test                              # 198 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
+npm test                              # 204 tests: money rules, gate, the six agents (budget, revenue, send, chase, refund, commission), schema checks, MCP, AG Studio tool names, the PayPal CSV audit
 node scripts/e2e.mjs                  # browser run against the live demo (also daily in CI)
 cd web && npm install && npm run build
 npx wrangler dev                      # or: npx wrangler deploy

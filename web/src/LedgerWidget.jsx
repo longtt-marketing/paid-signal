@@ -6,13 +6,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { ModuleRegistry, themeQuartz } from "ag-grid-community";
-import { GRID_MODULES } from "./gridModules.js";
+import { GRID_MODULES, GRID_ENTERPRISE, gridEnterpriseOn } from "./gridModules.js";
 import { AdCell, ClaimCell, DecisionCell, DecisionEditor, DecisionForm, SearchBox, StatusCell, TrailRow, money, useClaims, useDecisionForm } from "./LedgerGrid.jsx";
 import { searchRows } from "./adClaims.js";
 import { decisionOf, groupByAd, totalsOf, trailHeight, withTrail } from "./gridTotals.js";
 import { widgetFormat } from "./widgetForm.js";
 import { DATA_EVENT } from "./OwesWidget.jsx";
 import { AD_PICK, getPick, nextPick, setPick } from "./adPick.js";
+import { filterModelFor, registerLedger } from "./ledgerView.js";
 
 ModuleRegistry.registerModules(GRID_MODULES);
 
@@ -26,6 +27,19 @@ const theme = themeQuartz.withParams({
 // Studio hands dates back as Date objects or strings; the trail shows YYYY-MM-DD
 const day = (v) => { const d = v instanceof Date ? v : new Date(v); return isNaN(d) ? String(v || "").slice(0, 10) : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const KEYS = ["ad", "id", "status", "via", "meta", "source", "date", "gross", "refunded", "net", "held"];
+// what Claude is told about the columns when it asks the AI Toolkit for the grid's schema
+const SCHEMA_PARAMS = {
+  exclude: ["columnSizing", "columnVisibility", "pivot"],
+  columns: {
+    ad: { description: "The ad the payment came from.", includeSetValues: true },
+    status: { description: "Paid; Paid, $X back (partly refunded); Refunded; Held: double? (possible double payment); Held: dispute.", includeSetValues: true },
+    kept: { description: "Money the shop kept, in USD, after refunds; 0 when held. For 'kept', 'net', 'money we keep'." },
+    amount: { description: "Amount the buyer paid (captured), in USD, before any refund. For 'captured', 'paid in', 'gross', 'amount'." },
+    back: { description: "Amount refunded to the buyer, in USD (0 when nothing came back). For 'refunded', 'money back': sum this column per group rather than filtering by status." },
+    via: { description: "Paid through: checkout or invoice.", includeSetValues: true },
+    at: { description: "Capture time, UTC (ISO)." },
+  },
+};
 
 // The Studio assistant's view of the ledger (the show_payments_in_ledger tool): the grid drops the ad groups and AG Grid
 // itself filters (external filter), sorts (column state), scrolls to and flashes the rows the agent asked for.
@@ -119,36 +133,75 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
   const narrow = width > 0 && width < 640;
   const shown = useMemo(() => searchRows(picked.length ? rows.filter((r) => picked.includes(r.ad)) : rows, q), [rows, picked, q]);
   // the assistant's view lists payments flat, so AG Grid's own sort applies across ads
-  const data = useMemo(() => withTrail(view ? shown : groupByAd(shown), open), [shown, open, view]);
+  // a grid state from the AI Toolkit may group rows itself, so its view carries no trail rows
+  const data = useMemo(() => (view?.state ? shown : withTrail(view ? shown : groupByAd(shown), open)), [shown, open, view]);
+  const [ent, setEnt] = useState(gridEnterpriseOn());
+  useEffect(() => { const on = () => setEnt(true); addEventListener(GRID_ENTERPRISE, on); return () => removeEventListener(GRID_ENTERPRISE, on); }, []);
+  const asView = (d, reply) => ({ status: d.status || "all", ad: d.ad || "", sort: d.sort || "", label: d.label || "", reply });
+  // the assistant's tool reaches this grid through the registry once the grid is ready (ledgerView.js); scripts and
+  // the browser checks can also send the same view as an event
+  const [gridReady, setGridReady] = useState(false);
   useEffect(() => {
-    const on = (e) => { const d = e.detail || {}; setView(d.reset ? null : { status: d.status || "all", ad: d.ad || "", sort: d.sort || "", label: d.label || "", reply: d.reply }); };
+    if (!gridReady) return undefined;
+    const apply = (d) => new Promise((res) => { if (d.reset) { setView(null); res({ reset: true }); } else setView(asView(d, res)); });
+    // AG Grid's AI Toolkit: the schema of the states this grid accepts, and a state (from Claude) to apply
+    apply.toolkit = () => Boolean(grid.current?.api?.getStructuredSchema);
+    // the grouped ledger's columns cannot group, filter or sort, so its schema would be empty: switch to the flat grid
+    // first (no filter, no sort) and read the schema once AG Grid holds the flat columns
+    apply.schema = () => {
+      const api = grid.current?.api; if (!api?.getStructuredSchema) return null;
+      if (viewRef.current) return api.getStructuredSchema(SCHEMA_PARAMS);
+      return new Promise((res) => setView({ state: {}, label: "AG Grid AI Toolkit", quiet: true, reply: () => res(grid.current?.api?.getStructuredSchema(SCHEMA_PARAMS) ?? null) }));
+    };
+    apply.setGridState = (state, label) => new Promise((res) => setView({ state, label: label || "a grid state from the AI Toolkit", reply: res }));
+    return registerLedger(apply);
+  }, [gridReady, ent]);
+  useEffect(() => {
+    const on = (e) => { const d = e.detail || {}; setView(d.reset ? null : asView(d, d.reply)); };
     addEventListener(LEDGER_VIEW, on); return () => removeEventListener(LEDGER_VIEW, on);
   }, []);
   // once the rows are in: filter, sort, bring into view, flash, and tell the tool what the grid now shows
   useEffect(() => {
     const api = grid.current?.api; if (!api) return;
-    api.onFilterChanged();
-    const [colId, sort] = SORT_COL[view?.sort] || [];
-    api.applyColumnState({ state: colId ? [{ colId, sort }] : [], defaultState: { sort: null } });
+    if (view?.state) {
+      // the AI Toolkit's state, as the grid's own setState applies it (filter, sort, row grouping, aggregation);
+      // everything else about the grid stays as it is
+      api.setState(view.state, ["columnSizing", "columnOrder", "columnPinning", "scroll", "focusedCell", "rowSelection", "cellSelection", "pagination", "sideBar", "partialColumnState"]);
+    } else {
+      api.setFilterModel(filterModelFor(view)); // AG Grid's own text filters on Status and Ad, shown in the headers
+      const [colId, sort] = SORT_COL[view?.sort] || [];
+      api.applyColumnState({ state: colId ? [{ colId, sort }] : [], defaultState: { sort: null, rowGroup: false, aggFunc: null } });
+    }
     if (!view) return;
     const t = setTimeout(() => {
-      const nodes = []; api.forEachNodeAfterFilterAndSort((n) => { if (n.data && !n.rowPinned && !n.data.isDetail) nodes.push(n); });
+      const nodes = []; api.forEachNodeAfterFilterAndSort((n) => { if (n.data && !n.group && !n.rowPinned && !n.data.isDetail) nodes.push(n); });
+      const groups = []; if (view.state) api.forEachNodeAfterFilterAndSort((n) => { if (n.group && n.level === 0) groups.push({ group: String(n.key), rows: n.allLeafChildren?.length || 0, ...(n.aggData ? Object.fromEntries(Object.entries(n.aggData).map(([k, v]) => [k, typeof v === "number" ? Number(v.toFixed(2)) : v])) : {}) }); });
+      if (view.state) setStateTotal(totalsOf(nodes.map((n) => ({ ...n.data, raw: { refunded_amount: n.data.amount - n.data.kept } })), narrow));
       if (!view.reply) return; // scroll and flash once, when the agent asks; later data refreshes only re-filter
+      if (view.quiet) { const r = view.reply; view.reply = null; r({}); return; } // the schema read: nothing to show yet
       if (nodes.length) { api.ensureIndexVisible(0, "top"); api.flashCells({ rowNodes: nodes.slice(0, 6), columns: ["ad", "kept", "status"], flashDuration: 1400, fadeDuration: 900 }); }
       box.current?.closest(".ag-studio-layout-widget")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      const reply = view.reply; view.reply = null; reply({ shown: nodes.length, ids: nodes.map((n) => n.data.capture_id), top: nodes.slice(0, 5).map((n) => ({ capture: n.data.capture_id, ad: n.data.ad, captured_usd: n.data.amount.toFixed(2), kept_usd: n.data.kept.toFixed(2), status: n.data.status })) });
+      const st = api.getState();
+      const reply = view.reply; view.reply = null; reply({ shown: nodes.length, filter_model: api.getFilterModel(), ...(view.state ? { groups, grid_state: { filter: st.filter, sort: st.sort, rowGroup: st.rowGroup, aggregation: st.aggregation } } : {}), ids: nodes.map((n) => n.data.capture_id), top: nodes.slice(0, 5).map((n) => ({ capture: n.data.capture_id, ad: n.data.ad, captured_usd: n.data.amount.toFixed(2), kept_usd: n.data.kept.toFixed(2), status: n.data.status })) });
     }, 120);
     return () => clearTimeout(t);
   }, [view, data]);
   const total = useMemo(() => totalsOf(shown.filter((r) => viewMatches(r, view)).map((r) => ({ ...r, raw: { refunded_amount: r.amount - r.kept } })), narrow), [shown, narrow, view]);
   // a click on an ad's row picks it: the money flow then filters the page with its own field, as a band click does
   const filterTo = (ad) => setPick(nextPick(getPick(), ad), "ledger");
+  const [stateTotal, setStateTotal] = useState(null);
   const flat = Boolean(view); // the claim cell belongs to an ad's group row, absent from the flat view
+  // with AG Grid Enterprise the flat view's Ad and Status can group rows and Kept, Captured, Refunded add up
+  const groupable = (key) => (ent && flat ? { enableRowGroup: true } : {});
+  const summable = () => (ent && flat ? { enableValue: true, allowedAggFuncs: ["sum", "count", "avg", "min", "max"] } : {});
+  // in the flat view Status and Ad carry AG Grid text filters (the agent sets them; a person can change them in the
+  // header); a trail row is filtered by its payment's values, so it stays with its payment
+  const colFilter = (key) => (flat ? { filter: "agTextColumnFilter", filterParams: { maxNumConditions: 3 }, filterValueGetter: (p) => (p.data?.isDetail ? p.data.of?.[key] : p.data?.[key]) } : { filter: false });
   const cols = useMemo(() => [
-    { field: "ad", headerName: "Ad, then each payment", flex: 1.5, minWidth: narrow ? 120 : 170, cellRenderer: AdCell },
+    { field: "ad", headerName: "Ad, then each payment", flex: 1.5, minWidth: narrow ? 120 : 170, cellRenderer: AdCell, ...colFilter("ad"), ...groupable("ad") },
     { colId: "claim", headerName: "Ad report → PayPal", width: 196, cellRenderer: ClaimCell, sortable: false, hide: narrow || flat, headerTooltip: "Leads the ad report counts, against orders PayPal confirms paid" },
-    { field: "kept", headerName: "Kept", width: 92, enableCellChangeFlash: true, valueFormatter: (p) => money(p.value), type: "rightAligned", headerTooltip: "Money kept after refunds; a held double payment counts 0" },
-    { field: "status", headerName: "Status", enableCellChangeFlash: true, width: 180, cellRenderer: StatusCell, tooltipValueGetter: (p) => p.data?.why || null, hide: narrow },
+    { field: "kept", headerName: "Kept", width: 92, enableCellChangeFlash: true, ...summable(), valueFormatter: (p) => money(p.value), type: "rightAligned", headerTooltip: "Money kept after refunds; a held double payment counts 0" },
+    { field: "status", headerName: "Status", enableCellChangeFlash: true, ...colFilter("status"), ...groupable("status"), width: 180, cellRenderer: StatusCell, tooltipValueGetter: (p) => p.data?.why || null, hide: narrow },
     { field: "meta", headerName: "What Meta heard", flex: 1, minWidth: 150, hide: narrow },
     { headerName: "Decision", colId: "decision", width: narrow ? 108 : 132, sortable: false, suppressHeaderMenuButton: true,
       valueGetter: (p) => (p.data && !p.data.isGroup && !p.node.rowPinned ? decisionOf(p.data).value : ""), cellRenderer: DecisionCell,
@@ -158,15 +211,15 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
     { field: "date", headerName: "Captured (UTC date)", hide: true }, { field: "source", headerName: "Click source", hide: true },
     { field: "back", headerName: "Refunded", hide: true, valueFormatter: (p) => money(p.value) }, { field: "why", headerName: "Why held", hide: true },
     { field: "amount", headerName: "Captured", hide: true, valueFormatter: (p) => money(p.value) }, { field: "capture_id", headerName: "PayPal capture", hide: true }, { field: "at", headerName: "Captured at (UTC)", hide: true }, { field: "via", headerName: "Paid through", hide: true },
-  ], [narrow, act, flat]);
+  ], [narrow, act, flat, ent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="ledger-w" ref={box}>
       <SearchBox value={q} onChange={setQ} />
       <div className="ledger-w-grid">
-        <AgGridReact ref={grid} theme={theme} rowData={data} columnDefs={cols} context={{ grouped: !view, open, toggle, claims }}
+        <AgGridReact key={ent ? "enterprise" : "community"} ref={grid} theme={theme} rowData={data} columnDefs={cols} context={{ grouped: !view, open, toggle, claims }}
           defaultColDef={{ sortable: Boolean(view), resizable: true, suppressMovable: true }}
-          isExternalFilterPresent={() => Boolean(viewRef.current)} doesExternalFilterPass={(n) => viewMatches(n.data, viewRef.current)}
+          onGridReady={() => setGridReady(true)}
           // after AG Grid sorts the flat view, each open trail row goes back under its own payment
           postSortRows={(p) => {
             if (!viewRef.current) return;
@@ -178,13 +231,14 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
           getRowId={(p) => p.data?.detailId || p.data?.capture_id || p.data?.groupId || "total"}
           getRowHeight={(p) => (p.data?.isDetail ? trailHeight(width) : 40)} isFullWidthRow={(p) => Boolean(p.rowNode.data?.isDetail)} fullWidthCellRenderer={TrailRow}
           getRowClass={(p) => (p.node.rowPinned ? "row-total" : p.data?.isGroup ? "row-group" : p.data?.held ? "row-held" : "")}
-          pinnedBottomRowData={rows.length ? [total] : []} tooltipShowDelay={200}
+          pinnedBottomRowData={rows.length ? [view?.state && stateTotal ? stateTotal : total] : []} tooltipShowDelay={200}
+          autoGroupColumnDef={{ headerName: "Group", minWidth: 190, cellRendererParams: { innerRenderer: (p) => p.node.key ?? p.value ?? "" } }} groupDefaultExpanded={0} suppressAggFuncInHeader
           // a click on an ad's subtotal row filters the whole page to that ad
           onRowClicked={(e) => { if (e.data?.isGroup) filterTo(e.data.ad.replace(/ \(\d+\)$/, "")); }} />
       </div>
       <DecisionForm form={decisionForm} />
       <div className="ledger-w-foot">{view && <button type="button" className="chip-x" onClick={() => setView(null)} aria-label="Back to every payment grouped by ad">Assistant's view: {view.label || "filtered"} ×</button>}{picked.length > 0 && <button type="button" className="chip-x" onClick={() => setPick([], "ledger")}>Showing: {picked.join(", ")} ×</button>}
-        <span>{said || "▸ opens a payment's trail · click an ad's row to filter the page · click a Decision to act (the server checks it)"}</span>
+        <span>{said || "▸ shows a payment's history · click an ad's row to filter the page · Decision: refund it, or count it as a separate order"}</span>
         <button type="button" className="ledger-w-csv" onClick={() => grid.current?.api?.exportDataAsCsv({ fileName: "paypal-ledger.csv", columnKeys: ["ad", "amount", "kept", "back", "via", "status", "why", "meta", "capture_id", "date", "source"],
           shouldRowBeSkipped: (p) => Boolean(p.node.data?.isGroup || p.node.data?.isDetail) })}>Export CSV</button></div>
     </div>

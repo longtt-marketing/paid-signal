@@ -54,6 +54,22 @@ NEGATIVE = [
     ("Show payments from the TikTok ad.", "no_such_ad"),
 ]
 WRITE_TOOLS = {"draft_paypal_invoices", "submit_budget_recommendation"}
+# requests that group or total payments: answered with AG Grid's AI Toolkit (get_ledger_grid_schema, then
+# set_ledger_grid_state); each group's total the grid computes is checked against the ledger
+# (group-by field, column summed, status filter or None)
+TOOLKIT = [
+    ("In the PayPal ledger, group the payments by ad and show the money kept per ad.", ("ad", "kept", None)),
+    ("Group the ledger by status and show the money kept in each group.", ("status", "kept", None)),
+    ("Show the total refunded per ad in the ledger, grouped by ad.", ("ad", "back", None)),
+    ("Group the payments by ad and total the amount captured for each ad.", ("ad", "amount", None)),
+    ("Show how much money was kept per ad, counting only payments with status Paid.", ("ad", "kept", "Paid")),
+    # added 8 Nov, written before they were run
+    ("How much money went back to buyers for each ad? Group the grid that way.", ("ad", "back", None)),
+    ("In the ledger grid, total what buyers paid in each status group.", ("status", "amount", None)),
+    ("Group by status and add up the refunds in each group.", ("status", "back", None)),
+    ("Group the ledger by ad and add up the money we kept.", ("ad", "kept", None)),
+    ("For refunded payments only, total the amount captured per ad.", ("ad", "amount", "Refunded")),
+]
 REPEATS = int(os.environ.get("EVAL_REPEATS", "1"))
 
 ledger = json.load(urllib.request.urlopen(urllib.request.Request(BASE + "/api/ledger", headers={"User-Agent": "paid-signal-eval"})))
@@ -78,6 +94,13 @@ def expected_rows(status, ad, sort):
     if sort == "date_desc": rows.sort(key=lambda p: p["captured_at"], reverse=True)
     if sort == "kept_desc": rows.sort(key=lambda p: kept(p), reverse=True)
     return [p["capture_id"] for p in rows]
+NAMES = {"trial_video": "Trial class · video", "free_guide": "Free guide · lead form", "parent_carousel": "Testimonial · carousel", "holiday_static": "Holiday camp · static"}
+def ad_name(k): return NAMES.get(k, k)
+def status_text(p):  # the status the grid shows (LedgerWidget.jsx)
+    back = float(p.get("refunded_amount") or 0)
+    if p["capture_id"] in held_ids: return "Held: dispute" if dispute_state(p) else "Held: double?"
+    if p["status"] == "REFUNDED": return "Refunded"
+    return f"Paid, ${back:.2f} back" if back > 0 else "Paid"
 def same_order(ids, sort):
     if sort == "date_desc": key = lambda i: pay[i]["captured_at"]
     elif sort == "kept_desc": key = lambda i: kept(pay[i])
@@ -92,11 +115,12 @@ def run_batch(pw, batch, offset):
     pg = b.new_page(viewport={"width": 1440, "height": 1000}, extra_http_headers={"cf-connecting-ip": os.environ["PS_IP"]} if os.environ.get("PS_IP") else None)
     pg.goto(BASE + "/studio", wait_until="domcontentloaded")
     pg.wait_for_function("() => window.__studio && window.__psThreads", timeout=90000); pg.wait_for_timeout(4000)
-    pg.evaluate("() => [...document.querySelectorAll('.judge-strip button')].find(x => /replay a run/.test(x.textContent)).click()")
+    pg.evaluate("() => [...document.querySelectorAll('.judge-strip button')].find(x => /replay a run|Ask the assistant/.test(x.textContent)).click()")
     pg.wait_for_timeout(4000)
     for n, (req, spec) in enumerate(batch, offset):
         negative = isinstance(spec, str)
-        st, ad, sort = (None, None, None) if negative else spec
+        toolkit = (req, spec) in TOOLKIT
+        st, ad, sort = (None, None, None) if negative or toolkit else spec
         # on a local wrangler dev, each case stands in as its own visitor, so the per-visitor turn cap does not end the run
         if os.environ.get("PS_IP_BASE"): pg.set_extra_http_headers({"cf-connecting-ip": f"{os.environ['PS_IP_BASE']}.{100 + n}"})
         # every request gets a fresh chat: if "New" did not open one, reload the page (a reply that carries the last
@@ -109,7 +133,7 @@ def run_batch(pw, batch, offset):
             return empty or pg.evaluate("() => window.__psThreads.size") > before
         if not fresh_chat():
             pg.reload(wait_until="domcontentloaded"); pg.wait_for_function("() => window.__studio && window.__psThreads", timeout=90000); pg.wait_for_timeout(4000)
-            pg.evaluate("() => [...document.querySelectorAll('.judge-strip button')].find(x => /replay a run/.test(x.textContent)).click()")
+            pg.evaluate("() => [...document.querySelectorAll('.judge-strip button')].find(x => /replay a run|Ask the assistant/.test(x.textContent)).click()")
             pg.wait_for_timeout(4000)
         box = pg.locator("textarea[placeholder^='Ask the AI']")
         box.fill(req); box.press("Enter")
@@ -118,16 +142,16 @@ def run_batch(pw, batch, offset):
             pg.wait_for_timeout(2500)
             # read only what follows this request in the thread that holds it (a "New" click can miss, and the request
             # then lands in an older thread)
-            s = pg.evaluate("""(req) => { const text = (m) => (m.parts || []).map((p) => p.text || '').join(' ');
+            s = pg.evaluate("""([req, tk]) => { const text = (m) => (m.parts || []).map((p) => p.text || '').join(' ');
               const t = [...window.__psThreads.values()].reverse().find((x) => x.messages.some((m) => m.role === 'user' && text(m).includes(req))); if (!t) return null;
               const at = t.messages.map((m, i) => (m.role === 'user' && text(m).includes(req) ? i : -1)).filter((i) => i >= 0).pop();
               const mine = t.messages.slice(at + 1);
               const parts = mine.flatMap((m) => m.parts || []);
               const calls = parts.map((p) => p.toolCall).filter(Boolean);
-              const c = calls.filter((x) => x.name === 'show_payments_in_ledger').pop();
+              const c = calls.filter((x) => x.name === (tk ? 'set_ledger_grid_state' : 'show_payments_in_ledger')).pop();
               const last = mine[mine.length - 1];
-              return { names: calls.map((x) => x.name), call: c ? { args: c.args, result: c.result?.data || null } : null, done: last?.role === 'assistant' && (last.parts || []).some((p) => p.type === 'text') }; }""", req)
-            if s and s["done"] and (negative or (s["call"] and s["call"]["result"])): call = s["call"]; names = s["names"]; break
+              return { names: calls.map((x) => x.name), call: c ? { args: c.args, result: c.result?.data || null } : null, done: last?.role === 'assistant' && (last.parts || []).some((p) => p.type === 'text') }; }""", [req, toolkit])
+            if s and s["done"] and (negative or (s["call"] and s["call"]["result"]) or (toolkit and time.time() - t0 > 60)): call = s["call"]; names = s["names"]; break
         else:
             names = (s or {}).get("names") or []
         pg.wait_for_timeout(1500)
@@ -141,6 +165,21 @@ def run_batch(pw, batch, offset):
         understood = call is not None and got[0] == (st or "all") and got[1] == ad and (sort is None or got[2] == sort)
         exp = expected_rows(got[0], got[1], got[2])  # what the grid should show for the call the agent made
         grid_ok = shown is not None and set(shown) == set(exp) and same_order(shown, got[2])
+        if toolkit:
+            by, col, only = spec
+            rows = [p for p in ledger["payments"] if (only is None or status_text(p) == only)]
+            want = {}
+            for p in rows:
+                key = ad_name(p["ad"]) if by == "ad" else status_text(p)
+                val = {"kept": kept(p), "back": float(p.get("refunded_amount") or 0), "amount": float(p["amount"])}[col]
+                want[key] = round(want.get(key, 0) + val, 2)
+            groups = ((call or {}).get("result") or {}).get("groups") or []
+            got = {g["group"]: round(float(g.get(col, float("nan"))), 2) for g in groups if col in g}
+            ok = bool(call) and got == want and "get_ledger_grid_schema" in names
+            results.append({"request": req, "toolkit": {"group_by": by, "sum": col, "status": only}, "tools_called": names, "agent_call": args,
+                            "grid_groups": groups, "ledger_groups": want, "understood": ok, "grid_ok": ok})
+            print(("OK " if ok else "XX ") + "[toolkit] " + req, got, "want", want, flush=True)
+            continue
         if negative:
             wrote = sorted(set(names) & WRITE_TOOLS)
             swapped = spec == "no_such_ad" and call is not None and (adk is not None or len(shown or []) > 0)
@@ -154,7 +193,8 @@ def run_batch(pw, batch, offset):
     b.close()
 
 # EVAL_ONLY=negative runs only the must-not-act requests (to recheck a prompt change without re-running all)
-ALL = [c for _ in range(REPEATS) for c in (NEGATIVE if os.environ.get("EVAL_ONLY") == "negative" else CASES + NEGATIVE)]
+ONLY = os.environ.get("EVAL_ONLY")
+ALL = [c for _ in range(REPEATS) for c in (NEGATIVE if ONLY == "negative" else TOOLKIT if ONLY == "toolkit" else CASES + NEGATIVE + TOOLKIT)]
 with sync_playwright() as pw:
     for i in range(0, len(ALL), 10): run_batch(pw, ALL[i:i + 10], i)
 
@@ -164,8 +204,10 @@ for r in results: per[r["request"]].append(r["understood"] and r["grid_ok"])
 summary = {"run": date.today().isoformat(), "base": BASE, "repeats": REPEATS, "requests": len(per), "cases": len(results),
            "stable": sum(all(v) for v in per.values()), "negative_ok": sum(r["understood"] for r in results if r.get("negative")),
            "negative_runs": sum(1 for r in results if r.get("negative")),
+           "toolkit_ok": sum(r["understood"] for r in results if r.get("toolkit")), "toolkit_runs": sum(1 for r in results if r.get("toolkit")),
            "understood": sum(r["understood"] for r in results), "grid_ok": sum(r["grid_ok"] for r in results),
            "both": sum(r["understood"] and r["grid_ok"] for r in results), "results": results}
 open(OUT, "w", encoding="utf-8").write(json.dumps(summary, indent=1, ensure_ascii=False))
 print("runs", len(results), "· understood", summary["understood"], "· grid matches", summary["grid_ok"], "· both", summary["both"],
-      "· requests right every time", summary["stable"], "/", summary["requests"], "· must-not-act runs ok", summary["negative_ok"], "/", summary["negative_runs"])
+      "· requests right every time", summary["stable"], "/", summary["requests"], "· must-not-act runs ok", summary["negative_ok"], "/", summary["negative_runs"],
+      "· AI Toolkit runs ok", summary["toolkit_ok"], "/", summary["toolkit_runs"])
