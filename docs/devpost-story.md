@@ -1,7 +1,5 @@
 
-**Small shops pay for ads that bring chats, but only some chats turn into money. Paid Signal ties each PayPal payment to the ad click behind it, so the shop sees which ads bring money. AI agents then act on that ledger inside AG Grid, from invoices to refunds to ad budget, and nothing goes out until the owner approves.**
-
-**How the match works:** the ad click (ad, source, click id) rides inside the PayPal order's `custom_id` or the invoice's reference. When PayPal confirms the payment, Paid Signal reads it back and books the money to that ad; refunds come off, a look-alike double payment waits for the owner, and Meta is told only about confirmed orders.
+**In October a small gift shop spent about $10,000 on ads. Matched by hand against its bank transfers, the ad that brought 69% of its chats brought 19% of its money. Paid Signal makes that check automatic on PayPal: a payment that carries the ad click is tied to that ad, so the owner sees which ads bring money, not just messages. AI agents then do the daily money work inside AG Grid: they draft invoices and reminders, refund double charges and recommend ad budgets, and nothing reaches a customer or moves money until the owner clicks Approve or Send.**
 
 **Try it in 90 seconds** ([open the workspace](https://paid-signal.thelongmarketing.workers.dev/studio); no login, and the Approve buttons are open so you can try every step):
 1. In the chart at the top, click the Testimonial ad. The page and the PayPal ledger under it narrow to that ad, and the budget agent's suggestion waits for your Approve.
@@ -12,22 +10,25 @@
 Want to pay as a customer? The [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) lets you pay a sandbox invoice the agent drafted for you, see what it changes in the ad's numbers, and undo it with a PayPal refund.
 
 ### In numbers
-- **69% of the chats, 19% of the money:** in a real gift shop's October (about $10,000 of ads, 735 payments, paid by bank transfer), the ad that brought most of the chats brought little of the money. That is why we built the same check on PayPal.
-- **$0.41 against $2.73** per $1 of ads, in the demo shop (fictional ads, sandbox PayPal): the ad with the most leads (31) against the testimonial ad. The budget agent proposes growing the one that pays; the owner approves.
-- **117 of 120** runs right when the owner asks the ledger grid for something in plain words (40 requests, each run 3 times; the AI Toolkit's groups and totals: 27 of 30).
+- **$0.41 against $2.73** per $1 of ads, in the demo shop (fictional ads, sandbox PayPal): the ad with the most leads against the testimonial ad. The budget agent proposes growing the one that pays; the owner approves.
+- **117 of 120** runs right when the owner asks the ledger grid for something in plain words (40 requests, each run 3 times). The 3 misses were the same request, refunded payments totalled per ad: the assistant filtered the grid but did not group and total it. No invoice, reminder or payment went out.
+- **0** invoices or reminders sent without the owner's click: the assistant's tools can only draft them (a test checks the list), and sending runs only after Approve or Send.
 
 ## Inspiration
 
-Small shops that sell through ads live between two numbers: the leads the ad platform reports and the money that actually arrives. They rarely agree. In a real gift shop's October, with about $10,000 of ads, the ad that brought 69% of the chats brought 19% of the money. That shop takes bank transfers, so we built the same check on PayPal, where every payment is confirmed, and gave the daily money work to agents.
+Small shops that sell through ads live between two numbers: the leads the ad platform reports and the money that actually arrives. They rarely agree. The gift shop above is paid by bank transfer, so we ran the check on its own records (735 payments). Then we built the same check on PayPal, where every payment is confirmed, and gave the daily money work to agents.
 
 Agents and money are an obvious risk: an agent can quote a number that is not true, or send something it should not. So in Paid Signal the agents draft and code checks: the numbers and payment ids they quote are checked against the ledger, prices are set in code, and every action that reaches a customer or moves money waits for the owner.
 
 ## What it does
 
 - **Ad money for the ads that sell.** Each PayPal payment is matched to the ad click behind it; refunds come off, and a possible double payment or an open dispute is put on hold. The budget agent suggests which ads to grow, keep or cut from this ledger; every number and payment id it quotes is checked in code, and an ad with fewer than 3 paid orders is never moved. In the demo, the free guide ad shows 31 leads in the ad report and 1 paid order in PayPal.
+- **How the match works.** The ad click (ad, source, click id) rides inside the PayPal order's `custom_id` or the invoice's reference. When PayPal confirms the payment, Paid Signal reads it back and books the money to that ad; refunds come off, a look-alike double payment waits for the owner, and Meta is told only about confirmed orders.
 - **Invoices for buyers who are ready.** The revenue agent reads what each lead wrote, picks the ones ready to buy and drafts a PayPal invoice through the Agent Toolkit; code sets the price and the recipient. The owner approves, and the send agent reads the draft from PayPal again before it sends it.
 - **Kind reminders for late payers.** The chase agent prepares reminders for unpaid invoices, at most three a run, and sends them when the owner clicks Send.
 - **Refunds for double charges, payouts for creators.** The refund agent returns a double payment once the owner approves. The payout agent pays the ad's creator per PayPal-confirmed order, not per lead.
+
+**Why agents and not rules:** deciding who is ready to buy means reading what each lead actually wrote, in free text, which an agent does well and simple rules do not. The rules that touch money (the price, the recipient, whether an ad has enough paid orders to move its budget) are code, and the owner approves every action.
 
 ## AG Grid and AG Studio
 
@@ -46,8 +47,8 @@ AG Studio is the shop's workspace, and the PayPal ledger is an AG Grid table the
 
 ## How we built it
 
-- **PayPal:** Agent Toolkit (`create_invoice`, `get_invoice`, `send_invoice`, `send_invoice_reminder`, `create_refund`, `get_refund`, `list_disputes`, `get_dispute`), Orders v2 through the Server SDK (APIMatic), Invoicing v2, Payouts v1, Webhooks with signature checks, Transaction Search, JS SDK.
-- **AI:** six agents on Claude, each with its own tools, every tool call checked against its schema; inside AG Studio they run through a custom model adapter. A read-only MCP server exposes the ledger.
+- **PayPal** is the source of truth: a payment counts only when PayPal confirms it. Agent Toolkit (`create_invoice`, `get_invoice`, `send_invoice`, `send_invoice_reminder`, `create_refund`, `get_refund`, `list_disputes`, `get_dispute`), Orders v2 through the Server SDK (APIMatic), Invoicing v2, Payouts v1, Webhooks with signature checks, Transaction Search, JS SDK.
+- **AI:** six agents on Claude Sonnet 5.5, each with its own tools, every tool call checked against its schema; inside AG Studio they run through a custom model adapter. A read-only MCP server exposes the ledger.
 - **AG Grid:** AG Studio for the workspace, AG Grid Enterprise (AI Toolkit, row grouping) on the Studio ledger, AG Grid Community and AG Charts on the dashboard.
 - **Runs on** Cloudflare Workers and KV, with 204 tests in CI.
 

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**Small shops pay for ads that bring chats, but only some chats turn into money. Paid Signal ties each PayPal payment to the ad click behind it, so the shop sees which ads bring money. AI agents then act on that ledger inside AG Grid, from invoices to refunds to ad budget, and nothing goes out until the owner approves.**
+**In October a small gift shop spent about $10,000 on ads. Matched by hand against its bank transfers, the ad that brought 69% of its chats brought 19% of its money. Paid Signal makes that check automatic on PayPal: a payment that carries the ad click is tied to that ad, so the owner sees which ads bring money, not just messages. AI agents then do the daily money work inside AG Grid: they draft invoices and reminders, refund double charges and recommend ad budgets, and nothing reaches a customer or moves money until the owner clicks Approve or Send.**
 
 ![AG Studio, 30 seconds: a click on an ad filters the page; the PayPal ledger (AG Grid) narrows to it; a payment opens its history; the owner decides in the cell](docs/img/studio-tour.gif)
 
