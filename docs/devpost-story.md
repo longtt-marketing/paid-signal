@@ -10,9 +10,10 @@
 Want to pay as a customer? The [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) lets you pay a sandbox invoice the agent drafted for you, see what it changes in the ad's numbers, and undo it with a PayPal refund.
 
 ### In numbers
-- **$0.41 against $2.73** per $1 of ads, in the demo shop (fictional ads, sandbox PayPal): the ad with the most leads against the testimonial ad. The budget agent proposes growing the one that pays; the owner approves.
 - **117 of 120** runs right when the owner asks the ledger grid for something in plain words (40 requests, each run 3 times). The 3 misses were the same request, refunded payments totalled per ad: the assistant filtered the grid but did not group and total it. No invoice, reminder or payment went out.
 - **0** invoices or reminders sent without the owner's click: the assistant's tools can only draft them (a test checks the list), and sending runs only after Approve or Send.
+- **1,100 of 1,100** planted errors (made-up numbers, fake payment ids, budget moves on thin evidence) caught by the code that checks the budget agent; **0 of 500** correct recommendations rejected.
+- **$0.41 against $2.73** per $1 of ads, in the demo shop (fictional ads, sandbox PayPal): the ad with the most leads against the testimonial ad. The budget agent proposes growing the one that pays; the owner approves.
 
 ## Inspiration
 
@@ -23,7 +24,7 @@ Agents and money are an obvious risk: an agent can quote a number that is not tr
 ## What it does
 
 - **Ad money for the ads that sell.** Each PayPal payment is matched to the ad click behind it; refunds come off, and a possible double payment or an open dispute is put on hold. The budget agent suggests which ads to grow, keep or cut from this ledger; every number and payment id it quotes is checked in code, and an ad with fewer than 3 paid orders is never moved. In the demo, the free guide ad shows 31 leads in the ad report and 1 paid order in PayPal.
-- **How the match works.** The ad click (ad, source, click id) rides inside the PayPal order's `custom_id` or the invoice's reference. When PayPal confirms the payment, Paid Signal reads it back and books the money to that ad; refunds come off, a look-alike double payment waits for the owner, and Meta is told only about confirmed orders.
+- **How the match works.** The ad click (ad, source, click id) rides inside the PayPal order's `custom_id` or the invoice's reference. When PayPal confirms the payment, Paid Signal reads it back and books the money to that ad; refunds come off, a look-alike double payment waits for the owner, and Meta is told only about confirmed orders. Invoices the agents draft carry the click automatically. A payment that arrives with no ad click is booked as direct: it is not credited to any ad and is not reported to Meta. In the demo, all 13 sandbox payments carry their click.
 - **Invoices for buyers who are ready.** The revenue agent reads what each lead wrote, picks the ones ready to buy and drafts a PayPal invoice through the Agent Toolkit; code sets the price and the recipient. The owner approves, and the send agent reads the draft from PayPal again before it sends it.
 - **Kind reminders for late payers.** The chase agent prepares reminders for unpaid invoices, at most three a run, and sends them when the owner clicks Send.
 - **Refunds for double charges, payouts for creators.** The refund agent returns a double payment once the owner approves. The payout agent pays the ad's creator per PayPal-confirmed order, not per lead.
