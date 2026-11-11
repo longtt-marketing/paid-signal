@@ -69,6 +69,12 @@ TOOLKIT = [
     ("Group by status and add up the refunds in each group.", ("status", "back", None)),
     ("Group the ledger by ad and add up the money we kept.", ("ad", "kept", None)),
     ("For refunded payments only, total the amount captured per ad.", ("ad", "amount", "Refunded")),
+    # added 11 Nov after the fix for the request above, written before they were run
+    ("Only payments with status Paid: how much was captured per ad? Show it in the grid.", ("ad", "amount", "Paid")),
+    ("Add up the refunds for each ad, but only for fully refunded payments.", ("ad", "back", "Refunded")),
+    ("Total the money kept per ad for payments that are still Paid.", ("ad", "kept", "Paid")),
+    ("Group the ledger by how each payment was made and total the money kept.", ("via", "kept", None)),
+    ("Per status, how much did buyers pay in total? Group the grid to show it.", ("status", "amount", None)),
 ]
 REPEATS = int(os.environ.get("EVAL_REPEATS", "1"))
 
@@ -170,7 +176,7 @@ def run_batch(pw, batch, offset):
             rows = [p for p in ledger["payments"] if (only is None or status_text(p) == only)]
             want = {}
             for p in rows:
-                key = ad_name(p["ad"]) if by == "ad" else status_text(p)
+                key = ad_name(p["ad"]) if by == "ad" else ("invoice" if p.get("via") == "invoice" else "checkout") if by == "via" else status_text(p)
                 val = {"kept": kept(p), "back": float(p.get("refunded_amount") or 0), "amount": float(p["amount"])}[col]
                 want[key] = round(want.get(key, 0) + val, 2)
             groups = ((call or {}).get("result") or {}).get("groups") or []

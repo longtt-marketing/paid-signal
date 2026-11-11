@@ -28,6 +28,7 @@ class StudioGuard extends Component {
 }
 import { adName } from "./names.js";
 import FlowChart from "./FlowChart.jsx";
+import GuidedTour from "./GuidedTour.jsx";
 
 // AG Studio is the heaviest part of the page: it loads as its own chunk when scrolled near, or when asked for.
 const StudioPanel = lazy(() => import("./StudioPanel.jsx"));
@@ -196,8 +197,9 @@ export default function App({ first = null }) {
     if (Object.keys(by).length) setInvoices((cur) => cur.map((i) => (by[i.id] ? { ...i, reminded_at: at, reminder: { subject: by[i.id].subject, note: by[i.id].note } } : i)));
   }, []);
   const [studioPage, setStudioPage] = useState("overview");
+  const [studioReady, setStudioReady] = useState(false);
   // an agent may switch the page itself (open_page, a filter, the ledger view): the tab bar follows Studio
-  useEffect(() => { const t = setInterval(() => { const id = window.__studio?.getState?.().selectedPageId; if (id) setStudioPage((cur) => (cur === id ? cur : id)); }, 800); return () => clearInterval(t); }, []);
+  useEffect(() => { const t = setInterval(() => { if (studio.current) setStudioReady(true); const id = window.__studio?.getState?.().selectedPageId; if (id) setStudioPage((cur) => (cur === id ? cur : id)); }, 800); return () => clearInterval(t); }, []);
   const [morePages, setMorePages] = useState(false);
   // the headline on /studio: how many of the agents' PayPal writes PayPal reports back right now
   const [readBack, setReadBack] = useState(null);
@@ -277,6 +279,71 @@ export default function App({ first = null }) {
     setStudioOn(true); if (location.hash !== "#report") location.hash = "report";
     const tryOpen = (n) => { if (!studio.current?.openAssistant() && n > 0) setTimeout(() => tryOpen(n - 1), 400); };
     tryOpen(30);
+  };
+  const runGuidedTourStep = async (step, setCaption) => {
+    document.querySelectorAll(".ps-point").forEach((el) => el.classList.remove("ps-point"));
+    const waitFor = async (find, ms = 30000) => {
+      const end = Date.now() + ms;
+      while (Date.now() < end) {
+        const found = find();
+        if (found) return found;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      return null;
+    };
+    const visibleWidget = (label, selector) => [...document.querySelectorAll(".ag-studio-layout-widget")]
+      .filter((el) => el.offsetHeight > 0 && el.textContent.includes(label))
+      .map((el) => ({ widget: el, control: selector ? el.querySelector(selector) : null }))
+      .find((x) => !selector || x.control);
+    const point = (el) => {
+      el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+      el.classList.add("ps-point");
+    };
+
+    if (step < 2) {
+      setStudioPage("overview"); studio.current?.selectPage("overview");
+      const label = step === 0 ? "Ad report vs PayPal: leads → paid money" : "PayPal ledger (AG Grid)";
+      const selector = step === 0 ? "[role=button][aria-label^='Testimonial']" : ".trail-toggle";
+      const found = await waitFor(() => visibleWidget(label, selector));
+      if (!found) { if (step === 0) setCaption("The ad chart is still loading; use Next to continue or try this step again."); return; }
+      point(found.control);
+      found.control.click();
+      return;
+    }
+    if (step === 2) {
+      setStudioPage("overview"); studio.current?.selectPage("overview");
+      openAssistant();
+      const fresh = await waitFor(() => [...document.querySelectorAll("button")].find((el) => /^New( chat)?$/.test(el.textContent.trim())));
+      if (fresh) fresh.click();
+      const input = await waitFor(() => [...document.querySelectorAll("textarea")].find((el) => (el.placeholder || "").startsWith("Ask the AI")));
+      if (!input) { setCaption("The assistant could not open here; use Next to continue. The grouped view is in the gallery."); return; }
+      const prompt = "In the PayPal ledger, group the payments by ad and show the money kept per ad.";
+      point(input);
+      input.focus();
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+      if (setter) setter.call(input, prompt); else input.value = prompt;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true }));
+      setCaption("The assistant asks AG Grid's AI Toolkit for the grid's schema, then sets a grouped state…");
+      const end = Date.now() + 60000;
+      while (Date.now() < end) {
+        const text = document.body?.innerText || "";
+        if (text.includes("Applied a grid state to the ledger (AG Grid AI Toolkit)")) {
+          setCaption("AG Grid's AI Toolkit grouped the ledger by ad and totalled the money kept, after refunds."); return;
+        }
+        if (/daily limit|rate limit|too many requests|request failed|tool failed|assistant.{0,40}(?:error|failed)/i.test(text)) {
+          setCaption("The assistant is resting; the grouped view is in the gallery."); return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      setCaption("The assistant is resting; the grouped view is in the gallery.");
+      return;
+    }
+    setStudioPage("agents"); studio.current?.selectPage("agents");
+    const found = await waitFor(() => visibleWidget("Agent writes, read back from PayPal"));
+    if (found) point(found.widget);
   };
   // the person approves; the send agent (Claude + PayPal Agent Toolkit) checks that draft and sends it, nothing else
   const send = async (id) => {
@@ -571,14 +638,16 @@ export default function App({ first = null }) {
               <button className="btn dark" onClick={openAssistant}>Open the Studio assistant</button>
             </div>
           </div>
-          {STUDIO_PAGE && <ol className="judge-strip" aria-label="Try it: three clicks">
-            <li className="js-k">Try it</li>
-            {readBack && <li><button type="button" className="js-link js-count" onClick={() => { setStudioPage("agents"); studio.current?.selectPage("agents"); }}>{readBack.read_back} of {readBack.total} agent actions found in PayPal</button>{readBack.checked_at && <span className="js-at"> · read {String(readBack.checked_at).slice(11, 16)} UTC{readBack.stale ? ", limit reached: older read" : ""}</span>}</li>}
-            <li><button type="button" className="js-link" onClick={() => pointTo("Ad report vs PayPal: leads → paid money|1 · Leads", "[role=button][aria-label^='Testimonial']")}><b>1</b>Click an ad in the chart</button></li>
-            <li><button type="button" className="js-link" onClick={() => pointTo("PayPal ledger (AG Grid)|2 · PayPal ledger", ".trail-toggle, button[aria-expanded]")}><b>2</b>Open a payment's history</button></li>
-            <li><button type="button" className="js-link" onClick={() => pointTo("Who still owes", ".owes-act button")}><b>3</b>Send a kind reminder</button></li>
-            <li><button type="button" className="js-link" onClick={openReplay}>Ask the assistant</button></li>
-          </ol>}
+          {STUDIO_PAGE && <GuidedTour
+            autoStart={/[?&]tour=1(?:&|$)/.test(location.search)}
+            ready={studioReady}
+            onStep={runGuidedTourStep}
+            onEnd={() => document.querySelectorAll(".ps-point").forEach((el) => el.classList.remove("ps-point"))}
+            readBack={readBack}
+            pointTo={pointTo}
+            openReplay={openReplay}
+            goAgents={() => { setStudioPage("agents"); studio.current?.selectPage("agents"); }}
+          />}
           <div className="studio-pages" role="group" aria-label="Report pages">
             {/* three pages carry the story; the rest fold under More pages */}
             {[["overview", "Ads vs PayPal"], ["agents", "Agents → PayPal"], ["shop", "Real shop: October"], ...(morePages || !["overview", "agents", "shop"].includes(studioPage) ? [["perad", "Per ad"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["mine", "Your page"]] : [])].map(([id, label]) => (

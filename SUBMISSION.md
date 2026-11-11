@@ -15,6 +15,7 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 **In October a small gift shop spent about $10,000 on ads. Matched by hand against its bank transfers, the ad that brought 69% of its chats brought 19% of its money. Paid Signal makes that check automatic on PayPal: a payment that carries the ad click is tied to that ad, so the owner sees which ads bring money, not just messages. AI agents then do the daily money work inside AG Grid: they draft invoices and reminders, refund double charges and recommend ad budgets, and nothing reaches a customer or moves money until the owner clicks Approve or Send.**
 
 **Try it in 90 seconds** ([open the workspace](https://paid-signal.thelongmarketing.workers.dev/studio); no login, and the Approve buttons are open so you can try every step):
+Fastest: press **▶ Take the 60-second tour** at the top of the workspace. It does the four steps below by itself, the AI Toolkit step with a live model call, and you press Next between them.
 1. In the chart at the top, click the Testimonial ad. The page and the PayPal ledger under it narrow to that ad, and the budget agent's suggestion waits for your Approve.
 2. Open the assistant and pick **Group the ledger by ad (AI Toolkit)**, or ask in your own words. AG Grid's AI Toolkit turns the request into a grid state, and the grid groups the payments and totals the money kept.
 3. Pick **Invoice warm leads**. The revenue agent drafts real PayPal sandbox invoices and puts each one in the chat as a card; nothing is sent until you press Approve.
@@ -23,7 +24,7 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 Want to pay as a customer? The [judge path](https://paid-signal.thelongmarketing.workers.dev/judge) lets you pay a sandbox invoice the agent drafted for you, see what it changes in the ad's numbers, and undo it with a PayPal refund.
 
 ### In numbers
-- **117 of 120** runs right when the owner asks the ledger grid for something in plain words (40 requests, each run 3 times). The 3 misses were the same request, refunded payments totalled per ad: the assistant filtered the grid but did not group and total it. No invoice, reminder or payment went out.
+- **127 of 135** runs right when the owner asks the ledger grid for something in plain words (45 requests, each run 3 times; filters and sorts 72 of 72, refusals 18 of 18). The 8 misses all came from 3 of the 15 requests that group and total: the assistant summed the wrong column, left out the sum, or did not group by payment method. No invoice, reminder or payment went out.
 - **0** invoices or reminders sent without the owner's click: the assistant's tools can only draft them (a test checks the list), and sending runs only after Approve or Send.
 - **1,100 of 1,100** planted errors (made-up numbers, fake payment ids, budget moves on thin evidence) caught by the code that checks the budget agent; **0 of 500** correct recommendations rejected.
 - **$0.41 against $2.73** per $1 of ads, in the demo shop (fictional ads, sandbox PayPal): the ad with the most leads against the testimonial ad. The budget agent proposes growing the one that pays; the owner approves.

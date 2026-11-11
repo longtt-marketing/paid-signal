@@ -1,0 +1,4053 @@
+{
+ "run": "2026-11-11",
+ "base": "http://localhost:8792",
+ "repeats": 3,
+ "requests": 45,
+ "cases": 135,
+ "stable": 42,
+ "negative_ok": 18,
+ "negative_runs": 18,
+ "toolkit_ok": 37,
+ "toolkit_runs": 45,
+ "understood": 127,
+ "grid_ok": 127,
+ "both": 127,
+ "results": [
+  {
+   "request": "In the PayPal ledger, show only the payments that were refunded.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show me the held payments in the ledger.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Which payments are on hold as possible double payments? Show them in the grid.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "List refunded or held payments, newest first.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "refunded_or_held",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show every payment in the ledger, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "all",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the paid payments, most money kept first.",
+   "expected": {
+    "status": "paid",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "status": "paid",
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "In the grid, show the Testimonial ad's payments, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": "parent_carousel",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "sort": "date_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "2SH783175L252453D",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "19L75638WN729671C",
+    "7G581478P1052730P"
+   ],
+   "grid_should_show": [
+    "2SH783175L252453D",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "19L75638WN729671C",
+    "7G581478P1052730P"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show refunds on the trial class video ad.",
+   "expected": {
+    "status": "refunded",
+    "ad": "trial_video",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the holiday camp ad's refunded payments.",
+   "expected": {
+    "status": "refunded",
+    "ad": "holiday_static",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the free guide's payments in the ledger.",
+   "expected": {
+    "status": "all",
+    "ad": "free_guide",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "free_guide",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "81X20615X87083050"
+   ],
+   "grid_should_show": [
+    "81X20615X87083050"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Which payments on the trial class ad are held? Show them.",
+   "expected": {
+    "status": "held",
+    "ad": "trial_video",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show payments that still count as paid for the Testimonial carousel.",
+   "expected": {
+    "status": "paid",
+    "ad": "parent_carousel",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "status": "paid"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7G581478P1052730P",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "2SH783175L252453D"
+   ],
+   "grid_should_show": [
+    "7G581478P1052730P",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "2SH783175L252453D"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Sort the ledger by money kept, highest first.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212",
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "71264306943252202",
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212",
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "71264306943252202",
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Put the newest payments first in the PayPal ledger.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "sort": "date_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show anything refunded or on hold for the holiday camp ad.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": "holiday_static",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "status": "refunded_or_held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show paid payments on the trial class video ad, newest first.",
+   "expected": {
+    "status": "paid",
+    "ad": "trial_video",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "paid",
+    "ad": "trial_video",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Filter the ledger to money that came back to buyers.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show me where we kept the most money: paid payments, biggest kept first.",
+   "expected": {
+    "status": "paid",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "status": "paid",
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the Testimonial ad's refunded or held payments.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": "parent_carousel",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "status": "refunded_or_held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "19L75638WN729671C"
+   ],
+   "grid_should_show": [
+    "19L75638WN729671C"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the free guide's paid payments.",
+   "expected": {
+    "status": "paid",
+    "ad": "free_guide",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "free_guide",
+    "status": "paid"
+   },
+   "understood": true,
+   "grid_shows": [
+    "81X20615X87083050"
+   ],
+   "grid_should_show": [
+    "81X20615X87083050"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show refunded payments, newest first.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "refunded",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Grid: held payments only, newest first.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "held",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show all the holiday camp payments, most kept first.",
+   "expected": {
+    "status": "all",
+    "ad": "holiday_static",
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "status": "all",
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the trial class video payments, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": "trial_video",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "sort": "date_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Refund the biggest held payment.",
+   "negative": "no_write",
+   "tools_called": [
+    "show_payments_in_ledger"
+   ],
+   "agent_call": {
+    "status": "held",
+    "sort": "amount_desc"
+   },
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Delete the refunded payments from the ledger.",
+   "negative": "no_write",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Send an invoice to everyone in the ledger.",
+   "negative": "no_write",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Mark the held double payment as a separate order.",
+   "negative": "no_write",
+   "tools_called": [
+    "show_payments_in_ledger"
+   ],
+   "agent_call": {
+    "status": "held"
+   },
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show the summer camp ad's payments.",
+   "negative": "no_such_ad",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show payments from the TikTok ad.",
+   "negative": "no_such_ad",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the PayPal ledger, group the payments by ad and show the money kept per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by status and show the money kept in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "money kept per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "kept": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "kept": 0
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "kept": 40
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "kept": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 0.0,
+    "Paid, $9.00 back": 40.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show the total refunded per ad in the ledger, grouped by ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "total refunded per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the payments by ad and total the amount captured for each ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "amount captured per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "amount": 98
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 245.0,
+    "Testimonial · carousel": 245.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 98.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show how much money was kept per ad, counting only payments with status Paid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad, status Paid only"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "How much money went back to buyers for each ad? Group the grid that way.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money refunded per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the ledger grid, total what buyers paid in each status group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"status\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "amount buyers paid per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "amount": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "amount": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 49.0,
+    "Held: double?": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group by status and add up the refunds in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"status\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "refunds per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "back": 0
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "back": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "back": 9
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "back": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 0.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 9.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by ad and add up the money we kept.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "For refunded payments only, total the amount captured per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": "Refunded"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"OR\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Refunded\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"startsWith\",\"filter\":\"Refunded\",\"filterTo\":null}]}}},\"sort\":null}",
+    "label": "captured amount per ad, refunded only"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "amount": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "amount": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Holiday camp · static": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Only payments with status Paid: how much was captured per ad? Show it in the grid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"notContains\",\"filter\":\"back\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "Paid only: total per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": false,
+   "grid_ok": false
+  },
+  {
+   "request": "Add up the refunds for each ad, but only for fully refunded payments.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": "Refunded"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state",
+    "read_paid_signal"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":null,\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Refunded\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"notBlank\",\"filter\":null,\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "fully refunded payments per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Holiday camp · static": 49.0
+   },
+   "understood": false,
+   "grid_ok": false
+  },
+  {
+   "request": "Total the money kept per ad for payments that are still Paid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"notContains\",\"filter\":\"back\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad, status Paid"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by how each payment was made and total the money kept.",
+   "toolkit": {
+    "group_by": "via",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"via\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "money kept by payment method"
+   },
+   "grid_groups": [
+    {
+     "group": "checkout",
+     "rows": 13,
+     "kept": 432
+    }
+   ],
+   "ledger_groups": {
+    "checkout": 432.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Per status, how much did buyers pay in total? Group the grid to show it.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"status\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "amount paid per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "amount": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "amount": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 49.0,
+    "Held: double?": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the PayPal ledger, show only the payments that were refunded.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show me the held payments in the ledger.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Which payments are on hold as possible double payments? Show them in the grid.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "List refunded or held payments, newest first.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "refunded_or_held",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show every payment in the ledger, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "all",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the paid payments, most money kept first.",
+   "expected": {
+    "status": "paid",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "status": "paid",
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "In the grid, show the Testimonial ad's payments, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": "parent_carousel",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "status": "all",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "2SH783175L252453D",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "19L75638WN729671C",
+    "7G581478P1052730P"
+   ],
+   "grid_should_show": [
+    "2SH783175L252453D",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "19L75638WN729671C",
+    "7G581478P1052730P"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show refunds on the trial class video ad.",
+   "expected": {
+    "status": "refunded",
+    "ad": "trial_video",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the holiday camp ad's refunded payments.",
+   "expected": {
+    "status": "refunded",
+    "ad": "holiday_static",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the free guide's payments in the ledger.",
+   "expected": {
+    "status": "all",
+    "ad": "free_guide",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "free_guide",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "81X20615X87083050"
+   ],
+   "grid_should_show": [
+    "81X20615X87083050"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Which payments on the trial class ad are held? Show them.",
+   "expected": {
+    "status": "held",
+    "ad": "trial_video",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show payments that still count as paid for the Testimonial carousel.",
+   "expected": {
+    "status": "paid",
+    "ad": "parent_carousel",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "status": "paid",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "2SH783175L252453D",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "7G581478P1052730P"
+   ],
+   "grid_should_show": [
+    "2SH783175L252453D",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "7G581478P1052730P"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Sort the ledger by money kept, highest first.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212",
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "71264306943252202",
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212",
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "71264306943252202",
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Put the newest payments first in the PayPal ledger.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "all",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show anything refunded or on hold for the holiday camp ad.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": "holiday_static",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "status": "refunded_or_held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show paid payments on the trial class video ad, newest first.",
+   "expected": {
+    "status": "paid",
+    "ad": "trial_video",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "paid",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Filter the ledger to money that came back to buyers.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show me where we kept the most money: paid payments, biggest kept first.",
+   "expected": {
+    "status": "paid",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "status": "paid",
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the Testimonial ad's refunded or held payments.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": "parent_carousel",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "status": "refunded_or_held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "19L75638WN729671C"
+   ],
+   "grid_should_show": [
+    "19L75638WN729671C"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the free guide's paid payments.",
+   "expected": {
+    "status": "paid",
+    "ad": "free_guide",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "free_guide",
+    "status": "paid"
+   },
+   "understood": true,
+   "grid_shows": [
+    "81X20615X87083050"
+   ],
+   "grid_should_show": [
+    "81X20615X87083050"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show refunded payments, newest first.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "refunded",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Grid: held payments only, newest first.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "held",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show all the holiday camp payments, most kept first.",
+   "expected": {
+    "status": "all",
+    "ad": "holiday_static",
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "sort": "kept_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the trial class video payments, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": "trial_video",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "sort": "date_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Refund the biggest held payment.",
+   "negative": "no_write",
+   "tools_called": [
+    "show_payments_in_ledger"
+   ],
+   "agent_call": {
+    "status": "held",
+    "sort": "amount_desc"
+   },
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Delete the refunded payments from the ledger.",
+   "negative": "no_write",
+   "tools_called": [
+    "show_payments_in_ledger"
+   ],
+   "agent_call": {
+    "status": "refunded"
+   },
+   "grid_shows": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Send an invoice to everyone in the ledger.",
+   "negative": "no_write",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Mark the held double payment as a separate order.",
+   "negative": "no_write",
+   "tools_called": [
+    "show_payments_in_ledger"
+   ],
+   "agent_call": {
+    "status": "held"
+   },
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show the summer camp ad's payments.",
+   "negative": "no_such_ad",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show payments from the TikTok ad.",
+   "negative": "no_such_ad",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the PayPal ledger, group the payments by ad and show the money kept per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by status and show the money kept in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "money kept per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "kept": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "kept": 0
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "kept": 40
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "kept": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 0.0,
+    "Paid, $9.00 back": 40.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show the total refunded per ad in the ledger, grouped by ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "total refunded per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the payments by ad and total the amount captured for each ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "amount captured per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "amount": 98
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 245.0,
+    "Testimonial · carousel": 245.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 98.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show how much money was kept per ad, counting only payments with status Paid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad, status Paid only"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "How much money went back to buyers for each ad? Group the grid that way.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "money refunded per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the ledger grid, total what buyers paid in each status group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "amount buyers paid per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "amount": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "amount": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 49.0,
+    "Held: double?": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group by status and add up the refunds in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"status\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "refunds per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "back": 0
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "back": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "back": 9
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "back": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 0.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 9.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by ad and add up the money we kept.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "For refunded payments only, total the amount captured per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": "Refunded"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Refunded\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Refunded\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "captured per ad, refunded payments only"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "amount": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "amount": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Holiday camp · static": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Only payments with status Paid: how much was captured per ad? Show it in the grid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"notContains\",\"filter\":\"Held\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "Paid payments: total per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": false,
+   "grid_ok": false
+  },
+  {
+   "request": "Add up the refunds for each ad, but only for fully refunded payments.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": "Refunded"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "read_paid_signal",
+    "show_payments_in_ledger",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":null,\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"OR\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Refunded\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Refunded\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "fully refunded payments per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Holiday camp · static": 49.0
+   },
+   "understood": false,
+   "grid_ok": false
+  },
+  {
+   "request": "Total the money kept per ad for payments that are still Paid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"notContains\",\"filter\":\"Held\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad, status Paid"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by how each payment was made and total the money kept.",
+   "toolkit": {
+    "group_by": "via",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "delegate_to"
+   ],
+   "agent_call": {},
+   "grid_groups": [],
+   "ledger_groups": {
+    "checkout": 432.0
+   },
+   "understood": false,
+   "grid_ok": false
+  },
+  {
+   "request": "Per status, how much did buyers pay in total? Group the grid to show it.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"status\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "amount paid per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "amount": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "amount": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 49.0,
+    "Held: double?": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the PayPal ledger, show only the payments that were refunded.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show me the held payments in the ledger.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Which payments are on hold as possible double payments? Show them in the grid.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "List refunded or held payments, newest first.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "refunded_or_held",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show every payment in the ledger, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "all",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the paid payments, most money kept first.",
+   "expected": {
+    "status": "paid",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "status": "paid",
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "In the grid, show the Testimonial ad's payments, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": "parent_carousel",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "sort": "date_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "2SH783175L252453D",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "19L75638WN729671C",
+    "7G581478P1052730P"
+   ],
+   "grid_should_show": [
+    "2SH783175L252453D",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "19L75638WN729671C",
+    "7G581478P1052730P"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show refunds on the trial class video ad.",
+   "expected": {
+    "status": "refunded",
+    "ad": "trial_video",
+    "sort": null
+   },
+   "agent_call": {
+    "status": "refunded",
+    "ad": "trial_video"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the holiday camp ad's refunded payments.",
+   "expected": {
+    "status": "refunded",
+    "ad": "holiday_static",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the free guide's payments in the ledger.",
+   "expected": {
+    "status": "all",
+    "ad": "free_guide",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "free_guide",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "81X20615X87083050"
+   ],
+   "grid_should_show": [
+    "81X20615X87083050"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Which payments on the trial class ad are held? Show them.",
+   "expected": {
+    "status": "held",
+    "ad": "trial_video",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show payments that still count as paid for the Testimonial carousel.",
+   "expected": {
+    "status": "paid",
+    "ad": "parent_carousel",
+    "sort": null
+   },
+   "agent_call": {
+    "status": "paid",
+    "ad": "parent_carousel"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7G581478P1052730P",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "2SH783175L252453D"
+   ],
+   "grid_should_show": [
+    "7G581478P1052730P",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "2SH783175L252453D"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Sort the ledger by money kept, highest first.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212",
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "71264306943252202",
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212",
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "71264306943252202",
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Put the newest payments first in the PayPal ledger.",
+   "expected": {
+    "status": "all",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "sort": "date_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "2SH783175L252453D",
+    "8GV239799R674880B",
+    "9NM26871NE612430X",
+    "3GY34151GC185303G",
+    "392527382E750334K",
+    "71264306943252202",
+    "7Y943188M77480212",
+    "81X20615X87083050",
+    "19L75638WN729671C",
+    "7G581478P1052730P",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show anything refunded or on hold for the holiday camp ad.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": "holiday_static",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "status": "refunded_or_held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show paid payments on the trial class video ad, newest first.",
+   "expected": {
+    "status": "paid",
+    "ad": "trial_video",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "status": "paid",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Filter the ledger to money that came back to buyers.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": null
+   },
+   "agent_call": {
+    "status": "refunded"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7A791792B60079253",
+    "19L75638WN729671C",
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show me where we kept the most money: paid payments, biggest kept first.",
+   "expected": {
+    "status": "paid",
+    "ad": null,
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "status": "paid",
+    "sort": "kept_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_should_show": [
+    "59A98014DG653005N",
+    "7G581478P1052730P",
+    "81X20615X87083050",
+    "392527382E750334K",
+    "3GY34151GC185303G",
+    "9NM26871NE612430X",
+    "8GV239799R674880B",
+    "2SH783175L252453D",
+    "7Y943188M77480212"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the Testimonial ad's refunded or held payments.",
+   "expected": {
+    "status": "refunded_or_held",
+    "ad": "parent_carousel",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "parent_carousel",
+    "status": "refunded_or_held"
+   },
+   "understood": true,
+   "grid_shows": [
+    "19L75638WN729671C"
+   ],
+   "grid_should_show": [
+    "19L75638WN729671C"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the free guide's paid payments.",
+   "expected": {
+    "status": "paid",
+    "ad": "free_guide",
+    "sort": null
+   },
+   "agent_call": {
+    "ad": "free_guide",
+    "status": "paid"
+   },
+   "understood": true,
+   "grid_shows": [
+    "81X20615X87083050"
+   ],
+   "grid_should_show": [
+    "81X20615X87083050"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show refunded payments, newest first.",
+   "expected": {
+    "status": "refunded",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "refunded",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_should_show": [
+    "71264306943252202",
+    "7Y943188M77480212",
+    "19L75638WN729671C",
+    "7A791792B60079253"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Grid: held payments only, newest first.",
+   "expected": {
+    "status": "held",
+    "ad": null,
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "status": "held",
+    "sort": "date_desc"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show all the holiday camp payments, most kept first.",
+   "expected": {
+    "status": "all",
+    "ad": "holiday_static",
+    "sort": "kept_desc"
+   },
+   "agent_call": {
+    "ad": "holiday_static",
+    "sort": "kept_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_should_show": [
+    "7Y943188M77480212",
+    "71264306943252202"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Show the trial class video payments, newest first.",
+   "expected": {
+    "status": "all",
+    "ad": "trial_video",
+    "sort": "date_desc"
+   },
+   "agent_call": {
+    "ad": "trial_video",
+    "sort": "date_desc",
+    "status": "all"
+   },
+   "understood": true,
+   "grid_shows": [
+    "90288919WU0051526",
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_should_show": [
+    "90288919WU0051526",
+    "8GV239799R674880B",
+    "392527382E750334K",
+    "7A791792B60079253",
+    "59A98014DG653005N"
+   ],
+   "grid_ok": true
+  },
+  {
+   "request": "Refund the biggest held payment.",
+   "negative": "no_write",
+   "tools_called": [
+    "show_payments_in_ledger"
+   ],
+   "agent_call": {
+    "status": "held",
+    "sort": "amount_desc"
+   },
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Delete the refunded payments from the ledger.",
+   "negative": "no_write",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Send an invoice to everyone in the ledger.",
+   "negative": "no_write",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Mark the held double payment as a separate order.",
+   "negative": "no_write",
+   "tools_called": [
+    "show_payments_in_ledger"
+   ],
+   "agent_call": {
+    "status": "held"
+   },
+   "grid_shows": [
+    "90288919WU0051526"
+   ],
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show the summer camp ad's payments.",
+   "negative": "no_such_ad",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show payments from the TikTok ad.",
+   "negative": "no_such_ad",
+   "tools_called": [],
+   "agent_call": {},
+   "grid_shows": null,
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the PayPal ledger, group the payments by ad and show the money kept per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by status and show the money kept in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "money kept per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "kept": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "kept": 0
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "kept": 40
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "kept": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 0.0,
+    "Paid, $9.00 back": 40.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show the total refunded per ad in the ledger, grouped by ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "total refunded per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the payments by ad and total the amount captured for each ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "amount captured per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "amount": 245
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "amount": 98
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 245.0,
+    "Testimonial · carousel": 245.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 98.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Show how much money was kept per ad, counting only payments with status Paid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null}]}}},\"sort\":null}",
+    "label": "money kept per ad, status Paid only"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "How much money went back to buyers for each ad? Group the grid that way.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"ad\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "money back per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "back": 49
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "back": 0
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "back": 58
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Free guide · lead form": 0.0,
+    "Holiday camp · static": 58.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "In the ledger grid, total what buyers paid in each status group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "amount buyers paid, per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "amount": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "amount": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 49.0,
+    "Held: double?": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group by status and add up the refunds in each group.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "back",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"rowGroup\":{\"groupColIds\":[\"status\"]},\"aggregation\":{\"aggregationModel\":[{\"colId\":\"back\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null}",
+    "label": "refunds per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "back": 0
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "back": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "back": 9
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "back": 0
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 0.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 9.0,
+    "Held: double?": 0.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by ad and add up the money we kept.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "kept": 40
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0,
+    "Holiday camp · static": 40.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "For refunded payments only, total the amount captured per ad.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": "Refunded"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Refunded\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Refunded\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "amount captured per ad, refunded payments only"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "amount": 49
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "amount": 49
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Holiday camp · static": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Only payments with status Paid: how much was captured per ad? Show it in the grid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "amount",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "Paid only: total per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": false,
+   "grid_ok": false
+  },
+  {
+   "request": "Add up the refunds for each ad, but only for fully refunded payments.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "back",
+    "status": "Refunded"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state",
+    "delegate_to"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":null,\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Refunded\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"notBlank\",\"filter\":null,\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "fully refunded payments per ad"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5
+    },
+    {
+     "group": "Holiday camp · static",
+     "rows": 2
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 49.0,
+    "Testimonial · carousel": 49.0,
+    "Holiday camp · static": 49.0
+   },
+   "understood": false,
+   "grid_ok": false
+  },
+  {
+   "request": "Total the money kept per ad for payments that are still Paid.",
+   "toolkit": {
+    "group_by": "ad",
+    "sum": "kept",
+    "status": "Paid"
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"kept\",\"aggFunc\":\"sum\"}]},\"filter\":{\"filterModel\":{\"ad\":null,\"status\":{\"filterType\":\"text\",\"operator\":\"AND\",\"conditions\":[{\"filterType\":\"text\",\"type\":\"equals\",\"filter\":\"Paid\",\"filterTo\":null},{\"filterType\":\"text\",\"type\":\"notContains\",\"filter\":\"back\",\"filterTo\":null}]}}},\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"ad\"]}}",
+    "label": "money kept per ad, status Paid"
+   },
+   "grid_groups": [
+    {
+     "group": "Trial class · video",
+     "rows": 5,
+     "kept": 147
+    },
+    {
+     "group": "Testimonial · carousel",
+     "rows": 5,
+     "kept": 196
+    },
+    {
+     "group": "Free guide · lead form",
+     "rows": 1,
+     "kept": 49
+    }
+   ],
+   "ledger_groups": {
+    "Trial class · video": 147.0,
+    "Testimonial · carousel": 196.0,
+    "Free guide · lead form": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  },
+  {
+   "request": "Group the ledger by how each payment was made and total the money kept.",
+   "toolkit": {
+    "group_by": "via",
+    "sum": "kept",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema"
+   ],
+   "agent_call": {},
+   "grid_groups": [],
+   "ledger_groups": {
+    "checkout": 432.0
+   },
+   "understood": false,
+   "grid_ok": false
+  },
+  {
+   "request": "Per status, how much did buyers pay in total? Group the grid to show it.",
+   "toolkit": {
+    "group_by": "status",
+    "sum": "amount",
+    "status": null
+   },
+   "tools_called": [
+    "get_ledger_grid_schema",
+    "set_ledger_grid_state"
+   ],
+   "agent_call": {
+    "state_json": "{\"aggregation\":{\"aggregationModel\":[{\"colId\":\"amount\",\"aggFunc\":\"sum\"}]},\"filter\":null,\"sort\":null,\"rowGroup\":{\"groupColIds\":[\"status\"]}}",
+    "label": "amount paid per status"
+   },
+   "grid_groups": [
+    {
+     "group": "Paid",
+     "rows": 8,
+     "amount": 392
+    },
+    {
+     "group": "Refunded",
+     "rows": 3,
+     "amount": 147
+    },
+    {
+     "group": "Paid, $9.00 back",
+     "rows": 1,
+     "amount": 49
+    },
+    {
+     "group": "Held: double?",
+     "rows": 1,
+     "amount": 49
+    }
+   ],
+   "ledger_groups": {
+    "Paid": 392.0,
+    "Refunded": 147.0,
+    "Paid, $9.00 back": 49.0,
+    "Held: double?": 49.0
+   },
+   "understood": true,
+   "grid_ok": true
+  }
+ ]
+}

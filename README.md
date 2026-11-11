@@ -7,6 +7,7 @@
 ![AG Studio, 30 seconds: a click on an ad filters the page; the PayPal ledger (AG Grid) narrows to it; a payment opens its history; the owner decides in the cell](docs/img/studio-tour.gif)
 
 **Try it in 90 seconds** ([open the workspace](https://paid-signal.thelongmarketing.workers.dev/studio), no login):
+Fastest: press **▶ Take the 60-second tour** at the top of the workspace. It does the four steps below by itself, the AI Toolkit step with a live model call, and you press Next between them.
 1. In the chart at the top, click the Testimonial ad: the page and the PayPal ledger under it narrow to that ad, and the budget agent's suggestion waits for your Approve.
 2. Open the assistant and pick **Group the ledger by ad (AI Toolkit)**, or ask in your own words: AG Grid's AI Toolkit turns the request into a grid state, and the grid groups the payments and totals the money kept.
 3. Pick **Invoice warm leads**: the revenue agent drafts real PayPal sandbox invoices as cards in the chat; nothing is sent until you press Approve.
@@ -18,7 +19,7 @@ Video (2:40): https://www.youtube.com/watch?v=Fw7SqbTZCmo · Pay as a customer: 
 
 | What | See it | Code |
 |---|---|---|
-| AG Grid AI Toolkit on the PayPal ledger: ask in words, the grid groups and totals (eval: 27 of 30 runs) | /studio, the assistant: Group the ledger by ad (AI Toolkit) | `get_ledger_grid_schema`, `set_ledger_grid_state` in `web/src/agentTools.js`, `web/src/LedgerWidget.jsx` |
+| AG Grid AI Toolkit on the PayPal ledger: ask in words, the grid groups and totals (eval: 37 of 45 runs) | /studio, the assistant: Group the ledger by ad (AI Toolkit) | `get_ledger_grid_schema`, `set_ledger_grid_state` in `web/src/agentTools.js`, `web/src/LedgerWidget.jsx` |
 | Agents draft invoices and propose reminders; sent only on the owner's chat-card click | /studio, the assistant: Invoice warm leads, Nudge who still owes | `web/src/agentTools.js`, `web/src/toolDisplay.jsx` |
 | The assistant drives the AG Grid ledger: filter, sort, scroll, flash (eval: 72 of 72 runs, and 18 of 18 refusals) | /studio, the assistant: Show refunded or held payments | `show_payments_in_ledger` in `web/src/agentTools.js`, `web/src/LedgerWidget.jsx` |
 | Agents → PayPal page: every agent write, read back from PayPal with its status | /studio, second page | `src/agentActions.js`, `/api/agent-actions` in `src/routes/judge.js` |
