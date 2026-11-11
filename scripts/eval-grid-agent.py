@@ -75,6 +75,13 @@ TOOLKIT = [
     ("Total the money kept per ad for payments that are still Paid.", ("ad", "kept", "Paid")),
     ("Group the ledger by how each payment was made and total the money kept.", ("via", "kept", None)),
     ("Per status, how much did buyers pay in total? Group the grid to show it.", ("status", "amount", None)),
+    # added 11 Nov evening after the second fix, written before they were run (held out from that fix)
+    ("Split the ledger by payment method and add up what buyers paid.", ("via", "amount", None)),
+    ("For the Paid payments only, how much did buyers pay for each ad?", ("ad", "amount", "Paid")),
+    ("How much money came back to buyers on refunded payments, per ad?", ("ad", "back", "Refunded")),
+    ("Show the money kept for each status, but only for payments still marked Paid.", ("status", "kept", "Paid")),
+    ("Group by ad and give me the total captured, refunded payments only.", ("ad", "amount", "Refunded")),
+    ("Total refunds per payment method in the grid.", ("via", "back", None)),
 ]
 REPEATS = int(os.environ.get("EVAL_REPEATS", "1"))
 

@@ -36,7 +36,7 @@ const SCHEMA_PARAMS = {
     kept: { description: "Money the shop kept, in USD, after refunds; 0 when held. For 'kept', 'net', 'money we keep'." },
     amount: { description: "Amount the buyer paid (captured), in USD, before any refund. For 'captured', 'paid in', 'gross', 'amount'." },
     back: { description: "Amount refunded to the buyer, in USD (0 when nothing came back). For 'refunded', 'money back': sum this column per group rather than filtering by status." },
-    via: { description: "Paid through: checkout or invoice.", includeSetValues: true },
+    via: { description: "How the buyer paid: checkout or invoice. Group by this column for 'how each payment was made', 'payment method'.", includeSetValues: true },
     at: { description: "Capture time, UTC (ISO)." },
   },
 };
@@ -209,8 +209,8 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
       cellEditor: DecisionEditor, cellEditorPopup: true, cellEditorPopupPosition: "over", cellEditorParams: { act }, valueSetter: () => false },
     // not shown, exported: the CSV carries the capture date, click source, refunded amount and why a payment is held
     { field: "date", headerName: "Captured (UTC date)", hide: true }, { field: "source", headerName: "Click source", hide: true },
-    { field: "back", headerName: "Refunded", hide: true, valueFormatter: (p) => money(p.value) }, { field: "why", headerName: "Why held", hide: true },
-    { field: "amount", headerName: "Captured", hide: true, valueFormatter: (p) => money(p.value) }, { field: "capture_id", headerName: "PayPal capture", hide: true }, { field: "at", headerName: "Captured at (UTC)", hide: true }, { field: "via", headerName: "Paid through", hide: true },
+    { field: "back", headerName: "Refunded", hide: true, ...summable(), valueFormatter: (p) => money(p.value) }, { field: "why", headerName: "Why held", hide: true },
+    { field: "amount", headerName: "Captured", hide: true, ...summable(), valueFormatter: (p) => money(p.value) }, { field: "capture_id", headerName: "PayPal capture", hide: true }, { field: "at", headerName: "Captured at (UTC)", hide: true }, { field: "via", headerName: "Paid through", hide: true, ...groupable("via") },
   ], [narrow, act, flat, ent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
