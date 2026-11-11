@@ -307,7 +307,8 @@ export default function App({ first = null }) {
       const found = await waitFor(() => visibleWidget(label, selector));
       if (!found) { if (step === 0) setCaption("The ad chart is still loading; use Next to continue or try this step again."); return; }
       point(found.control);
-      found.control.click();
+      // the chart's bands are SVG groups (no .click()): send a real click event; a band already picked stays picked
+      if (!(step === 0 && found.control.getAttribute("aria-pressed") === "true")) found.control.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
       return;
     }
     if (step === 2) {
@@ -327,7 +328,7 @@ export default function App({ first = null }) {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true }));
       input.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true }));
       setCaption("The assistant asks AG Grid's AI Toolkit for the grid's schema, then sets a grouped state…");
-      const end = Date.now() + 60000;
+      const began = Date.now(); const end = began + 75000;
       while (Date.now() < end) {
         const text = document.body?.innerText || "";
         if (text.includes("Applied a grid state to the ledger (AG Grid AI Toolkit)")) {
@@ -336,6 +337,7 @@ export default function App({ first = null }) {
         if (/daily limit|rate limit|too many requests|request failed|tool failed|assistant.{0,40}(?:error|failed)/i.test(text)) {
           setCaption("The assistant is resting; the grouped view is in the gallery."); return;
         }
+        setCaption(`Live model call: the assistant reads the grid's schema from AG Grid's AI Toolkit, then sets a grouped state… ${Math.round((Date.now() - began) / 1000)} s (usually 15 to 40 s)`);
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
       setCaption("The assistant is resting; the grouped view is in the gallery.");
@@ -426,7 +428,7 @@ export default function App({ first = null }) {
             <p className="kicker">Kite Robotics Club · demo shop</p>
             <h1 className="duo"><span className="n claimed">{(t || first)?.leads ?? "…"} leads.</span><span className="n paid">{(t || first)?.paid ?? "…"} paid.</span></h1>
             <p className="pitch">Ads learn from leads. PayPal knows who paid.</p>
-            <div className="hero-actions"><a className="cta" href="/judge#customer">Follow a payment</a><a className="cta ghost" href="/audit">Audit your ads</a></div>
+            <div className="hero-actions"><a className="cta" href="/studio?tour=1">▶ Take the 60-second tour</a><a className="cta ghost" href="/judge#customer">Follow a payment</a><a className="cta ghost" href="/audit">Audit your ads</a></div>
           </div>
           <div className="hero-bars" aria-label="Leads and paid orders by ad">
             <div className="hb-head"><b>By ad</b><span>paid revenue per $1 of ads</span></div>
