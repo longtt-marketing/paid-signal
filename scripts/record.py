@@ -583,7 +583,93 @@ def studio30c(pg):
     mark(pg, "chart", ".ag-studio-layout-widget:has-text('Paid revenue vs spend')"); pg.wait_for_timeout(5500)
 
 
-SEGMENTS = {"studio30a": studio30a, "studio30b": studio30b, "studio30c": studio30c, "studio26": studio26, "home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
+def tour_open(pg):
+    pg.goto(BASE + "/studio?tour=1", wait_until="networkidle")
+    pg.wait_for_selector("#studio h2", timeout=90000)
+    pg.wait_for_selector(".ag-studio-layout-widget:has-text('PayPal ledger (AG Grid)')", timeout=90000)
+    pg.wait_for_selector("section.judge-tour", timeout=90000)
+
+
+def tour_next(pg):
+    btn = pg.locator("section.judge-tour .jt-next")
+    glide(pg, btn)
+    pg.wait_for_timeout(250)
+
+
+def tour31a(pg):
+    """V31 tour step 1: the Testimonial band filters the PayPal ledger."""
+    tour_open(pg)
+    band = pg.locator("[role=button][aria-label^='Testimonial']").first
+    pg.wait_for_function("() => !!document.querySelector('[role=button][aria-label^=\"Testimonial\"].ps-point')", timeout=90000)
+    mark(pg, "band", "[role=button][aria-label^='Testimonial']")
+    glide(pg, band, click=False)
+    pg.wait_for_timeout(1800)
+    ledger = pg.locator(".ag-studio-layout-widget:has-text('PayPal ledger (AG Grid)')").first
+    ledger.scroll_into_view_if_needed()
+    pg.wait_for_timeout(500)
+    mark(pg, "ledger", ".ag-studio-layout-widget:has-text('PayPal ledger (AG Grid)')")
+    glide(pg, ledger, click=False)
+    pg.wait_for_timeout(2200)
+
+
+def tour31b(pg):
+    """V31 tour step 2: open a capture's history inside the ledger grid."""
+    tour_open(pg)
+    pg.wait_for_selector(".ps-point", timeout=90000)
+    tour_next(pg)
+    ledger = pg.locator(".ag-studio-layout-widget:has-text('PayPal ledger (AG Grid)')").first
+    trail_toggle = ledger.locator(".trail-toggle[aria-expanded='true']")
+    trail_toggle.wait_for(state="visible", timeout=90000)
+    trail = ledger.locator(".trail-row").first
+    trail.wait_for(state="visible", timeout=30000)
+    mark(pg, "trail", ".ag-studio-layout-widget:has-text('PayPal ledger (AG Grid)') .trail-row")
+    glide(pg, trail, click=False)
+    pg.wait_for_timeout(4000)
+
+
+def tour31c(pg):
+    """V31 tour step 3: the live assistant groups the ledger through AG Grid AI Toolkit."""
+    tour_open(pg)
+    pg.wait_for_selector(".ps-point", timeout=90000)
+    tour_next(pg)
+    pg.wait_for_selector(".trail-toggle[aria-expanded='true']", timeout=90000)
+    tour_next(pg)
+    pg.wait_for_function("() => document.querySelector('.jt-caption')?.textContent.includes('grouped the ledger')", timeout=90000)
+    mark(pg, "chat", ".studio [class*='ai']")
+    mark(pg, "grid", ".ag-studio-layout-widget:has-text('PayPal ledger (AG Grid)')")
+    chat = pg.locator(".studio [class*='ai']").first
+    glide(pg, chat, click=False)
+    pg.wait_for_timeout(500)
+    ledger = pg.locator(".ag-studio-layout-widget:has-text('PayPal ledger (AG Grid)')").first
+    ledger.scroll_into_view_if_needed()
+    glide(pg, ledger, click=False)
+    pg.wait_for_timeout(5000)
+
+
+def tour31d(pg):
+    """V31 tour step 4: inspect agent actions and the completed PayPal refund."""
+    tour_open(pg)
+    pg.wait_for_selector(".ps-point", timeout=90000)
+    tour_next(pg)
+    pg.wait_for_selector(".trail-toggle[aria-expanded='true']", timeout=90000)
+    tour_next(pg)
+    pg.wait_for_function("() => document.querySelector('.jt-caption')?.textContent.includes('grouped the ledger')", timeout=90000)
+    tour_next(pg)
+    actions = pg.locator(".ag-studio-layout-widget:has-text('Agent actions')").first
+    actions.wait_for(state="visible", timeout=90000)
+    refund_row = actions.locator(".ag-row", has_text="COMPLETED").first
+    refund_row.wait_for(state="visible", timeout=30000)
+    mark(pg, "actions", ".ag-studio-layout-widget:has-text('Agent actions')")
+    mark(pg, "refund", ".ag-studio-layout-widget:has-text('Agent actions') .ag-row:has-text('COMPLETED')")
+    glide(pg, refund_row, click=False)
+    pg.wait_for_timeout(5000)
+    tour_next(pg)
+    pg.wait_for_function("() => document.querySelector('section.judge-tour .jt-caption')?.textContent.includes('That was all real')", timeout=30000)
+    mark(pg, "done", "section.judge-tour")
+    pg.wait_for_timeout(3000)
+
+
+SEGMENTS = {"tour31a": tour31a, "tour31b": tour31b, "tour31c": tour31c, "tour31d": tour31d, "studio30a": studio30a, "studio30b": studio30b, "studio30c": studio30c, "studio26": studio26, "home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
 
 with sync_playwright() as p:
     b = p.chromium.launch(channel=os.environ.get("PS_CHANNEL") or None, args=["--mute-audio", "--disable-sync", "--no-first-run", "--no-default-browser-check"])
