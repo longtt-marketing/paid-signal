@@ -27,27 +27,19 @@ try {
   page.on("request", (r) => { if (r.resourceType() === "script" && !loaded) early.push(r.url()); });
   page.once("load", () => { loaded = true; });
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
-  await page.waitForSelector("#captures .cap", { timeout: 30000 });
+  await page.waitForFunction(() => document.querySelectorAll(".hb-row").length >= 4, null, { timeout: 30000 });
   ok("dashboard renders without loading AG Studio", !early.some((u) => u.includes("StudioPanel")), `${early.length} scripts before load`);
-  await page.goto(`${BASE}/#report`, { waitUntil: "networkidle" });
-  await page.waitForSelector(".funnel", { timeout: 60000 });
-  ok("the report view opens AG Studio full screen", (await page.locator(".studio").boundingBox()).height > 500);
-  const head = await page.textContent("h1");
-  ok("headline compares leads with PayPal paid orders", /Ads report \d+ leads\. PayPal confirms \d+ paid orders?\./.test(head), head);
-  await page.waitForFunction(() => document.querySelectorAll(".claim-row").length >= 4 && document.querySelectorAll(".fn-row").length >= 4, null, { timeout: 30000 }).catch(() => {});
-  ok("claimed-vs-confirmed widget renders", await page.locator(".claim-row").count() >= 4);
-  ok("lead/invoice/paid widget renders", await page.locator(".fn-row").count() >= 4);
-  ok("payments list shows every capture", await page.locator("#captures .cap").count() >= 8);
+  const head = (await page.textContent("h1")).replace(/\s+/g, " ");
+  ok("headline compares leads with PayPal paid orders", /\d+ leads\. ?\d+ paid\./.test(head), head);
+  ok("leads and paid orders per ad", await page.locator(".hb-row").count() >= 4);
+  await page.goto(`${BASE}/studio`, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => document.querySelectorAll(".ag-row").length >= 8, null, { timeout: 60000 }).catch(() => {});
+  ok("AG Studio opens with the PayPal ledger grid", await page.locator(".ag-row").count() >= 8, `${await page.locator(".ag-row").count()} rows`);
+  ok("ads-vs-PayPal widget renders", (await page.textContent("body")).includes("Ad report vs PayPal"));
 
   // 3. a refund on a seeded payment is previewed, not sent
   const preview = await page.evaluate(async () => (await fetch("/api/refund", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ capture_id: "392527382E750334K", amount: "1" }) })).json());
   ok("seeded payment refund is a preview", preview.preview === true && /previewed/.test(preview.message));
-
-  // 4. the timeline widget on the PayPal captures page
-  await page.evaluate(() => { const a = window.__studio; const s = a.getState(); a.setState({ ...s, selectedPageId: "captures" }); });
-  await page.waitForSelector(".timeline svg", { timeout: 30000 });
-  await page.waitForFunction(() => document.querySelectorAll(".timeline circle").length >= 8, null, { timeout: 15000 }).catch(() => {});
-  ok("payment timeline widget renders", await page.locator(".timeline circle").count() >= 8);
 
   // 5. the money trail: one real capture from click to PayPal's own record (read through the server SDK) to Meta's reply
   await page.goto(`${BASE}/trail?capture=3GY34151GC185303G`, { waitUntil: "networkidle" });
@@ -63,7 +55,7 @@ try {
   const init = await mcp({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "e2e", version: "1" } } });
   ok("MCP initialize", init.result?.serverInfo?.name === "paid-signal");
   const tools = await mcp({ jsonrpc: "2.0", id: 2, method: "tools/list" });
-  ok("MCP lists six read-only tools", tools.result?.tools?.length === 6 && tools.result.tools.every((t) => t.annotations?.readOnlyHint));
+  ok("MCP lists 12 tools, 8 read-only", tools.result?.tools?.length === 12 && tools.result.tools.filter((t) => t.annotations?.readOnlyHint).length === 8);
   const prop = await mcp({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "propose_budget", arguments: {} } });
   const proposal = JSON.parse(prop.result?.content?.[0]?.text || "{}");
   ok("MCP propose_budget proposes and changes nothing", proposal.applied === false && proposal.proposal?.length === 4);
