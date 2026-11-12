@@ -13,7 +13,7 @@ Fastest: **[▶ start the 60-second guided tour](https://paid-signal.thelongmark
 3. Pick **Invoice warm leads**: the revenue agent drafts real PayPal sandbox invoices as cards in the chat; nothing is sent until you press Approve.
 4. Open **Agents → PayPal**: every invoice, reminder, refund and payout the agents made, with the status PayPal reports for it now ([live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions)).
 
-Video (2:55): https://youtu.be/TcTbjGlja0A · Pay as a customer: [judge path](https://paid-signal.thelongmarketing.workers.dev/judge)
+Video (2:53): https://youtu.be/CvNtEokRDf4 · Pay as a customer: [judge path](https://paid-signal.thelongmarketing.workers.dev/judge)
 
 **Where each piece is** (screenshots in [docs/AG-STUDIO.md](docs/AG-STUDIO.md)):
 
@@ -46,7 +46,7 @@ Licences: the dashboard ledger uses AG Grid and AG Charts Community; its groupin
 | AI harness: custom LLM adapter, custom agents, tools, tool cards | Claude through a custom LLM adapter (Studio's `AgLlmAdapter` shape); budget and nudge agents; tools that draft invoices and send reminders on PayPal; a card per tool | `web/src/claudeAdapter.js`, `web/src/agentTools.js`, `web/src/toolDisplay.jsx` |
 | Report state (`getState`, `setState`, `selectedPageId`) | the filter_page_to_ad tool, the page tabs above the report, Save layout and Reset | `web/src/agentTools.js`, `web/src/StudioPanel.jsx` |
 
-Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:55): https://youtu.be/TcTbjGlja0A ([script](docs/video-script.md)) · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
+Live demo (no login): https://paid-signal.thelongmarketing.workers.dev · [Money trail](https://paid-signal.thelongmarketing.workers.dev/trail) (one payment from ad click to PayPal to Meta) · [Data use](https://paid-signal.thelongmarketing.workers.dev/data) · Video (2:53): https://youtu.be/CvNtEokRDf4 ([script](docs/video-script.md)) · Every measured number: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof)
 
 <a id="one-real-shops-october"></a>**One real shop's October:** the ad with 69.4% of the chats brought 19.3% of the money. Detail (a gift shop that sells in chat; the author runs its Meta ads; 260M VND, about $10,000, of spend; figures reported by the author; the shop's book is published in docs/proof (invoices, payments, refunds, anonymised ids) and `node scripts/eval-shop-replay.mjs` runs it through the same ledger code: 705 paid orders and 1,317M VND, as the accountant found, and its 7 double transfers held (each a second payment for the same order); paid by bank transfer and matched to orders by the shop's accountant, ad group taken from the chat that started each order): the ad with 69.4% of the chats brought 19.3% of the money, and the ad with 20.7% of the chats brought 56.3%. By cost per chat the ads rank A, B, C; by money kept per ad dollar, B, C, A. Numbers: [docs/proof/merchant-case-2026-10.json](docs/proof/merchant-case-2026-10.json), read by [src/merchantCase.js](src/merchantCase.js).
 

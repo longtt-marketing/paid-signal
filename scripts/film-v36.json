@@ -1,0 +1,731 @@
+[
+ {
+  "key": "hook",
+  "lines": [
+   [
+    "69% of the chats",
+    "ink",
+    130
+   ],
+   [
+    "19% of the money",
+    "paid",
+    130
+   ],
+   [
+    "A real gift shop's October, matched by hand against its bank transfers.",
+    "mute",
+    44
+   ]
+  ],
+  "text": "Ad reports count chats. PayPal counts money. In a real gift shop's October, matched by hand against its bank transfers, the ad with sixty nine percent of the chats brought nineteen percent of the money. And now AI agents send buyers too. Paid Signal credits ads and agents only with sales PayPal confirms, and refunds and payouts wait for the owner's click."
+ },
+ {
+  "key": "customer",
+  "chip": "01 · Be the customer",
+  "text": "Start as the customer. Ask to book, and the revenue agent drafts a PayPal sandbox invoice; code sets the price. The owner approves, and the send agent sends it on PayPal; the pay link opens here.",
+  "clip": "cust36",
+  "clip_from": 5.35,
+  "clip_to": 33.38,
+  "speed": 2.056,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    0.48,
+    960,
+    540,
+    1
+   ],
+   [
+    0.88,
+    1100,
+    225,
+    1.2
+   ],
+   [
+    5.6,
+    1100,
+    225,
+    1.2
+   ],
+   [
+    6.0,
+    1100,
+    464,
+    1.2
+   ],
+   [
+    7.27,
+    1100,
+    464,
+    1.2
+   ],
+   [
+    7.67,
+    1100,
+    553,
+    1.2
+   ],
+   [
+    11.78,
+    1100,
+    553,
+    1.2
+   ],
+   [
+    12.18,
+    1100,
+    592,
+    1.2
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     729,
+     190,
+     742,
+     70
+    ],
+    "from": 0.98,
+    "to": 5.8
+   },
+   {
+    "box": [
+     729,
+     331,
+     742,
+     267
+    ],
+    "from": 6.1,
+    "to": 7.47
+   },
+   {
+    "box": [
+     729,
+     509,
+     742,
+     89
+    ],
+    "from": 7.77,
+    "to": 11.98
+   },
+   {
+    "box": [
+     729,
+     509,
+     742,
+     166
+    ],
+    "from": 12.28
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "paid",
+  "chip": "02 · PayPal confirms",
+  "clip": "paidpage",
+  "clip_from": 3.0,
+  "clip_to": 13.8,
+  "text": "Payment happens on PayPal's own page, as the sandbox buyer; here is one a sandbox buyer paid. No real money moves.",
+  "speed": 1.246,
+  "cam": [
+   [
+    0,
+    960,
+    491,
+    1.1
+   ],
+   [
+    20,
+    960,
+    491,
+    1.1
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     1184,
+     276,
+     62,
+     32
+    ],
+    "from": 1.0,
+    "to": 4.5
+   },
+   {
+    "box": [
+     1296,
+     105,
+     551,
+     108
+    ],
+    "from": 4.7
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "tour1",
+  "chip": "03 · Ads vs PayPal",
+  "text": "Now the owner's side: the shop's workspace, in AG Studio. One click on the testimonial ad filters the page: the PayPal ledger under it, an AG Grid table, narrows to that ad, and the budget agent's suggestion waits for the owner's approval.",
+  "clip": "tour31a",
+  "clip_from": 0.73,
+  "clip_to": 10.8,
+  "speed": 0.664,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    2.11,
+    960,
+    540,
+    1
+   ],
+   [
+    2.51,
+    922,
+    361,
+    1.0
+   ],
+   [
+    7.34,
+    922,
+    361,
+    1.0
+   ],
+   [
+    7.74,
+    922,
+    780,
+    1.0
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     43,
+     308,
+     1759,
+     107
+    ],
+    "from": 2.61,
+    "to": 7.54
+   },
+   {
+    "box": [
+     29,
+     528,
+     1787,
+     504
+    ],
+    "from": 7.84
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "tour2",
+  "chip": "04 · A payment's history",
+  "text": "Open a payment and its history unfolds inside the grid: the ad click, the PayPal capture, and what Meta was told.",
+  "clip": "tour31b",
+  "clip_from": 14.42,
+  "clip_to": 21.02,
+  "speed": 0.93,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    1.42,
+    960,
+    540,
+    1
+   ],
+   [
+    1.82,
+    922,
+    636,
+    1.0
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     44,
+     600,
+     1757,
+     73
+    ],
+    "from": 1.92
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "tour3",
+  "chip": "05 · AG Grid AI Toolkit",
+  "text": "Ask in plain words. AG Grid's AI Toolkit hands the assistant the grid's schema, and the grid groups the payments by ad and totals the money kept. We measured it: fifty nine of sixty three grouping requests came out right, a hundred and forty nine of a hundred and fifty three overall.",
+  "clip": "tour31c",
+  "clip_from": 21.72,
+  "clip_to": 28.36,
+  "speed": 0.38,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    3.91,
+    960,
+    540,
+    1
+   ],
+   [
+    4.31,
+    1705,
+    680,
+    1.18
+   ],
+   [
+    4.02,
+    1705,
+    680,
+    1.18
+   ],
+   [
+    4.42,
+    765,
+    578,
+    1.15
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     1515,
+     300,
+     380,
+     760
+    ],
+    "from": 4.41,
+    "to": 4.22
+   },
+   {
+    "box": [
+     29,
+     326,
+     1473,
+     504
+    ],
+    "from": 4.52
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "tour4",
+  "chip": "06 · Read back from PayPal",
+  "text": "The agents act too. They draft invoices, send reminders, refund double charges and pay creators, each inside a limit set in code, and every action is read back from PayPal. Here, the refund PayPal reports as completed.",
+  "clip": "tour31d",
+  "clip_from": 24.96,
+  "clip_to": 32.3,
+  "speed": 0.476,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    0.33,
+    960,
+    540,
+    1
+   ],
+   [
+    0.73,
+    765,
+    726,
+    1.15
+   ],
+   [
+    0.41,
+    765,
+    726,
+    1.15
+   ],
+   [
+    0.81,
+    765,
+    886,
+    1.18
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     29,
+     456,
+     1473,
+     540
+    ],
+    "from": 0.83,
+    "to": 0.61
+   },
+   {
+    "box": [
+     43,
+     866,
+     1445,
+     40
+    ],
+    "from": 0.91
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "money",
+  "chip": "07 · Live sandbox money",
+  "text": "These are live PayPal sandbox calls. The refund agent returned a forty nine dollar double payment, and PayPal says completed. The ad's creator is paid per confirmed order through PayPal Payouts: fifteen dollars for three paid orders.",
+  "clip": "money36",
+  "clip_from": 1.6,
+  "clip_to": 13.99,
+  "speed": 0.808,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    1.68,
+    960,
+    540,
+    1
+   ],
+   [
+    2.08,
+    960,
+    439,
+    1.6
+   ],
+   [
+    5.05,
+    960,
+    439,
+    1.6
+   ],
+   [
+    5.45,
+    960,
+    495,
+    1.6
+   ],
+   [
+    13.55,
+    960,
+    495,
+    1.6
+   ],
+   [
+    13.95,
+    632,
+    510,
+    1.6
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     474,
+     411,
+     972,
+     56
+    ],
+    "from": 2.18,
+    "to": 5.25
+   },
+   {
+    "box": [
+     474,
+     467,
+     972,
+     57
+    ],
+    "from": 5.55,
+    "to": 13.75
+   },
+   {
+    "box": [
+     474,
+     474,
+     316,
+     73
+    ],
+    "from": 14.05
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "agent",
+  "text": "Outside AI agents can sell for the shop too. Claude, connected over MCP, started a PayPal sandbox checkout, and the buyer paid on PayPal. Only after PayPal confirmed the payment did Claude ask for its commission; the owner approved, and PayPal Payouts paid five dollars to the program's sandbox account. An agent with no confirmed sale asks anyway: code says nothing is owed.",
+  "chip": "08 · Claude sells over MCP",
+  "clip": "agent36",
+  "clip_from": 1.89,
+  "clip_to": 23.91,
+  "speed": 0.895,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    1.49,
+    960,
+    540,
+    1
+   ],
+   [
+    1.89,
+    960,
+    173,
+    1.5
+   ],
+   [
+    9.4,
+    960,
+    173,
+    1.5
+   ],
+   [
+    9.8,
+    960,
+    483,
+    1.5
+   ],
+   [
+    17.7,
+    960,
+    483,
+    1.5
+   ],
+   [
+    18.1,
+    1321,
+    540,
+    1.5
+   ],
+   [
+    20.5,
+    1321,
+    540,
+    1.5
+   ],
+   [
+    20.9,
+    1321,
+    564,
+    1.5
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     424,
+     76,
+     1072,
+     194
+    ],
+    "from": 1.99,
+    "to": 9.6
+   },
+   {
+    "box": [
+     449,
+     455,
+     1022,
+     56
+    ],
+    "from": 9.9,
+    "to": 17.9
+   },
+   {
+    "box": [
+     1147,
+     438,
+     349,
+     204
+    ],
+    "from": 18.2,
+    "to": 20.7
+   },
+   {
+    "box": [
+     1147,
+     438,
+     349,
+     253
+    ],
+    "from": 21.0
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "no",
+  "chip": "09 · The agent says no",
+  "text": "The owner asks to raise the free guide. Thirty one leads, one paid order: the budget agent refuses, and recommends the ad whose PayPal payments show paid orders. The same raise, sent straight to the rule in code, is refused too.",
+  "clip": "says36",
+  "clip_from": 4.53,
+  "clip_to": 18.58,
+  "speed": 0.943,
+  "cam": [
+   [
+    0,
+    960,
+    540,
+    1
+   ],
+   [
+    1.4,
+    960,
+    540,
+    1
+   ],
+   [
+    1.8,
+    614,
+    209,
+    1.2
+   ],
+   [
+    4.6,
+    614,
+    209,
+    1.2
+   ],
+   [
+    5.0,
+    1120,
+    191,
+    1.2
+   ],
+   [
+    7.9,
+    1120,
+    191,
+    1.2
+   ],
+   [
+    8.3,
+    1120,
+    256,
+    1.2
+   ],
+   [
+    11.21,
+    1120,
+    256,
+    1.2
+   ],
+   [
+    11.61,
+    1120,
+    321,
+    1.2
+   ]
+  ],
+  "rings": [
+   {
+    "box": [
+     474,
+     163,
+     280,
+     93
+    ],
+    "from": 1.9,
+    "to": 4.8
+   },
+   {
+    "box": [
+     794,
+     163,
+     652,
+     56
+    ],
+    "from": 5.1,
+    "to": 8.1
+   },
+   {
+    "box": [
+     794,
+     219,
+     652,
+     74
+    ],
+    "from": 8.4,
+    "to": 11.41
+   },
+   {
+    "box": [
+     794,
+     293,
+     652,
+     57
+    ],
+    "from": 11.71
+   }
+  ],
+  "callouts": []
+ },
+ {
+  "key": "close",
+  "text": "Paid Signal. Ads and AI agents, credited only with sales PayPal confirms. Take the guided tour yourself: no login.",
+  "lines": [
+   [
+    "Paid Signal.",
+    "ink",
+    110
+   ],
+   [
+    "Ads and AI agents, credited only with sales PayPal confirms.",
+    "paid",
+    50
+   ],
+   [
+    "paid-signal.thelongmarketing.workers.dev/studio",
+    "mute",
+    40
+   ]
+  ],
+  "chips": [
+   "149 of 153 grid requests right",
+   "Agent commission: Payouts SUCCESS",
+   "No login"
+  ],
+  "span2_end": 5.3
+ }
+]
