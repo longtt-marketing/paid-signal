@@ -369,13 +369,17 @@ async function showAgentRequests() {
   try {
     const { requests = [] } = await getJSON("/api/agent-requests");
     host.replaceChildren(...(requests.length ? requests.map((r) => {
-      const amount = r.amount ? ` · $${r.amount}` : "";
-      const info = `${r.agent_name} · ${r.kind === "refund" ? `refund ${r.capture_id}: ${r.reason}` : "commission"}${amount} · ${r.status}`;
-      const line = $("div", { className: "row" }, [$ ("span", { className: "v", textContent: info })]);
+      const amount = r.amount ? `$${Number(r.amount).toFixed(2)} ` : "";
+      const pp = r.paypal || {};
+      const outcome = pp.preview ? " · preview only, frozen demo payment" : pp.batch_id ? ` · PayPal Payouts batch ${pp.batch_id}` : pp.refund_id ? ` · PayPal refund ${pp.refund_id}` : "";
+      const what = (r.kind === "refund" ? `${amount}refund of ${r.capture_id}: ${r.reason}` : `${amount}commission`) + outcome;
+      const tone = r.status === "approved" ? "ok" : r.status === "pending" ? "held" : "neu";
+      const end = $("span", { className: "agent-req-end" }, [chip(r.status, tone)]);
+      const line = row(r.agent_name, what, end);
       if (r.status === "pending") for (const decision of ["approve", "decline"]) {
         const b = btn(decision === "approve" ? "Approve" : "Decline", "sm");
         b.onclick = async () => { b.disabled = true; try { await post("/api/agent-requests/decide", { id: r.id, decision }); await showAgentRequests(); } catch (e) { b.disabled = false; line.append($ ("span", { className: "ps-note", textContent: e.message })); } };
-        line.append(b);
+        end.append(b);
       }
       return line;
     }) : [$ ("div", { className: "row", textContent: "No outside agent requests." })]));

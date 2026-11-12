@@ -172,4 +172,4 @@ details.det ul,details.det-card ul{margin:6px 0 0;padding-left:18px}
 .pg{gap:72px}
 @media(max-width:900px){.grid3,.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.grid2,.grid3,.grid4{grid-template-columns:1fr}.row{grid-template-columns:minmax(0,1fr) auto;gap:4px 12px}.row .l{grid-column:1/-1}.card{padding:18px}.pg{gap:56px}.big{font-size:36px}}
-.ps-note a{color:var(--ink)}#outside-agents .card{display:grid;gap:8px}#outside-agents code{overflow-wrap:anywhere;font-size:11px}#outside-agent-requests .row{gap:8px;flex-wrap:wrap}
+.ps-note a{color:var(--ink)}#outside-agents .card{display:grid;gap:8px}#outside-agents code{overflow-wrap:anywhere;font-size:11px}.agent-req-end{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
