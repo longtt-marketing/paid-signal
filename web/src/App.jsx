@@ -436,7 +436,6 @@ export default function App({ first = null }) {
           <a className="brand" href="/"><span className="mark"><i /></span>Paid Signal</a>
           <nav className="tabs" aria-label="Sections">
             <a href="/judge">Try it</a>
-            <a href="/" className={view === "desk" ? "on" : ""}>Dashboard</a>
             <a href="/studio" className={view === "report" ? "on" : ""}>AG Studio</a>
             <a href="/proof">Proof</a>
             <a href="https://github.com/longtt-marketing/paid-signal">Code</a>
@@ -476,6 +475,11 @@ export default function App({ first = null }) {
         </section>
         {error && <p className="err" role="alert">{error}</p>}
 
+        <section className="flow-card" aria-label="From the ad report, through PayPal, back to Meta">
+          <div className="hb-head"><b>Ad report → PayPal → Meta</b><a className="link-btn" href={adLink("trial_video", "fb")}>Pay from an ad link</a></div>
+          {state ? <FlowChart ads={ads} payments={state.payments} sends={state.metaSends} held={(state.duplicates || []).map((d) => d.capture_id)} worst={worst} /> : <p className="ghost">Loading the ledger…</p>}
+          <div className="legend"><span><i className="l" />what the ads report</span><span><i className="p" />what PayPal confirms</span><span><i className="m" />what Meta learns</span></div>
+        </section>
         <section className="agents" aria-label="Agents">
           <div className="sec-head"><h2>Agents draft. Code checks. You approve.</h2></div>
           <div className="agent-grid">
@@ -490,11 +494,6 @@ export default function App({ first = null }) {
           </div>
         </section>
 
-        <section className="flow-card" aria-label="From the ad report, through PayPal, back to Meta">
-          <div className="hb-head"><b>Ad report → PayPal → Meta</b><a className="link-btn" href={adLink("trial_video", "fb")}>Pay from an ad link</a></div>
-          {state ? <FlowChart ads={ads} payments={state.payments} sends={state.metaSends} held={(state.duplicates || []).map((d) => d.capture_id)} worst={worst} /> : <p className="ghost">Loading the ledger…</p>}
-          <div className="legend"><span><i className="l" />what the ads report</span><span><i className="p" />what PayPal confirms</span><span><i className="m" />what Meta learns</span></div>
-        </section>
 
         <div className="cols">
           <div className="col-main">

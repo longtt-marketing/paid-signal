@@ -63,7 +63,7 @@ export function gapHTML(r, c) {
     + bar("chats", g.share_conversations) + bar("money", g.share_net, "money")
     + `<small>${g.conversations.toLocaleString("en-US")} chats · ${g.paid} kept orders · ${g.roas.toFixed(2)}x ad spend back</small></div>`).join("");
   const split = r.paid_signal_split.map((s) => `${s.id} ${(s.share_now * 100).toFixed(1)}% → ${(s.share_proposed * 100).toFixed(1)}%`).join(", ");
-  return `<p class="sub" id="gap-sub">A Vietnamese gift shop the author runs ads for. Paid by bank transfer.</p>`
+  return `<p class="sub" id="gap-sub">A Vietnamese gift shop whose ads we run. Paid by bank transfer; its book (735 payments, anonymised) is published in the repo.</p>`
     + `<div class="grid3" id="gap-grid">${cards}</div>`
     + (() => { const w = r.what_if, lo = w.flattening[0], hi = w.flattening[1];
         return `<div class="card" id="gap-whatif"><div class="row first"><span class="l">Same spend, split by Paid Signal</span><span class="v">The shop's own numbers imply ${Math.round(lo.lift * 100)}% to ${Math.round(hi.lift * 100)}% more revenue after refunds, before costs: ${vnd(lo.extra)} to ${vnd(hi.extra)} (about $${Math.round(lo.extra / 26000).toLocaleString("en-US")} to $${Math.round(hi.extra / 26000).toLocaleString("en-US")}) in one month</span><span class="chip neu">Estimate</span></div>`
