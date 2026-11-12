@@ -53,7 +53,7 @@ Live in the sandbox, each read back from PayPal: a $49 double payment refunded (
 
 The same PayPal ledger is an AG Grid table inside AG Studio, where the owner and the agents work.
 
-- **Ask the ledger in plain words.** For groups and totals, AG Grid's AI Toolkit turns the request into grid state; filters and sorts go through the grid's own API. Measured on 51 requests, 3 runs each: 149 of 153 runs right, 59 of 63 for the AI Toolkit's groups and totals; all 4 misses were on held-out requests written after the last change ([eval](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/grid-agent-eval-2026-11-11.json)).
+- **Ask the ledger in plain words.** For groups and totals, AG Grid's AI Toolkit turns the request into grid state; filters and sorts go through the grid's own API. Measured: 59 of 63 runs right for the AI Toolkit's groups and totals; the misses were on held-out requests written after the last change ([eval](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/grid-agent-eval-2026-11-11.json)).
 - **AG Studio's own agents** build a new page from one request; custom Studio tools turn invoice drafts and reminders into cards the owner approves.
 - **Seven custom widgets, one cross-filter.** Click an ad and the whole page follows. The arrow on a row opens a payment's history: the ad click, the PayPal capture, what Meta was told.
 - **An AG Grid pivot** of the real gift shop's 735 payments.
@@ -62,11 +62,11 @@ How each feature is wired: [docs/AG-STUDIO.md](https://github.com/longtt-marketi
 
 ## How we built it
 
-Cloudflare Workers and KV; React and Vite. Six agents on Claude Sonnet 5.5, each with its own tools, every tool call checked against its schema. An MCP server with 8 read tools and 4 write tools for outside agents. Meta's Conversions API hears about confirmed purchases only (test events). 218 tests run in CI.
+Cloudflare Workers and KV; React and Vite. Six agents on Claude Sonnet 5.5, each with its own tools, every tool call checked against its schema. An MCP server with 8 read tools and 4 write tools for outside agents. Meta's Conversions API hears about confirmed purchases only (test events). Tests run in CI.
 
 ## Challenges we ran into
 
-- **Agents that make up numbers.** A check in code rejects any number or payment id that is not in the ledger. In a test with 1,100 planted errors, it caught all 1,100.
+- **Agents that make up numbers.** A check in code rejects any number or payment id that is not in the ledger, before the owner sees the draft.
 - **One payment, many signals.** A PayPal payment can arrive from an order, an invoice and a webhook, sometimes twice. Each is matched to its ad once, refunds come off, and likely double charges wait for a person.
 - **Letting outside agents in without letting them move money.** An agent can start a checkout that the buyer approves on PayPal, and it can ask; price, payee and commission are fixed in code. We pointed Claude at the public MCP server as a selling agent: it started a sandbox checkout, asked for its commission only after PayPal confirmed the buyer's payment, and the $5 was paid after the owner approved ([the run](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-sale-2026-11-12.md)). In another run the buyer had not paid, and Claude did not ask ([that run](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-buy-2026-11-12.md)).
 
@@ -74,7 +74,7 @@ Cloudflare Workers and KV; React and Vite. Six agents on Claude Sonnet 5.5, each
 
 - PayPal sandbox payments, refunds and payouts, end to end, each read back from PayPal.
 - A judge can be the customer: pay $49 on PayPal's page, watch the testimonial ad gain the order, and undo it with a refund.
-- The real gift shop's whole book (1,214 invoices, 735 payments, 30 refunds, anonymised) is in the repo, so its numbers can be recomputed.
+- The real gift shop's whole book, anonymised, is in the repo, so its numbers can be recomputed.
 
 ## What we learned
 
