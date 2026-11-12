@@ -56,3 +56,11 @@ test("audit: the same budget rule as the gate runs on a merchant's own two files
 test("the browser copy of the ledger is the same file the Worker runs", () => {
   assert.equal(readFileSync(new URL("../public/lib/ledger.js", import.meta.url), "utf8"), readFileSync(new URL("../src/ledger.js", import.meta.url), "utf8"));
 });
+
+test("audit sample explains the small-shop threshold and lets the budget rule wrap", () => {
+  const html = readFileSync(new URL("../public/audit.html", import.meta.url), "utf8");
+  const js = readFileSync(new URL("../public/audit.js", import.meta.url), "utf8");
+  assert.match(html, /The sample shop is small on purpose\. The budget rule needs 3 paid orders before it moves a budget\./);
+  assert.match(html, /#out \.tbl td:last-child\{[^}]*white-space:normal[^}]*overflow-wrap:anywhere/);
+  assert.match(js, /\$\("sample-note"\)\.hidden = !files\.sample/);
+});

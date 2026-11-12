@@ -236,6 +236,7 @@ button.claim-name{all:unset;cursor:pointer;font-weight:600;overflow:hidden;text-
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 
 .owner-ask{margin:0 0 10px;font-size:13.5px;color:var(--ink)}.owner-ask b{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin-bottom:2px}
+.payment-count-line{font-size:12px;line-height:1.4;color:var(--mute);margin-top:-10px}
 
 .ad-cards{display:none}
 .ad-card{display:grid;gap:9px;padding:12px;border:1px solid var(--line2);border-radius:12px;background:#fcfbf8;min-width:0}

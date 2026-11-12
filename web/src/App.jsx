@@ -384,6 +384,18 @@ export default function App({ first = null }) {
   const lastMeta = [...(state?.metaSends || [])].filter((m) => m.ok && !m.backfill).sort((a, b) => String(b.at).localeCompare(String(a.at)))[0];
   const drafts = invoices.filter((i) => i.status === "DRAFT");
   const costPerPaid = t && t.paid ? usd(Math.round(t.spend_cents / t.paid)) : "none";
+  const paymentRows = state?.payments || [];
+  const partlyRefunded = paymentRows.filter((p) => Number(p.refunded_amount || 0) > 0 && Number(p.refunded_amount || 0) < Number(p.amount)).length;
+  const paymentBreakdown = state && (() => {
+    const totals = state.reconciliation.totals;
+    const parts = [`${totals.paid} paid orders${partlyRefunded ? ` (${partlyRefunded} partly refunded)` : ""}`, `${totals.refunded} fully refunded`, `${totals.held} held`];
+    if (totals.disputed) parts.push(`${totals.disputed} disputed`);
+    const unmatched = state.reconciliation.unmatched_captures.length;
+    if (unmatched) parts.push(`${unmatched} unmatched`);
+    const unclassified = Math.max(0, paymentRows.length - totals.paid - totals.refunded - totals.held - totals.disputed - unmatched);
+    if (unclassified) parts.push(`${unclassified} unclassified`);
+    return `${paymentRows.length} payments = ${parts.join(" + ")}`;
+  })();
   const byCost = [...ads].sort((a, b) => b.spend_cents - a.spend_cents);
   const odds = state?.odds?.ads || {}; // small-sample read from the ledger (paybackOdds)
   const best = ads.filter((a) => a.cost_per_paid_cents != null).sort((a, b) => a.cost_per_paid_cents - b.cost_per_paid_cents)[0]?.ad;
@@ -427,6 +439,7 @@ export default function App({ first = null }) {
           <div className="hero-copy">
             <p className="kicker">Kite Robotics Club · demo shop</p>
             <h1 className="duo"><span className="n claimed">{(t || first)?.leads ?? "…"} leads.</span><span className="n paid">{(t || first)?.paid ?? "…"} paid.</span></h1>
+            {paymentBreakdown && <p className="payment-count-line">{paymentBreakdown}</p>}
             <p className="pitch">Ads learn from leads. PayPal knows who paid.</p>
             <div className="hero-actions"><a className="cta" href="/studio?tour=1">▶ Take the 60-second tour</a><a className="cta ghost" href="/judge#customer">Follow a payment</a><a className="cta ghost" href="/audit">Audit your ads</a></div>
           </div>
@@ -490,7 +503,7 @@ export default function App({ first = null }) {
               <div className="ad-cards" aria-label="Per-ad summary">
                 {byCost.map((a) => <article key={a.ad} className="ad-card">
                   <h3>{adName(a.ad)}</h3>
-                  <p className="ad-card-flow"><span>{a.leads} leads</span><span aria-hidden="true">→</span><b>{a.paid} paid orders</b></p>
+                  <p className="ad-card-flow"><span>{a.leads} leads</span><span aria-hidden="true">→</span><b>{a.refunded || a.held || a.disputed ? `${a.paid} paid of ${a.paid + a.refunded + a.held + a.disputed} payments` : `${a.paid} paid orders`}</b></p>
                   <p className="ad-card-revenue"><span>Paid revenue</span><b>{usd(a.revenue_cents)}</b></p>
                   <div className="ad-card-cover"><span>Covers its spend?</span><b>{odds[a.ad] ? `${Math.round(odds[a.ad].chance_covers_spend * 100)}%` : "Not calculated"}</b>
                     <small>{odds[a.ad] ? odds[a.ad].more_spend_to_decide_cents != null ? `Cut if the next ${usd(odds[a.ad].more_spend_to_decide_cents)} brings no paid order` : odds[a.ad].verdict : "No cut point available"}</small>
@@ -507,7 +520,7 @@ export default function App({ first = null }) {
             </PhoneDisclosure>
 
             <PhoneDisclosure id="signal" title="Ad platform signal" className="card" summaryText={state ? `${state.meta.events.length} Meta events` : ""}>
-              <div className="card-head phone-section-head"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Meta Purchase events · {state.google.conversions.length} Google rows</span>}</div>
+              <div className="card-head phone-section-head"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Meta Purchase events · {state.google.conversions.length} Google {state.google.conversions.length === 1 ? "row" : "rows"}</span>}</div>
               <p className="muted">PayPal-confirmed payments from Meta ads become Purchase events, one per capture.</p>
               {state?.metaLive && <div className="live-meta" role="status">
                 <span className="pulse" aria-hidden="true" />

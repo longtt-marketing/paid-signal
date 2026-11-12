@@ -1,0 +1,86 @@
+"""V33 film plan (same narration as V32; alternate tech-product visual treatment):
+guided tour, real sandbox money (refund, payout), the customer path, the agent refusing, a close with the link.
+Phase 1: PS_FILM=scripts/film-v33.json python scripts/film-plan-v33.py texts, then build-film.py prepare with the same PS_FILM;
+phase 2: python scripts/film-plan-v33.py cams, then build-film.py prepare again, render and assemble."""
+import json, sys
+from pathlib import Path
+
+APP = Path(__file__).resolve().parents[1]
+FILM = APP / "scripts/film-v33.json"
+
+
+def plan(*a, **k):
+    src = (APP / "scripts/film-plan-v18.py").read_text("utf8").split("\n{\"texts\"")[0]
+    ns = {"__file__": str(APP / "scripts/film-plan-v18.py")}; exec(src, ns)
+    return ns["plan"](*a, **k)
+
+
+def marks(name): return json.loads((APP / "film/clips" / name / "marks.json").read_text("utf8"))
+
+
+CLIPS = {"tour1": "tour31a", "tour2": "tour31b", "tour3": "tour31c", "tour4": "tour31d", "money": "money23", "customer": "cust23", "no": "says23"}
+CHAT = [1515, 300, 380, 760]  # the assistant panel at 1920 x 1080 (its selector reports no size)
+
+
+def texts():
+    v30 = {s["key"]: dict(s) for s in json.loads((APP / "scripts/film-v30.json").read_text("utf8"))}
+    hook = {"key": "hook", "lines": [["69% of the chats", "ink", 130], ["19% of the money", "paid", 130], ["A real gift shop's October, matched by hand against its bank transfers.", "mute", 44]],
+            "text": "Ad reports count chats. PayPal counts money. In a real gift shop's October, matched by hand against its bank transfers, the ad with sixty nine percent of the chats brought nineteen percent of the money. Paid Signal does that match on PayPal, and AI agents prepare the money work for the owner to approve, inside AG Grid."}
+    scenes = [
+        hook,
+        {"key": "tour1", "chip": "01 · Ads vs PayPal",
+         "text": "This is the demo shop, in the PayPal sandbox. One button starts a guided tour. One click on the testimonial ad filters AG Studio: the PayPal ledger under it, an AG Grid table, narrows to that ad, and the budget agent's suggestion waits for the owner's approval."},
+        {"key": "tour2", "chip": "02 · A payment's history",
+         "text": "Open a payment and its history unfolds inside the grid: the ad click, the PayPal capture, and what Meta was told."},
+        {"key": "tour3", "chip": "03 · AG Grid AI Toolkit",
+         "text": "Ask in plain words. AG Grid's AI Toolkit hands the assistant the grid's schema, and the grid groups the payments by ad and totals the money kept. We measured it: a hundred and forty nine of a hundred and fifty three plain-word requests came out right."},
+        {"key": "tour4", "chip": "04 · Read back from PayPal",
+         "text": "The agents act too. They draft invoices, send reminders, refund double charges and pay creators, each inside a limit set in code, and every action is read back from PayPal. Here, the refund PayPal reports as completed."},
+        {"key": "money", "chip": "05 · Real sandbox money",
+         "text": "This is real sandbox money. The refund agent returned a forty nine dollar double payment, and PayPal says completed. The ad's creator is paid per confirmed order through PayPal Payouts: fifteen dollars for three paid orders."},
+        {"key": "customer", "chip": "06 · Be the customer",
+         "text": v30["customer"]["text"].replace("Claude drafts", "the revenue agent drafts")},
+        dict(v30["paid"], chip="07 · PayPal confirms"),
+        {"key": "no", "chip": "08 · The agent says no",
+         "text": "The owner asks to raise the free guide. Thirty one leads, one paid order: the budget agent refuses, and recommends the ad whose PayPal payments show paid orders. The same raise, sent straight to the rule in code, is refused too."},
+        {"key": "close", "text": "Paid Signal. Ad reports count chats; PayPal counts money. Take the guided tour yourself: no login.",
+         "lines": [["Paid Signal.", "ink", 110], ["Ad reports count chats. PayPal counts money.", "paid", 56], ["paid-signal.thelongmarketing.workers.dev/studio", "mute", 40]],
+         "chips": ["149 of 153 grid requests right", "Refund: PayPal COMPLETED", "No login"]},
+    ]
+    # Reuse the exact reviewed chapter labels from the v32 plan; the older generator
+    # source has a damaged separator glyph even though its JSON output is intact.
+    chapter_labels = {
+        "tour1": "01 \u00b7 Ads vs PayPal", "tour2": "02 \u00b7 A payment's history",
+        "tour3": "03 \u00b7 AG Grid AI Toolkit", "tour4": "04 \u00b7 Read back from PayPal",
+        "money": "05 \u00b7 Real sandbox money", "customer": "06 \u00b7 Be the customer",
+        "paid": "07 \u00b7 PayPal confirms", "no": "08 \u00b7 The agent says no",
+    }
+    for sc in scenes:
+        if sc["key"] in chapter_labels: sc["chip"] = chapter_labels[sc["key"]]
+    for sc in scenes:
+        if sc["key"] in CLIPS:
+            sc["clip"] = CLIPS[sc["key"]]; sc["clip_from"] = 0.0; sc["clip_to"] = None
+            for k in ("cam", "rings", "callouts"): sc.pop(k, None)
+    FILM.write_text(json.dumps(scenes, ensure_ascii=False, indent=1), "utf8")
+    print([(s["key"], s.get("chip")) for s in scenes])
+
+
+def cams():
+    tl = json.loads((APP / "film/timeline.json").read_text("utf8"))
+    secs = {s["key"]: s["seconds"] for s in tl["scenes"]}
+    scenes = json.loads(FILM.read_text("utf8"))
+    for sc in scenes:
+        if sc["key"] in CLIPS:
+            m = marks(sc["clip"])
+            m = [dict(x, box=CHAT) if x["name"] == "chat" else x for x in m]
+            if sc["key"] == "money": m = [x for x in m if x["name"] in ("r0", "r1", "paid")]
+            first = min(x["t"] for x in m)
+            sc["clip_from"] = round(max(0.0, first - 1.6), 2)
+            after = 5.0 if sc["key"].startswith("tour") else 3.2
+            sc["clip_to"] = round(max(x["t"] for x in m) + after, 2)
+            plan(sc, m, secs[sc["key"]])
+    FILM.write_text(json.dumps(scenes, ensure_ascii=False, indent=1), "utf8")
+    print({s["key"]: (s.get("speed"), len(s.get("cam", []))) for s in scenes})
+
+
+{"texts": texts, "cams": cams}[sys.argv[1]]()

@@ -1,11 +1,11 @@
 // The ledger grid's total row: money kept leaves out held double payments and refunds, and subtracts partial refunds.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { byAdChart, decisionOf, groupByAd, totalsOf } from "../web/src/gridTotals.js";
+import { byAdChart, decisionOf, groupByAd, signalSummary, totalsOf } from "../web/src/gridTotals.js";
 
 const rows = [
-  { amount: 49, status: "Paid", held: false, meta: "Received", raw: {} },
-  { amount: 49, status: "Paid, $9.00 back", held: false, meta: "Received", raw: { refunded_amount: "9.00" } },
+  { amount: 49, status: "Paid", held: false, meta: "Received", source: "Meta click", raw: {} },
+  { amount: 49, status: "Paid, $9.00 back", held: false, meta: "Received", source: "Meta click", raw: { refunded_amount: "9.00" } },
   { amount: 49, status: "Held: double?", held: true, meta: "Not sent", raw: {} },
   { amount: 49, status: "Refunded", held: false, meta: "No purchase", raw: { refunded_amount: "49.00" } },
 ];
@@ -15,8 +15,16 @@ test("total row: kept after refunds, held and refunded counted apart", () => {
   assert.equal(t.amount, 196);
   assert.equal(t.kept, 89);
   assert.equal(t.status, "1 held · 1 refunded");
-  assert.equal(t.meta, "2 received");
+  assert.equal(t.meta, "2 Meta Purchase events · 0 Google rows");
   assert.equal(totalsOf(rows, true).status, "1 held · 1 back");
+});
+
+test("Meta totals count Meta receipts and current Google rows, not a legacy Google Meta backfill", () => {
+  assert.equal(signalSummary([
+    { source: "Meta click", meta: "Received", kept: 49 },
+    { source: "Google click", meta: "Received", kept: 49 }, // old Meta backfill, still a Google conversion
+    { source: "Google click", meta: "Not sent", kept: 0 }, // fully refunded Google payment
+  ]), "1 Meta Purchase events · 1 Google row");
 });
 
 test("grouped by ad: a subtotal row per ad, most money kept first, then its payments", () => {

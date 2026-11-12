@@ -58,6 +58,7 @@ function audit() {
   const matchedCents = t.revenue_cents + t.held_cents + t.disputed_cents;
 
   $("out").hidden = false;
+  $("sample-note").hidden = !files.sample;
   $("out-tag").textContent = files.sample ? "SAMPLE: fictional invoice shop exports" : "Your files, read in this browser";
   const byLeads = [...rec.ads].sort((x, y) => y.leads - x.leads)[0], byPaid = [...rec.ads].sort((x, y) => y.revenue_cents - x.revenue_cents)[0];
   $("headline").textContent = !s.tagged

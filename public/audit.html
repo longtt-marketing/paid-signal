@@ -23,6 +23,8 @@
 .stat.bad b{color:var(--bad)}.stat.good b{color:var(--paid)}
 .tbl table{min-width:860px;width:100%;border-collapse:collapse}.tbl th,.tbl td{text-align:left;padding:12px;border-bottom:1px solid var(--line2);vertical-align:top;font-size:13px}
 .tbl th{white-space:nowrap;color:var(--mute);font-weight:600}.tbl td small{display:block;color:var(--mute)}
+#out .tbl th:last-child{white-space:normal;width:250px}
+#out .tbl td:last-child{white-space:normal;min-width:220px;max-width:260px;overflow-wrap:anywhere}
 .pill,.tag{display:inline-flex;padding:5px 10px;border-radius:99px;background:var(--soft);font-size:12px;font-weight:600}
 .pill.up{background:var(--paid-bg);color:var(--paid-ink)}.pill.down{background:var(--bad-bg);color:var(--bad)}
 .head{font-size:22px;font-weight:700;letter-spacing:-.01em}
@@ -62,6 +64,7 @@
     <div class="card result" id="out" hidden aria-live="polite">
       <div class="foot" style="border:0;padding:0"><p class="head" id="headline"></p><span class="tag" id="out-tag"></span></div>
       <div class="stats" id="stats"></div>
+      <p class="ps-note" id="sample-note" hidden>The sample shop is small on purpose. The budget rule needs 3 paid orders before it moves a budget.</p>
       <div class="tbl ps-table"><table><thead><tr><th>Ad</th><th>Spend</th><th>Leads (ad report)</th><th>Paid orders (PayPal)</th><th>Refunded</th><th>Paid revenue</th><th>Per $1 of ads</th><th>After costs and fees, per $1</th><th>What the budget rule allows</th></tr></thead><tbody id="rows"></tbody></table></div>
       <details class="det"><summary>Match detail and what to do next</summary><p id="match-rate"></p><ul class="todo" id="todo"></ul></details>
       <div class="foot"><span class="ps-note">Checks your files' arithmetic and matching, not whether ads caused a sale.</span><button class="btn sec2 sm" id="dl" type="button">Download (text)</button></div>

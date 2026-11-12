@@ -8,7 +8,11 @@ const NAMES = { free_guide: "Free guide · lead form", trial_video: "Trial class
 const SHORT = { free_guide: "free guide", trial_video: "trial class video", parent_carousel: "testimonial ad", holiday_static: "holiday camp ad" };
 const name = (ad) => NAMES[ad] || ad;
 const box = (id) => document.getElementById(id);
-const when = (t) => (t ? new Date(t).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "");
+const when = (t) => {
+  if (!t) return "";
+  const d = new Date(t);
+  return Number.isNaN(+d) ? "" : `${d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
+};
 const CHANGE = { increase: "Raise", reduce: "Cut", pause: "Pause", keep: "Keep, no raise" };
 
 async function getJSON(url, init) { const r = await fetch(url, init); const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.error || `HTTP ${r.status}`); e.fallback = j.fallback; throw e; } return j; }
@@ -89,12 +93,14 @@ function journey(out) {
   const send = btn("Approve and send");
   steps(2);
   let timer = null;
+  let stopTimer = null;
+  const stopPoll = () => { clearInterval(timer); clearTimeout(stopTimer); };
   const poll = (id) => {
     const check = async () => {
       try { const d = await getJSON(`/api/judge/try/status?id=${encodeURIComponent(id)}`); note.textContent = `Checked ${when(d.checked_at)}: ${d.invoice.status}`; if (d.invoice.status === "PAID") { clearInterval(timer); showPaid(d.invoice, wrap); } }
       catch (e) { note.textContent = e.message; }
     };
-    check(); timer = setInterval(check, 6000); setTimeout(() => clearInterval(timer), 15 * 60 * 1000);
+    check(); timer = setInterval(check, 6000); stopTimer = setTimeout(stopPoll, 15 * 60 * 1000);
   };
   send.onclick = async () => {
     send.disabled = true; note.textContent = "The send agent is checking the invoice on PayPal…";
@@ -104,13 +110,31 @@ function journey(out) {
       if (inv.status === "DRAFT") { note.textContent = `Not sent: ${d.agent?.summary || "the agent did not send it"}`; send.disabled = false; return; }
       steps(3);
       const pay = inv.pay_url ? $("a", { className: "btn go", href: inv.pay_url, target: "_blank", rel: "noopener noreferrer", textContent: `Pay ${usd(inv.amount)} on PayPal ↗` }) : chip("No pay link", "no2");
-      wrap.replaceChildren(row("You approved", "The send agent sent it to you", status(inv.status)), row("Now pay", "Log in as the sandbox buyer", pay), $("div", { className: "foot" }, [note]));
+      const replay = btn("No sandbox login? Replay a recorded payment", "sec2");
+      replay.onclick = () => { stopPoll(); showRecordedPayment(wrap); };
+      const payRow = $("div", { className: "row pay-row" }, [$("span", { className: "l", textContent: "Now pay" }), $("div", { className: "pay-actions" }, [pay, replay])]);
+      wrap.replaceChildren(row("You approved", "The send agent sent it to you", status(inv.status)), payRow, $("div", { className: "foot" }, [note]));
       note.textContent = "This page asks PayPal every few seconds.";
       poll(inv.id);
     } catch (e) { note.textContent = e.message; send.disabled = false; }
   };
   wrap.append(row("You are the owner", "Approve it; the send agent sends it to you", send), $("div", { className: "foot" }, [note]));
   return wrap;
+}
+
+function showRecordedPayment(wrap) {
+  steps(6);
+  const recorded = () => chip("RECORDED", "neu");
+  const order = $("b", {}, [$("span", { className: "was", textContent: "4" }), " → ", $("span", { className: "up", textContent: "5" }), " → ", $("span", { textContent: "4" })]);
+  wrap.replaceChildren(
+    $("h3", {}, ["What the recorded payment changed ", recorded()]),
+    $("div", { className: "rows" }, [
+      row("Step 4 · Testimonial ad", $("span", {}, ["Paid orders: payment, then Undo ", order]), recorded()),
+      row("Step 4 · Meta", "Purchase test event received · events_received 1", recorded()),
+      row("Step 5 · Undo", "PayPal refunded $49.00 · REFUNDED", recorded()),
+    ]),
+    details("Recorded proof", [p("Live judge run on 6 Nov 2026. Replay only; this button makes no PayPal call and writes no ledger data. Source: docs/proof/judge-click-meta-2026-11-06.json.")]),
+  );
 }
 
 function showPaid(inv, wrap) {
@@ -132,13 +156,13 @@ function showPaid(inv, wrap) {
       rows.replaceChildren(
         ...(d.refund.refunded
           // after Undo the count is back where it was: show the step up and the step back, not a flat 4 → 4
-          ? [row("Testimonial ad", "Paid orders: your payment, then your Undo", $("b", {}, [$("span", { className: "was", textContent: String(a.before.paid_orders) }), " → ", $("span", { className: "up", textContent: String(a.before.paid_orders + 1) }), " → ", $("span", { textContent: String(a.after.paid_orders) })]))]
-          : [row("Testimonial ad", "Paid orders", num(a.before.paid_orders, a.after.paid_orders)),
-            row("Per $1 of ads", "Paid revenue", num(a.before.back_per_ad_dollar, a.after.back_per_ad_dollar, (v) => `$${Number(v).toFixed(2)}`))]),
-        row("Budget rule", `Raise testimonial: ${b.parent_carousel.after_raise_supported ? "still yes" : "no"}. Raise free guide: ${b.free_guide.after_raise_blocked ? "still no" : "now yes"}.`, chip("Re-run")),
-        row("Meta", d.meta.sent ? `Purchase test event received${d.meta.refund_note ? `; ${d.meta.refund_note}` : ""}` : `Not sent: ${String(d.meta.reason || "no receipt from Meta").replace(/^Held:\s*/i, "")}`, chip(d.meta.sent ? "Sent" : "Held", d.meta.sent ? "ok" : "held")),
-        row("Ad's creator", d.creator.batch_id ? `Paid $5 through PayPal Payouts${d.creator.owed_back ? "; $5 owed back after the refund" : ""}` : d.refund.refunded ? (d.creator.owed_back ? "$5 owed back after the refund" : "Refunded order: no commission") : "Earns $5 for this paid order", creatorEnd),
-        ...(d.refund.refunded ? [row("Undo", `Refunded ${usd(d.refund.amount)}`, chip(d.refund.status || "REFUNDED", "ok"))] : []),
+          ? [row("Testimonial ad", "Paid orders: your payment, then your Undo", $("span", {}, [chip("LIVE", "ok"), $("b", {}, [$("span", { className: "was", textContent: String(a.before.paid_orders) }), " → ", $("span", { className: "up", textContent: String(a.before.paid_orders + 1) }), " → ", $("span", { textContent: String(a.after.paid_orders) })])]))]
+          : [row("Testimonial ad", "Paid orders", $("span", {}, [chip("LIVE", "ok"), num(a.before.paid_orders, a.after.paid_orders)])),
+            row("Per $1 of ads", "Paid revenue", $("span", {}, [chip("LIVE", "ok"), num(a.before.back_per_ad_dollar, a.after.back_per_ad_dollar, (v) => `$${Number(v).toFixed(2)}`)]))]),
+        row("Budget rule", `Raise testimonial: ${b.parent_carousel.after_raise_supported ? "still yes" : "no"}. Raise free guide: ${b.free_guide.after_raise_blocked ? "still no" : "now yes"}.`, chip("LIVE · re-run")),
+        row("Meta", d.meta.sent ? `Purchase test event received${d.meta.refund_note ? `; ${d.meta.refund_note}` : ""}` : `Not sent: ${String(d.meta.reason || "no receipt from Meta").replace(/^Held:\s*/i, "")}`, chip(d.meta.sent ? "LIVE · sent" : "LIVE · held", d.meta.sent ? "ok" : "held")),
+        row("Ad's creator", d.creator.batch_id ? `Paid $5 through PayPal Payouts${d.creator.owed_back ? "; $5 owed back after the refund" : ""}` : d.refund.refunded ? (d.creator.owed_back ? "$5 owed back after the refund" : "Refunded order: no commission") : "Earns $5 for this paid order", $("span", {}, [chip("LIVE", "ok"), creatorEnd])),
+        ...(d.refund.refunded ? [row("Undo", `Refunded ${usd(d.refund.amount)}`, $("span", {}, [chip("LIVE", "ok"), chip(d.refund.status || "REFUNDED", "ok")]))] : []),
       );
       undo.disabled = Boolean(d.refund.refunded);
       head.textContent = d.refund.refunded ? "PAID, then REFUNDED" : "PAID";
@@ -241,7 +265,7 @@ function showRefund(d) {
   if (r?.refund) {
     cards.push($("div", { className: "card" }, [$("span", { className: "k", textContent: "The real refund" }), $("div", { className: "rows" }, [
       row("Ledger", `Second ${usd(r.pair.second.amount)}, ${r.pair.seconds} s later, held out of paid orders`, chip("Held", "held")),
-      row("Person", `Approved ${when(r.approved_at).split(",").slice(0, 2).join(",")}`, chip("Approved")),
+      row("Person", `Approved ${when(r.approved_at)}`, chip("Approved")),
       row("PayPal", `Refund of ${usd(r.refund.amount)}`, status(r.refund.read_back?.status || r.refund.status))]),
       details("Ids, buyer note and limits", [
         p(`Capture ${r.pair.second.capture_id}, ${r.pair.seconds} s after ${r.pair.first.capture_id}: same payer, same ad. Refund ${r.refund.id}.`),
