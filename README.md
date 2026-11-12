@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**Small shops credit ads and AI agents only with sales PayPal confirms. Any agent can start a PayPal checkout over MCP; refunds and commissions it asks for wait for approval.**
+**Ad reports count chats. PayPal counts money.** Paid Signal shows a small shop which ads really sold, and pays the creators and AI agents who bring buyers only for sales PayPal confirms. Agents draft, code checks, the owner approves.
 
 ![AG Studio, 30 seconds: a click on an ad filters the page; the PayPal ledger (AG Grid) narrows to it; a payment opens its history; the owner decides in the cell](docs/img/studio-tour.gif)
 
