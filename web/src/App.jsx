@@ -435,10 +435,9 @@ export default function App({ first = null }) {
         <div className="top-in">
           <a className="brand" href="/"><span className="mark"><i /></span>Paid Signal</a>
           <nav className="tabs" aria-label="Sections">
+            <a href="/judge">Try it</a>
             <a href="/" className={view === "desk" ? "on" : ""}>Dashboard</a>
             <a href="/studio" className={view === "report" ? "on" : ""}>AG Studio</a>
-            <a href="/judge">Judge path</a>
-            <a href="/audit">Audit</a>
             <a href="/proof">Proof</a>
             <a href="https://github.com/longtt-marketing/paid-signal">Code</a>
           </nav>
@@ -455,7 +454,7 @@ export default function App({ first = null }) {
             <h1 className="duo"><span className="n claimed">{(t || first)?.leads ?? "…"} leads.</span><span className="n paid">{(t || first)?.paid ?? "…"} paid.</span></h1>
             {paymentBreakdown && <p className="payment-count-line">{paymentBreakdown}</p>}
             <p className="pitch">Ads learn from leads. PayPal knows who paid.</p>
-            <div className="hero-actions"><a className="cta" href="/studio?tour=1">▶ Take the 60-second tour</a><a className="cta ghost" href="/judge#customer">Follow a payment</a><a className="cta ghost" href="/audit">Audit your ads</a></div>
+            <div className="hero-actions"><a className="cta" href="/studio?tour=1">▶ Take the 60-second tour</a><a className="cta ghost" href="/judge#customer">Be the customer: pay $49</a></div>
           </div>
           <div className="hero-bars" aria-label="Leads and paid orders by ad">
             <div className="hb-head"><b>By ad</b><span>paid revenue per $1 of ads</span></div>
@@ -477,17 +476,17 @@ export default function App({ first = null }) {
         </section>
         {error && <p className="err" role="alert">{error}</p>}
 
-        <section className="agents" aria-label="Six agents">
-          <div className="sec-head"><h2>Six agents. Code holds the money.</h2><p className="muted">You approve every invoice, refund and payout.</p></div>
+        <section className="agents" aria-label="Agents">
+          <div className="sec-head"><h2>Agents draft. Code checks. You approve.</h2></div>
           <div className="agent-grid">
             {[
-              ["Revenue", "Reads the chat, drafts the invoice.", "create_invoice", <button className="mini" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading…" : "Run"}</button>],
-              ["Send", "Sends it once you approve.", "send_invoice", <button className="mini" onClick={() => scrollToId("approvals")}>Approvals</button>],
-              ["Chase", "Reminds who still owes.", "send_invoice_reminder", <button className="mini" disabled={chase.status === "running"} onClick={askChase}>{chase.status === "running" ? "Chasing…" : "Chase"}</button>],
-              ["Refund", "Returns a double payment.", "create_refund", <a className="mini" href="/judge#refund">Watch</a>],
-              ["Commission", "Pays the creator per paid order.", "Payouts", <a className="mini" href="/judge#commission">Watch</a>],
-              ["Budget", "Moves money only on PayPal proof.", "evidence gate", <button className="mini" disabled={agent.status === "running"} onClick={() => ask()}>{agent.status === "running" ? "Reading…" : "Ask"}</button>],
-            ].map(([n, does, tool, act]) => <article key={n}><div><b>{n}</b><p>{does}</p></div><div className="agent-foot"><code>{tool}</code>{act}</div></article>)}
+              ["Revenue", "Reads the chat, drafts the invoice.", "PayPal invoice", <button className="mini" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading…" : "Run"}</button>],
+              ["Send", "Sends it once you approve.", "PayPal invoice", <button className="mini" onClick={() => scrollToId("approvals")}>Approvals</button>],
+              ["Chase", "Reminds who still owes.", "PayPal reminder", <button className="mini" disabled={chase.status === "running"} onClick={askChase}>{chase.status === "running" ? "Chasing…" : "Chase"}</button>],
+              ["Refund", "Returns a double payment.", "PayPal refund", <a className="mini" href="/judge#refund">Watch</a>],
+              ["Commission", "Pays the creator per paid order.", "PayPal Payouts", <a className="mini" href="/judge#commission">Watch</a>],
+              ["Budget", "Moves money only on PayPal proof.", "Checked in code", <button className="mini" disabled={agent.status === "running"} onClick={() => ask()}>{agent.status === "running" ? "Reading…" : "Ask"}</button>],
+            ].map(([n, does, tool, act]) => <article key={n}><div><b>{n}</b><p>{does}</p></div><div className="agent-foot"><span className="agent-tool">{tool}</span>{act}</div></article>)}
           </div>
         </section>
 

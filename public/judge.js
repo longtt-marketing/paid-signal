@@ -355,7 +355,7 @@ async function mcpCall(id, name, args = {}) {
   return result;
 }
 box("unearned").onclick = async (event) => {
-  const b = event.currentTarget, out = box("sample-agent-result"); b.disabled = true; out.textContent = "An agent with no PayPal-confirmed sale calls request_commission…";
+  const b = event.currentTarget, out = box("unearned-result"); b.disabled = true; out.textContent = "An agent with no PayPal-confirmed sale calls request_commission…";
   try {
     const r = await mcpCall(3, "request_commission", { agent_name: `no-sale-agent-${Math.random().toString(36).slice(2, 7)}` });
     out.textContent = `LIVE · request_commission → ${r.status}, $${r.amount}. ${r.message}`;
