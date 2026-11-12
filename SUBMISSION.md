@@ -14,7 +14,7 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 <!-- devpost-story -->
 **Ad reports count chats; PayPal counts money. Paid Signal credits each ad only with PayPal-confirmed sales, and AI agents prepare the invoices, refunds and budget moves you approve in AG Grid.**
 
-**[▶ Start the 60-second guided tour](https://paid-signal.thelongmarketing.workers.dev/studio?tour=1)** · no login · it clicks through four steps by itself (an ad filter, a payment's history, a live AG Grid AI Toolkit call, the PayPal read-back); you press Next between them. Or [pay as a customer](https://paid-signal.thelongmarketing.workers.dev/judge): a sandbox invoice the agent drafts for you, then undo it with a PayPal refund.
+**[▶ Start the 60-second guided tour](https://paid-signal.thelongmarketing.workers.dev/studio?tour=1)** · no login · it clicks through four steps by itself (an ad filter, a payment's history, a live AG Grid AI Toolkit call, the PayPal read-back); you press Next between them. Or [pay as a customer](https://paid-signal.thelongmarketing.workers.dev/judge): a sandbox invoice the agent drafts for you, then undo it with a PayPal refund (no sandbox buyer login? one button replays a recorded payment, labelled RECORDED).
 
 ### In numbers
 - **69% of the chats, 19% of the money.** A real gift shop spent about $10,000 on ads in October. Matched by hand against its 735 bank transfers, the ad that brought 69% of the chats brought 19% of the money. On PayPal, Paid Signal does that match by itself.
