@@ -36,9 +36,9 @@ One loop, on PayPal:
 3. **The budget follows the money.** An agent proposes which ads to grow or cut. Code checks every number it quotes against the ledger, never moves an ad with fewer than 3 paid orders, and the owner approves.
 4. **Whoever sent the buyer is paid per confirmed sale.** The ad's creator is paid through PayPal Payouts for each confirmed order, not each lead. The same rule covers outside AI agents that sell for the shop over MCP (the open protocol AI agents use to call tools): the buyer approves on PayPal, and the agent's $5 commission is paid only after PayPal confirms the sale and the owner approves.
 
-Around the loop, agents do the daily PayPal work, each behind the owner's click: invoices for leads ready to buy, kind reminders for who still owes, refunds for double charges.
+Around the loop, agents do the daily PayPal work: invoices for leads ready to buy and refunds for double charges wait for the owner's click; kind reminders go out after the owner presses Chase, capped in code.
 
-**How AI is used:** agents draft, code checks, the owner approves. Claude reads what each lead wrote and drafts the invoice, the reminder or the budget plan. Code sets every price, payee and limit, and nothing goes out without a click.
+**How AI is used:** agents draft, code checks, the owner approves. Claude reads what each lead wrote and drafts the invoice, the reminder or the budget plan. Code sets every price, payee and limit; invoices, refunds and payouts wait for the owner's click.
 
 ### PayPal decides what counts
 
@@ -66,7 +66,7 @@ Cloudflare Workers and KV; React and Vite. Six agents on Claude Sonnet 5.5, each
 
 ## Challenges we ran into
 
-- **Agents that make up numbers.** A check in code rejects any number or payment id that is not in the ledger, before the owner sees the draft.
+- **Agents that make up numbers.** For budget plans, a check in code rejects any number or payment id that is not in the ledger, before the owner sees the plan.
 - **One payment, many signals.** A PayPal payment can arrive from an order, an invoice and a webhook, sometimes twice. Each is matched to its ad once, refunds come off, and likely double charges wait for a person.
 - **Letting outside agents in without letting them move money.** An agent can start a checkout that the buyer approves on PayPal, and it can ask; price, payee and commission are fixed in code. We pointed Claude at the public MCP server as a selling agent: it started a sandbox checkout, asked for its commission only after PayPal confirmed the buyer's payment, and the $5 was paid after the owner approved ([the run](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-sale-2026-11-12.md)). In another run the buyer had not paid, and Claude did not ask ([that run](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-buy-2026-11-12.md)).
 

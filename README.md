@@ -11,7 +11,7 @@ Fastest: **[▶ start the 60-second guided tour](https://paid-signal.thelongmark
 1. In the chart at the top, click the Testimonial ad: the page and the PayPal ledger under it narrow to that ad, and the budget agent's suggestion waits for your Approve.
 2. Open the assistant and pick **Group the ledger by ad (AI Toolkit)**, or ask in your own words: AG Grid's AI Toolkit turns the request into a grid state, and the grid groups the payments and totals the money kept.
 3. Pick **Invoice warm leads**: the revenue agent drafts real PayPal sandbox invoices as cards in the chat; nothing is sent until you press Approve.
-4. Open **Agents → PayPal**: every invoice, reminder, refund and payout the agents made, with the status PayPal reports for it now ([live count](https://paid-signal.thelongmarketing.workers.dev/api/agent-actions)).
+4. Open **Agents → PayPal**: every invoice, reminder, refund and payout the agents made, with the status PayPal reports for it now ([live in AG Studio](https://paid-signal.thelongmarketing.workers.dev/studio)).
 
 Video (2:55): https://youtu.be/Xp4Ewz4ri60 · Pay as a customer: [judge path](https://paid-signal.thelongmarketing.workers.dev/judge)
 

@@ -63,7 +63,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
     // Every thing an agent wrote to PayPal, each read back from PayPal now (cached ten minutes): the Studio page
     // "Agents → PayPal" shows PayPal's own status next to what the agent did.
     if (url.pathname === "/api/agent-actions") {
-      const cached = await env.LEDGER.get("actions:v3", "json");
+      const cached = (await env.LEDGER.get("actions:v3", "json")) || (await env.LEDGER.get("actions:last", "json"));
       // ?fresh=1 after an agent acted (the Nudge button): read PayPal again now, within the same rate limit
       if (cached && !url.searchParams.has("fresh") && Date.now() - Date.parse(cached.checked_at) < 600000) return json({ ...cached, cached: true });
       const stop = await guard(env, request, "PayPal readbacks", 20, 300); if (stop) return json(cached ? { ...cached, cached: true, stale: true, note: stop } : { error: stop }, cached ? 200 : 429);
@@ -84,7 +84,7 @@ export async function route({ request, env, url, pp, orders, ip }) {
       // two reads at once: the one that started later wins, so an older list never overwrites a newer one
       out.started_at = startedAt;
       const now = await env.LEDGER.get("actions:v3", "json");
-      if (!now || !now.started_at || now.started_at <= startedAt) await env.LEDGER.put("actions:v3", JSON.stringify(out), { expirationTtl: 3600 });
+      if (!now || !now.started_at || now.started_at <= startedAt) { await env.LEDGER.put("actions:v3", JSON.stringify(out), { expirationTtl: 3600 }); await env.LEDGER.put("actions:last", JSON.stringify(out)); }
       return json(out);
     }
 
