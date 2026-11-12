@@ -5,14 +5,16 @@
 
 ## Inspiration
 
-In October a small gift shop whose ads we run spent about $10,000 on ads. The ad report said one ad brought 69% of the chats. Matched by hand against the shop's 735 bank transfers, that ad brought 19% of the money. The owner had been paying for chats, not sales. The shop is not on PayPal yet: this is the gap we built for, not a result. Split by money instead of chats, the shop's own October numbers imply 9% to 18% more revenue from the same ad spend (an estimate from one month, not a measured lift; [how it is computed](https://paid-signal.thelongmarketing.workers.dev/judge#gap)).
+In October a small gift shop whose ads we run spent about $10,000 on ads. The ad report said one ad brought 69% of the chats. Matched by hand against the shop's 735 bank transfers, that ad brought 19% of the money. The owner had been paying for chats, not sales.
+
+On the shop's own numbers, splitting the same budget by money instead of chats is worth 9% to 18% more revenue in a month ([how it is computed](https://paid-signal.thelongmarketing.workers.dev/judge#gap)). Finding that took a person matching transfers one by one. That is the problem Paid Signal removes: on PayPal every payment is already confirmed, and the ad click can ride inside the order, so the same check runs by itself, every day, for every ad.
 
 > "Ads Manager says a campaign brought plenty of enquiries, but only my payment history shows who actually paid, and the two never line up. Seeing paid orders next to each ad, before I raise a budget, is what I need."
 > A friend who runs an online shop and buys their own Facebook ads (paraphrased from our conversation, shared with their permission, name withheld).
 
-Bank transfers have to be matched one by one. On PayPal the same check can run by itself: every payment is confirmed, and the ad click can travel inside the order. Buyers also no longer come only from ads. Creators and AI shopping agents send them too, and each wants to be paid. So we built one rule for all of them: no PayPal-confirmed sale, no credit and no payout.
+The gap is getting wider. Buyers no longer come only from ads: creators and AI shopping agents send them too, and each wants to be paid. So we built one rule for all of them: no PayPal-confirmed sale, no credit and no payout.
 
-**Who it is for:** small shops that sell through chat and click-to-message ads, where the ad platform sees the conversation but never the payment.
+**Who it is for:** small shops that sell through chat and click-to-message ads, where the ad platform sees the conversation but never the payment. They are the shops that can least afford to pay for chats that never buy, and they already take PayPal.
 
 ## What it does
 
@@ -70,6 +72,6 @@ Cloudflare Workers and KV; React and Vite. Six agents on Claude Sonnet 5.5, each
 
 ## What's next
 
-A pilot with the gift shop on PayPal; approved budget changes sent straight to the ad platform; each agent program registering its own PayPal payee (today the demo pays one sandbox account set in code).
+Move the gift shop's checkout to PayPal and run Paid Signal on its live ads, so the October check runs every day by itself; send approved budget changes straight to the ad platform; let each agent program register its own PayPal payee (today the demo pays one sandbox account set in code).
 
 **About the demo:** the demo shop (Kite Robotics Club) is fictional and runs on the PayPal sandbox with Meta test events. Approve is open so you can try every step; a real shop puts it behind the owner's sign-in. The gift shop's figures come from its own book; the ad figures are reported by us. Every number and the script behind it: [/proof](https://paid-signal.thelongmarketing.workers.dev/proof).
