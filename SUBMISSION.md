@@ -3,7 +3,7 @@
 Project name: Paid Signal
 
 Tagline (200 characters max):
-Ad reports count chats; PayPal counts money. Paid Signal credits each ad only with PayPal-confirmed sales, and AI agents prepare the invoices, refunds and budget moves you approve in AG Grid.
+Ads and AI agents both send buyers. Paid Signal credits each only with PayPal-confirmed sales; any agent can start a PayPal checkout or ask for a refund or payout, which waits for the owner.
 
 Built with: paypal-agent-toolkit, paypal-server-sdk, apimatic, mcp, paypal-orders-v2, paypal-invoicing, paypal-webhooks, paypal-transaction-search, paypal-js-sdk, meta-conversions-api, claude, anthropic, ag-studio, ag-grid, react, vite, cloudflare-workers, workers-kv, javascript
 
@@ -12,11 +12,14 @@ Try it: https://paid-signal.thelongmarketing.workers.dev · Proof: https://paid-
 ---
 
 <!-- devpost-story -->
-**Ad reports count chats; PayPal counts money. Paid Signal credits each ad only with PayPal-confirmed sales, and AI agents prepare the invoices, refunds and budget moves you approve in AG Grid.**
+**Ads and AI agents both send buyers. Paid Signal credits each only with PayPal-confirmed sales; any agent can start a PayPal checkout or ask for a refund or payout, which waits for the owner.**
+
+A small gift shop spent about $10,000 on ads in October. Matched by hand against its 735 bank transfers, the ad that brought 69% of its chats brought 19% of its money. Ad reports count chats, and AI shopping agents now send buyers too, each claiming credit. Paid Signal believes only PayPal: an ad click or an AI agent rides inside the PayPal order, and is credited only when PayPal confirms the payment. Any outside agent can connect to Paid Signal's MCP server, start a PayPal checkout, and ask for a refund or its commission. Those requests wait for the owner, and then PayPal moves the money: refunds through Payments, commissions through Payouts to the agent program's sandbox account set in code, each read back from PayPal. Inside, AI agents do the shop's PayPal work in an AG Grid workspace. The demo shop is fictional and runs on the PayPal sandbox; the gift shop's bank figures are why we built it, not a result of it.
 
 **[▶ Start the 60-second guided tour](https://paid-signal.thelongmarketing.workers.dev/studio?tour=1)** · no login · it clicks through four steps by itself (an ad filter, a payment's history, a live AG Grid AI Toolkit call, the PayPal read-back); you press Next between them. Or [pay as a customer](https://paid-signal.thelongmarketing.workers.dev/judge): a sandbox invoice the agent drafts for you, then undo it with a PayPal refund (no sandbox buyer login? one button replays a recorded payment, labelled RECORDED).
 
 ### In numbers
+- **An outside agent, end to end.** Over the public MCP endpoint, an agent started a PayPal order; the buyer paid (PayPal: COMPLETED, $49); the agent asked for its commission; the owner approved; PayPal Payouts paid $5 to the program's sandbox account set in code (SUCCESS). The ad ledger did not change ([proof](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/outside-agent-2026-11-12.json)).
 - **69% of the chats, 19% of the money.** A real gift shop spent about $10,000 on ads in October. Matched by hand against its 735 bank transfers, the ad that brought 69% of the chats brought 19% of the money. On PayPal, Paid Signal does that match by itself.
 - **62 leads, 9 paid orders.** In the demo shop the ad report says 62 leads and PayPal confirms 9 paid orders. The ad with the most leads returns $0.41 of PayPal revenue per $1 of ads; the testimonial ad returns $2.73.
 - **0 sent without a click.** No invoice or reminder goes out without the owner's click, and the code that checks the budget agent caught 1,100 of 1,100 planted errors (made-up numbers, fake payment ids and more) before the owner sees them.
@@ -36,6 +39,8 @@ Paid Signal runs one loop on PayPal, and an agent works each step:
 2. **The ad gets the credit.** An ad is credited with confirmed orders only. In the demo shop (Kite Robotics Club: fictional ads, sandbox PayPal) the ad report counts 62 leads and PayPal confirms 9 paid orders; Meta hears only about the confirmed purchases from its own ads.
 3. **The creator is paid by the sale.** After the owner approves, the payout agent pays the ad's creator through PayPal Payouts per eligible confirmed order (refunded, disputed, held or already-paid orders do not count), not per lead.
 4. **Ad money moves to what sells.** The budget agent proposes which ads to grow, keep or cut from this ledger. Every number and payment id it quotes is checked in code, an ad with fewer than 3 paid orders is never moved, and the owner approves. In the demo, the ad with the most leads (31) brings $0.41 of PayPal revenue per $1 of ads; the testimonial ad brings $2.73.
+
+**Outside AI agents, through MCP** (`/mcp`, any MCP client such as Claude): eight read tools (the PayPal-confirmed truth per ad, payments, a budget proposal, the shop's offer, a request's status) and four write tools that cannot move money alone. `start_checkout` creates a fixed-price PayPal Orders v2 order tagged with the agent, and the buyer approves on PayPal's page; `get_order_status` captures it once approved and books it to the agent channel, kept apart from the ad ledger; `request_refund` and `request_commission` only write a request that waits for the owner on /judge; `get_request` reads the request's status and, once the owner has approved a refund or payout, what PayPal reports for it. Price and payout recipient are set in code, never by the agent, and every write is rate limited.
 
 Around the loop, three more agents do the daily PayPal work, each behind the owner's click: one drafts invoices for leads ready to buy, one prepares kind reminders, one refunds double charges.
 
@@ -99,6 +104,7 @@ Methods and scripts behind every number: [/proof](https://paid-signal.thelongmar
 
 Demo: https://paid-signal.thelongmarketing.workers.dev (no login for anything except paying).
 PayPal sandbox buyer: [SANDBOX BUYER EMAIL] / [PASSWORD], for the PayPal step in the demo shop.
+Outside agent (MCP): add https://paid-signal.thelongmarketing.workers.dev/mcp as a connector in Claude (or any MCP client) and ask "buy one trial class from this shop and tell me the PayPal status", or press **Run a sample agent** on /judge. Requests an agent makes (refund, commission) appear on /judge under Outside agents with Approve and Decline. Example: curl -s https://paid-signal.thelongmarketing.workers.dev/mcp -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 0. Start at /judge: the read-only path (owner request, Claude's answer, the rule in code, the PayPal capture behind it, one lead's invoice loop), no login and no AI quota. /audit runs the same ledger on your own Ads Manager and PayPal files, in the browser.
 1. Press **Ask the revenue agent**: it drafts for any lead ready to pay that has no invoice yet (drafts it made earlier wait under Invoices), leaves the rest, and flags the prompt injection.
 2. Under Invoices, press **Approve** on a draft: the send agent checks it and sends it. **Chase unpaid** runs the chase agent on sent invoices that are still unpaid.

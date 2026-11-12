@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**Ad reports count chats; PayPal counts money. Paid Signal credits each ad only with PayPal-confirmed sales, and AI agents prepare the invoices, refunds and budget moves you approve in AG Grid.**
+**Ads and AI agents both send buyers. Paid Signal credits each only with PayPal-confirmed sales; any agent can start a PayPal checkout or ask for a refund or payout, which waits for the owner.**
 
 ![AG Studio, 30 seconds: a click on an ad filters the page; the PayPal ledger (AG Grid) narrows to it; a payment opens its history; the owner decides in the cell](docs/img/studio-tour.gif)
 
