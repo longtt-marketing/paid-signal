@@ -1,9 +1,44 @@
 // The budget agent, the evidence gate, reconciliation of an uploaded export, and the AG Studio Claude proxy.
 // Each block answers one path and returns a Response; a request no block matches returns undefined and goes on to the next group.
-import { OWNER_ASK, STUDIO_TOOLS, json, visitorId, publicMeta, saveRecommendation, listPayments, cleanTurns, heldDuplicates, metaFromLedger, guard, claudeGuard, budgetFallback, budgetUnavailable, parseAdCsv, reconcile, googleRows, paybackOdds, supportedMoves, runAgent, anthropicLLM, checkRecommendation, scenario, grade } from "../core.js";
+import { OWNER_ASK, STUDIO_TOOLS, json, visitorId, publicMeta, saveRecommendation, listPayments, cleanTurns, heldDuplicates, metaFromLedger, guard, claudeGuard, budgetFallback, budgetUnavailable, parseAdCsv, reconcile, googleRows, paybackOdds, supportedMoves, runAgent, anthropicLLM, checkRecommendation, scenario, grade, listPrefix, CREATOR, SEEDED_BEFORE, isEvidence, applyRefund, ordersSdk } from "../core.js";
 
 /** @param {{ request: Request, env: any, url: URL, pp: any, orders: any, ip: string }} c */
 export async function route({ request, env, url, pp, orders, ip }) {
+    if (url.pathname === "/api/agent-requests" && request.method === "GET") return json({ requests: (await listPrefix(env, "agentreq:")).sort((a,b) => String(b.at).localeCompare(String(a.at))) });
+    if (url.pathname === "/api/agent-requests/decide" && request.method === "POST") {
+      const { id, decision } = await request.json();
+      if (typeof id !== "string" || !/^AR-[0-9a-f-]{36}$/i.test(id) || !["approve", "decline"].includes(decision)) return json({ error: "Invalid request decision." }, 400);
+      const key = `agentreq:${id}`, rec = await env.LEDGER.get(key, "json"); if (!rec) return json({ error: "Unknown request." }, 404);
+      if (rec.status !== "pending") return json({ request: rec, idempotent: true });
+      const stop = await guard(env, request, "agent request decisions", 10, 100); if (stop) return json({ error: stop }, 429);
+      const mark = crypto.randomUUID(); await env.LEDGER.put(key, JSON.stringify({ ...rec, deciding: mark }));
+      const locked = await env.LEDGER.get(key, "json"); if (locked?.deciding !== mark) return json({ error: "This request is already being decided." }, 409);
+      if (decision === "decline") { const done = { ...rec, status: "declined", decided_at: new Date().toISOString() }; await env.LEDGER.put(key, JSON.stringify(done)); return json({ request: done }); }
+      if (rec.kind === "refund") {
+        const stopRefund = await guard(env, request, "refunds", 3, 30); if (stopRefund) { await env.LEDGER.put(key, JSON.stringify(rec)); return json({ error: stopRefund }, 429); }
+        const agent = await env.LEDGER.get(`agentpay:${rec.capture_id}`, "json"), pay = agent || await env.LEDGER.get(`pay:${rec.capture_id}`, "json");
+        if (!pay) { await env.LEDGER.put(key, JSON.stringify(rec)); return json({ error: "Unknown capture." }, 404); }
+        if (!agent && (isEvidence(pay) || String(pay.captured_at) < SEEDED_BEFORE)) { const done = { ...rec, status: "approved", paypal: { preview: true, message: "Frozen demo evidence is previewed; no refund was sent." }, decided_at: new Date().toISOString() }; await env.LEDGER.put(key, JSON.stringify(done)); return json({ request: done }); }
+        const rem = Math.max(0, Number(pay.amount) - Number(pay.refunded_amount || 0)); if (!rem) { const done = { ...rec, status: "approved", paypal: { status: "already_refunded" }, decided_at: new Date().toISOString() }; await env.LEDGER.put(key, JSON.stringify(done)); return json({ request: done }); }
+        const refunder = pay.try_invoice && env.TRY_PAYPAL_CLIENT_ID && env.TRY_PAYPAL_CLIENT_SECRET ? ordersSdk({ clientId: env.TRY_PAYPAL_CLIENT_ID, secret: env.TRY_PAYPAL_CLIENT_SECRET }) : orders;
+        const refundRequestId = `ar-ref-${id.slice(3).replace(/-/g, "").slice(0, 24)}`;
+        const refund = await refunder.refundCapture(rec.capture_id, { amount: rem.toFixed(2), requestId: refundRequestId });
+        if (agent) { agent.refunded_amount = Math.min(Number(pay.amount), Number(pay.refunded_amount || 0) + Number(refund.amount?.value || rem)).toFixed(2); agent.refund_id = refund.id; agent.refund_status = refund.status; agent.status = Number(agent.refunded_amount) >= Number(agent.amount) ? "REFUNDED" : "PARTIALLY_REFUNDED"; await env.LEDGER.put(`agentpay:${rec.capture_id}`, JSON.stringify(agent)); }
+        else { await env.LEDGER.put(`seen:${refund.id}`, "1"); await applyRefund(env, rec.capture_id, refund.amount?.value || rem, refund.create_time); }
+        const done = { ...rec, status: "approved", decided_at: new Date().toISOString(), paypal: { refund_id: refund.id, status: refund.status, amount: refund.amount?.value || rem.toFixed(2) } }; await env.LEDGER.put(key, JSON.stringify(done)); return json({ request: done });
+      }
+      if (rec.kind === "commission") {
+        const stopPay = await guard(env, request, "agent commission payouts", 3, 15); if (stopPay) { await env.LEDGER.put(key, JSON.stringify(rec)); return json({ error: stopPay }, 429); }
+        const current = await Promise.all((rec.capture_ids || []).map((cid) => env.LEDGER.get(`agentpay:${cid}`, "json")));
+        if (!current.length || current.some((p) => !p || p.agent_name !== rec.agent_name || p.status !== "COMPLETED" || Number(p.refunded_amount || 0) >= Number(p.amount || 0) || p.commission_paid)) { await env.LEDGER.put(key, JSON.stringify(rec)); return json({ error: "Commission eligibility changed; request was not paid." }, 409); }
+        const batchId = `agent-${id.slice(3).replace(/-/g, "").slice(0, 20)}`;
+        const payout = await pp.createPayout({ batchId, receiver: CREATOR.receiver, recipientType: "PAYPAL_ID", value: rec.amount, note: `Agent commission for ${current.length} confirmed orders`, subject: "Paid Signal agent commission", itemId: id });
+        const batch = payout.batch_header?.payout_batch_id || batchId; const read = await pp.getPayout(batch);
+        current.forEach((p) => { p.commission_paid = batch; }); await Promise.all(current.map((p) => env.LEDGER.put(`agentpay:${p.capture_id}`, JSON.stringify(p))));
+        const done = { ...rec, status: "approved", decided_at: new Date().toISOString(), paypal: { batch_id: batch, status: read.batch_header?.batch_status || payout.batch_header?.batch_status || null } }; await env.LEDGER.put(key, JSON.stringify(done)); return json({ request: done });
+      }
+      await env.LEDGER.put(key, JSON.stringify(rec)); return json({ error: "Unknown request kind." }, 400);
+    }
     // The browser-side Studio agent framework talks to Claude through this proxy; the key never leaves the Worker.
     if (url.pathname === "/api/ai/turn" && request.method === "POST") {
       const raw = await request.text();

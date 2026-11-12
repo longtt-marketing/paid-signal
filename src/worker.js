@@ -16,6 +16,7 @@ const SAME_SITE_ONLY = new Set([
   "/api/refund",
   "/api/duplicates/refund",
   "/api/commissions/pay",
+  "/api/agent-requests/decide",
   "/api/judge/try/send",
   "/api/judge/try/commission",
   "/api/judge/refund-try",
@@ -48,7 +49,7 @@ const app = {
         if (request.method !== "POST") return new Response("Paid Signal MCP server: POST JSON-RPC here (streamable HTTP, JSON responses).", { status: 405, headers: { allow: "POST" } });
         const body = await request.json();
         if (Array.isArray(body) && body.length > 5) return json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "At most 5 requests per batch." } }, 400);
-        const call = (name, args) => mcpTool(env, url, name, args, (req, e) => app.fetch(req, e));
+        const call = (name, args) => mcpTool(env, url, name, args, (req, e) => app.fetch(req, e), request);
         const out = Array.isArray(body) ? (await Promise.all(body.map((m) => handleMcp(m, call)))).filter(Boolean) : await handleMcp(body, call);
         return out === null || (Array.isArray(out) && !out.length) ? new Response(null, { status: 202 }) : json(out);
       }

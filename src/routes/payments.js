@@ -68,9 +68,10 @@ export async function route({ request, env, url, pp, orders, ip }) {
       const res = event.resource || {};
       if (event.event_type === "PAYMENT.CAPTURE.COMPLETED") {
         const known = await env.LEDGER.get(`pay:${res.id}`, "json");
+        const agentKnown = await env.LEDGER.get(`agentpay:${res.id}`, "json");
         const orderId = res.supplementary_data?.related_ids?.order_id;
         // already recorded at capture: only make sure Meta got it (the capture call may have timed out on Meta)
-        if (known) await sendToMeta(env, url, known);
+        if (known || agentKnown) { if (known) await sendToMeta(env, url, known); }
         else if (orderId) await sendToMeta(env, url, await recordCapture(env, await orders.getOrder(orderId)));
       }
       if (event.event_type === "INVOICING.INVOICE.PAID" && res.id) {
@@ -84,7 +85,12 @@ export async function route({ request, env, url, pp, orders, ip }) {
         const captureId = (res.links || []).find((l) => l.rel === "up")?.href?.split("/").pop();
         if (captureId) {
           const known = await env.LEDGER.get(`seen:${res.id}`);
-          if (!known) { await applyRefund(env, captureId, res.amount?.value, res.create_time); await env.LEDGER.put(`seen:${res.id}`, "1"); }
+          if (!known) {
+            const agent = await env.LEDGER.get(`agentpay:${captureId}`, "json");
+            if (agent) { agent.refunded_amount = Math.min(Number(agent.amount), Number(agent.refunded_amount || 0) + Number(res.amount?.value || 0)).toFixed(2); agent.refund_id = res.id; agent.refund_status = res.status || "COMPLETED"; agent.status = Number(agent.refunded_amount) >= Number(agent.amount) ? "REFUNDED" : "PARTIALLY_REFUNDED"; await env.LEDGER.put(`agentpay:${captureId}`, JSON.stringify(agent)); }
+            else await applyRefund(env, captureId, res.amount?.value, res.create_time);
+            await env.LEDGER.put(`seen:${res.id}`, "1");
+          }
         }
       }
       await env.LEDGER.put(`hook:${Date.now()}:${event.id}`, JSON.stringify({ type: event.event_type, at: new Date().toISOString() }), { expirationTtl: 1209600 });

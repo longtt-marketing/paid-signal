@@ -342,3 +342,43 @@ getJSON("/api/runs/week").then(({ run }) => {
   sec.append($("div", { className: "rows" }, (run.recommendation.actions || []).map((a) => row(name(a.ad), a.reason, chip(CHANGE[a.change] || a.change, a.change === "increase" ? "ok" : a.change === "keep" ? "neu" : "no2")))));
   if (run.grade) sec.append(p(`Recorded live run, ${when(run.at)}. ${run.grade.ok ? "Every move matches the week's written answer." : `Against the written answer: ${run.grade.wrong?.join(", ") || "a move missing"}.`}`));
 }).catch(() => {});
+
+/* Outside MCP agents: live sandbox checkout and owner reviewed requests. */
+const mcp = `${location.origin}/mcp`;
+box("mcp-url").textContent = mcp;
+box("mcp-curl").textContent = `curl -s ${mcp} -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'`;
+async function mcpCall(id, name, args = {}) {
+  const res = await fetch(mcp, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } }) });
+  const data = await res.json();
+  const result = JSON.parse(data.result?.content?.[0]?.text || "{}");
+  if (!res.ok || data.result?.isError) throw new Error(result.error || data.error?.message || "MCP call failed.");
+  return result;
+}
+box("sample-agent").onclick = async (event) => {
+  const b = event.currentTarget, out = box("sample-agent-result"); b.disabled = true; out.textContent = "Calling get_offer and starting a sandbox checkout…";
+  try {
+    await mcpCall(1, "get_offer");
+    const order = await mcpCall(2, "start_checkout", { agent_name: "sample-agent" });
+    out.replaceChildren(document.createTextNode(`LIVE · Order ${order.order_id} · `));
+    if (order.approve_url) out.append($("a", { href: order.approve_url, target: "_blank", rel: "noopener noreferrer", textContent: "Open PayPal approval" }));
+    out.append(document.createTextNode(` · ${order.note}`));
+  } catch (e) { out.textContent = e.message; } finally { b.disabled = false; }
+};
+async function showAgentRequests() {
+  const host = box("agent-requests");
+  try {
+    const { requests = [] } = await getJSON("/api/agent-requests");
+    host.replaceChildren(...(requests.length ? requests.map((r) => {
+      const amount = r.amount ? ` · $${r.amount}` : "";
+      const info = `${r.agent_name} · ${r.kind === "refund" ? `refund ${r.capture_id}: ${r.reason}` : "commission"}${amount} · ${r.status}`;
+      const line = $("div", { className: "row" }, [$ ("span", { className: "v", textContent: info })]);
+      if (r.status === "pending") for (const decision of ["approve", "decline"]) {
+        const b = btn(decision === "approve" ? "Approve" : "Decline", "sm");
+        b.onclick = async () => { b.disabled = true; try { await post("/api/agent-requests/decide", { id: r.id, decision }); await showAgentRequests(); } catch (e) { b.disabled = false; line.append($ ("span", { className: "ps-note", textContent: e.message })); } };
+        line.append(b);
+      }
+      return line;
+    }) : [$ ("div", { className: "row", textContent: "No outside agent requests." })]));
+  } catch (e) { host.replaceChildren($("div", { className: "row", textContent: e.message })); }
+}
+showAgentRequests();

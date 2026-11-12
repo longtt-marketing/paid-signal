@@ -1,0 +1,74 @@
+{
+ "what": "An outside AI agent transacting through Paid Signal's MCP server on the live demo (PayPal sandbox), 12 Nov 2026. Agent name 'claude-test-agent' (the author, calling the public /mcp endpoint with curl). The buyer approval was done by the author as the sandbox buyer on PayPal's page; owner approvals were pressed on /judge.",
+ "endpoint": "https://paid-signal.thelongmarketing.workers.dev/mcp",
+ "steps": [
+  {
+   "tool": "start_checkout",
+   "args": {
+    "agent_name": "claude-test-agent"
+   },
+   "result": {
+    "order_id": "69J6787591864840X",
+    "note": "The buyer approves on PayPal; nothing is charged until then."
+   }
+  },
+  {
+   "step": "buyer approves on PayPal sandbox checkout page"
+  },
+  {
+   "tool": "get_order_status",
+   "args": {
+    "order_id": "69J6787591864840X"
+   },
+   "result": {
+    "status": "COMPLETED",
+    "capture_id": "0DH16865KC6141824",
+    "amount": "49.00",
+    "currency": "USD"
+   }
+  },
+  {
+   "tool": "request_commission",
+   "args": {
+    "agent_name": "claude-test-agent"
+   },
+   "result": {
+    "id": "AR-7a4cc7cf-12c3-451e-89ea-d67a77117bf8",
+    "status": "pending",
+    "amount": "5.00"
+   }
+  },
+  {
+   "step": "owner presses Approve on /judge (Outside agents)"
+  },
+  {
+   "tool": "get_request",
+   "args": {
+    "id": "AR-7a4cc7cf-12c3-451e-89ea-d67a77117bf8"
+   },
+   "result": {
+    "status": "approved",
+    "paypal": {
+     "batch_id": "XMCUJ2QNCDN8S",
+     "status": "SUCCESS"
+    }
+   }
+  },
+  {
+   "tool": "request_refund",
+   "args": {
+    "capture_id": "7Y943188M77480212",
+    "agent_name": "claude-test-agent"
+   },
+   "result": {
+    "status": "pending"
+   },
+   "after_owner_approval": "approved; capture is frozen demo evidence, so the refund is previewed, not sent"
+  }
+ ],
+ "ad_ledger_payments_before_and_after": [
+  13,
+  13
+ ],
+ "note": "Agent-channel orders live in their own store (agentorder:, agentpay:, agentreq:) and never enter the ad ledger, reconciliation or Meta signal."
+}

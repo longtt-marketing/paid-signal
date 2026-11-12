@@ -83,7 +83,7 @@ export const publicMeta = ({ events, ...meta }) => ({ ...meta, events: events.ma
 // the reset). Keys under these prefixes are also kept in one index document per prefix, updated by every put and delete
 // that goes through this wrapper, so a listing costs one get. A real list() runs at most once an hour per prefix to
 // correct the index, and when the daily cap is reached the index, even an older one, still answers.
-const INDEXED = ["pay:", "inv:", "commission:", "dec:", "meta:"];
+const INDEXED = ["pay:", "inv:", "commission:", "dec:", "meta:", "agentorder:", "agentpay:", "agentreq:"];
 const RELIST_MS = 3600000;
 /** @param {any} kv */
 export function indexedKV(kv) {
@@ -236,6 +236,15 @@ export async function recordCapture(env, order, userAgent, visitor = null) {
   const cap = pu.payments?.captures?.[0];
   if (!cap) return null;
   const click = unpackClick(cap.custom_id || pu.custom_id);
+  if (click.source === "agent") {
+    const rec = { capture_id: cap.id, order_id: order.id, status: cap.status, amount: cap.amount?.value, currency: cap.amount?.currency_code,
+      captured_at: cap.create_time || new Date().toISOString(), refunded_amount: "0.00", source: "agent",
+      agent_name: (await env.LEDGER.get(`agentorder:${order.id}`, "json"))?.agent_name || "unknown" };
+    const previous = await env.LEDGER.get(`agentpay:${cap.id}`, "json");
+    if (previous) { rec.refunded_amount = previous.refunded_amount || "0.00"; rec.refund_id = previous.refund_id; rec.commission_paid = previous.commission_paid; }
+    await env.LEDGER.put(`agentpay:${cap.id}`, JSON.stringify(rec));
+    return rec;
+  }
   const email = order.payer?.email_address;
   const record = {
     capture_id: cap.id, order_id: order.id, status: cap.status, amount: cap.amount?.value, currency: cap.amount?.currency_code,
@@ -261,7 +270,7 @@ export async function recordCapture(env, order, userAgent, visitor = null) {
  * is kept with the payment so the dashboard and the receipt can show it. A held capture (duplicate, no click) is not sent.
  */
 export async function sendToMeta(env, url, record, { recheckHeld = false } = {}) {
-  if (!record || !env.META_CAPI_TOKEN || !env.META_DATASET_ID) return null;
+  if (!record || record.source === "agent" || !env.META_CAPI_TOKEN || !env.META_DATASET_ID) return null;
   const sent = await env.LEDGER.get(`meta:${record.capture_id}`, "json");
   // recheckHeld: a person has since confirmed a held payment as a separate order, so the hold is decided again (same event_id)
   if (sent && (sent.ok || (sent.held && !recheckHeld))) return sent; // a send that failed (Meta timed out) is tried again
@@ -349,8 +358,65 @@ export function withPageHeaders(res) {
 
 // MCP tools reuse the Worker's own read-only routes, so an MCP client sees exactly what the dashboard shows
 // appFetch is the Worker's own fetch handler, passed in by src/worker.js
-export async function mcpTool(env, url, name, args, appFetch) {
+export async function mcpTool(env, url, name, args, appFetch, request = new Request(url), sdkFactory = ordersSdk) {
   const get = async (path, body) => (await appFetch(new Request(url.origin + path, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {}), env)).json();
+  const validAgent = (v) => typeof v === "string" && /^[A-Za-z0-9 ._-]{1,40}$/.test(v);
+  const validReason = (v) => typeof v === "string" && v.length <= 200;
+  const writeGuard = async (key, perIp, daily) => { const stop = await guard(env, request, key, perIp, daily); if (stop) throw new Error(stop); };
+  const saveRequest = async (record) => { const old = (await listPrefix(env, "agentreq:")).find((x) => x.kind === record.kind && x.status === "pending" && x.agent_name === record.agent_name && x.capture_id === record.capture_id && x.amount === record.amount); if (old) return old;
+    const id = `AR-${crypto.randomUUID()}`; const value = { id, status: "pending", at: new Date().toISOString(), ...record }; await env.LEDGER.put(`agentreq:${id}`, JSON.stringify(value)); return value; };
+  if (name === "get_offer") return { product: { name: PRODUCT.name, price: PRODUCT.amount, currency: PRODUCT.currency }, terms: "The agent sends the buyer to PayPal to approve a sandbox order. A sale counts only after PayPal confirms payment. Refund and commission requests wait for the shop owner to approve them." };
+  if (name === "start_checkout") {
+    if (!validAgent(args.agent_name)) throw new Error("agent_name must be 1 to 40 letters, digits, spaces, dots, dashes or underscores.");
+    await writeGuard("agent checkouts", 10, 100);
+    const id = crypto.randomUUID(); const customId = packClick({ ad: "ai_agent", source: "agent", clickId: id.replace(/-/g, ""), clickedAt: Date.now() });
+    const order = await sdkFactory({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET }).createOrder({ amount: PRODUCT.amount, currency: PRODUCT.currency, description: PRODUCT.name,
+      customId, invoiceId: `PS-${id.replace(/-/g, "").slice(0, 16)}`, returnUrl: `${url.origin}/shop.html?done=1`, cancelUrl: `${url.origin}/shop.html`, requestId: `achk-${id.replace(/-/g, "").slice(0, 32)}` });
+    const rec = { order_id: order.id, agent_name: args.agent_name, created_at: new Date().toISOString(), custom_id: customId };
+    await env.LEDGER.put(`agentorder:${order.id}`, JSON.stringify(rec));
+    return { order_id: order.id, approve_url: (order.links || []).find((l) => l.rel === "payer-action" || l.rel === "approve")?.href || null, note: "The buyer approves on PayPal; nothing is charged until then." };
+  }
+  if (name === "get_order_status") {
+    if (typeof args.order_id !== "string" || !/^[A-Z0-9]{10,24}$/.test(args.order_id)) throw new Error("Invalid order_id.");
+    const record = await env.LEDGER.get(`agentorder:${args.order_id}`, "json"); if (!record) throw new Error("Only an order created through start_checkout can be read.");
+    let order = await sdkFactory({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET }).getOrder(args.order_id);
+    if (["APPROVED", "COMPLETED"].includes(order.status)) {
+      if (order.status === "APPROVED") {
+        await writeGuard("agent captures", 5, 50);
+        order = await sdkFactory({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET }).captureOrder(args.order_id, `agent-cap-${args.order_id}`);
+      }
+      const payment = await recordCapture(env, order, null);
+      if (!payment && order.status === "COMPLETED") { order = await sdkFactory({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET }).getOrder(args.order_id); await recordCapture(env, order, null); }
+      const capture = order.purchase_units?.[0]?.payments?.captures?.[0];
+      return { order_id: args.order_id, status: order.status, ...(capture ? { capture_id: capture.id, amount: capture.amount?.value, currency: capture.amount?.currency_code } : {}) };
+    }
+    return { order_id: args.order_id, status: order.status };
+  }
+  if (name === "request_refund") {
+    if (typeof args.capture_id !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(args.capture_id) || !validReason(args.reason) || !validAgent(args.agent_name)) throw new Error("Invalid capture_id, reason, or agent_name.");
+    const agentPayment = await env.LEDGER.get(`agentpay:${args.capture_id}`, "json"), adPayment = await env.LEDGER.get(`pay:${args.capture_id}`, "json");
+    if (!agentPayment && !adPayment) throw new Error("Unknown capture.");
+    await writeGuard("agent refund requests", 5, 30);
+    const rec = await saveRequest({ kind: "refund", capture_id: args.capture_id, reason: args.reason, agent_name: args.agent_name });
+    return { id: rec.id, status: rec.status, message: "Request sent; waits for the owner." };
+  }
+  if (name === "request_commission") {
+    if (!validAgent(args.agent_name)) throw new Error("agent_name must be 1 to 40 letters, digits, spaces, dots, dashes or underscores.");
+    await writeGuard("agent commission requests", 5, 30);
+    const payments = await listPrefix(env, "agentpay:");
+    const owed = payments.filter((p) => p.agent_name === args.agent_name && p.status === "COMPLETED" && Number(p.refunded_amount || 0) < Number(p.amount || 0) && !p.commission_paid);
+    if (!owed.length) return { status: "nothing_owed", amount: "0.00", message: "Nothing is owed for PayPal-confirmed orders." };
+    const amount = (owed.length * Number(CREATOR.rate)).toFixed(2);
+    const rec = await saveRequest({ kind: "commission", agent_name: args.agent_name, amount, capture_ids: owed.map((p) => p.capture_id), rate: CREATOR.rate });
+    return { id: rec.id, status: rec.status, amount, currency: "USD", message: "Request sent; waits for the owner." };
+  }
+  if (name === "get_request") {
+    if (typeof args.id !== "string" || args.id.length > 80) throw new Error("Invalid request id.");
+    const rec = await env.LEDGER.get(`agentreq:${args.id}`, "json"); if (!rec) throw new Error("Unknown request.");
+    if (rec.paypal?.refund_id) { const p = await paypal({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET }).getRefund(rec.paypal.refund_id); rec.paypal.status = p.status; }
+    if (rec.paypal?.batch_id) { const p = await paypal({ clientId: env.PAYPAL_CLIENT_ID, secret: env.PAYPAL_CLIENT_SECRET }).getPayout(rec.paypal.batch_id); rec.paypal.status = p.batch_header?.batch_status || null; }
+    return rec;
+  }
   if (name === "read_paid_signal") {
     const csv = typeof args.csv === "string" && args.csv.trim() ? args.csv : await (await env.ASSETS.fetch(new Request(`${url.origin}/data/demo-ads.csv`))).text();
     const [{ reconciliation: r, csv_errors }, ledger] = await Promise.all([get("/api/reconcile", { csv }), get("/api/ledger")]);
