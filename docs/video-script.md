@@ -1,6 +1,6 @@
-# Paid Signal demo video (V33, final cut)
+# Paid Signal demo video (V34, final cut)
 
-Video V33 (2:23; V32's script with the motion look, tour scenes re-recorded 12 Nov), built 12 Nov to the presentation playbook: https://youtu.be/CRXVLWyBzNc. It opens on the identity
+Video V33 (2:23; V32's script with the motion look, tour scenes re-recorded 12 Nov), built 12 Nov to the presentation playbook: https://youtu.be/-3opY9SNwhQ. It opens on the identity
 sentence and the real gift shop (paid by bank transfer, matched by hand), shows the product from 0:21 (the guided tour on
 /studio, recorded live on 11 Nov at 1920x1080; the AI Toolkit step is a live model call), then real sandbox money, the
 judge path scenes (recorded 5 to 7 Nov) and a close with the link. Narration is synthetic. The grid number is the 11 Nov

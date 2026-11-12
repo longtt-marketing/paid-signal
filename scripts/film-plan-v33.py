@@ -74,11 +74,16 @@ def cams():
             m = marks(sc["clip"])
             m = [dict(x, box=CHAT) if x["name"] == "chat" else x for x in m]
             if sc["key"] == "money": m = [x for x in m if x["name"] in ("r0", "r1", "paid")]
+            # end the refund scene on the refund row (not the tour bar), and start it once the Agents page has drawn
+            if sc["key"] == "tour4": m = [x for x in m if x["name"] in ("actions", "refund")]
             first = min(x["t"] for x in m)
-            sc["clip_from"] = round(max(0.0, first - 1.6), 2)
-            after = 5.0 if sc["key"].startswith("tour") else 3.2
+            lead_in = {"tour4": 0.3}.get(sc["key"], 1.6)
+            sc["clip_from"] = round(max(0.0, first - lead_in), 2)
+            # the payout scene stops before the page scrolls on to the real shop
+            after = {"money": 1.2, "tour4": 7.0}.get(sc["key"], 5.0 if sc["key"].startswith("tour") else 3.2)
             sc["clip_to"] = round(max(x["t"] for x in m) + after, 2)
-            plan(sc, m, secs[sc["key"]])
+            # judge-path pages are narrow columns: a lower zoom keeps their left edge in frame
+            plan(sc, m, secs[sc["key"]], zoom_cap={"customer": 1.2, "no": 1.2, "paid": 1.3}.get(sc["key"], 1.6))
     FILM.write_text(json.dumps(scenes, ensure_ascii=False, indent=1), "utf8")
     print({s["key"]: (s.get("speed"), len(s.get("cam", []))) for s in scenes})
 

@@ -67,12 +67,12 @@ def spotlight(im, box, cam, a):
     r = ((bx - x0) * z - 10, (by - y0) * z - 10, (bx + bw - x0) * z + 10, (by + bh - y0) * z + 10)
     if os.environ.get("PS_LOOK") == "v33":
         # A quarter-size blur is much cheaper than filtering every full-size frame.
-        low = im.convert("RGB").resize((W // 4, H // 4), Image.Resampling.BILINEAR).filter(ImageFilter.GaussianBlur(1.4))
+        low = im.convert("RGB").resize((W // 4, H // 4), Image.Resampling.BILINEAR).filter(ImageFilter.GaussianBlur(0.9))
         blur = low.resize((W, H), Image.Resampling.BILINEAR).convert("RGBA")
-        keep = Image.new("L", (W, H), round(118 * a))
+        keep = Image.new("L", (W, H), round(70 * a))
         ImageDraw.Draw(keep).rounded_rectangle(r, radius=16, fill=0)
         blur.putalpha(keep); im.alpha_composite(blur)
-        dim = Image.new("RGBA", (W, H), (12, 14, 17, round(55 * a)))
+        dim = Image.new("RGBA", (W, H), (12, 14, 17, round(38 * a)))
         ImageDraw.Draw(dim).rounded_rectangle(r, radius=16, fill=(0, 0, 0, 0))
         im.alpha_composite(dim)
     else:
