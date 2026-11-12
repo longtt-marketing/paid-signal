@@ -216,6 +216,7 @@ def frame(s, t, i, frac=0):
         if s["key"] == "hook": im = kinetic_hook(s, t)
         elif s["key"] == "close": im = close_card(s, t)
         elif "cam" in s: im = framed_stage(im, s, t)
+        if os.environ.get("PS_3D") and "cam" in s and s["key"] not in ("hook", "close") and t < 1.1: im = tilt_in(im, ease(t / 1.1))
     fm.progress(im, frac, dark=s["key"] in ("hook", "close"))
     if os.environ.get("PS_LOOK") == "v33" and s.get("words"):
         draw_word_caption(im, s, t)
@@ -266,6 +267,23 @@ def framed_stage(im, s, t):
         q=round(15*scale); cx=round((20+24*j)*scale); cy=bar//2; d.ellipse((cx-q//2,cy-q//2,cx+q//2,cy+q//2),fill=c)
     content = im.resize(inner, Image.Resampling.LANCZOS); shell.alpha_composite(content,(0,bar))
     shell.putalpha(stage_mask((ww,hh))); bg.alpha_composite(shell,(x,y)); return bg
+
+
+def tilt_in(im, p):
+    """V37: each chapter's screen arrives as a tilted card in 3D space and settles flat (perspective homography)."""
+    if p >= .999: return im
+    q = 1 - p
+    to = np.array([[0 + 250*q, 0 + 170*q], [W - 300*q, 0 + 70*q], [W - 170*q, H - 120*q], [0 + 190*q, H - 190*q]], dtype=float)
+    target = np.array([[0, 0], [W, 0], [W, H], [0, H]], dtype=float); a = []; b = []
+    for (x, y), (u, v) in zip(to, target):
+        a.extend(([x, y, 1, 0, 0, 0, -u*x, -u*y], [0, 0, 0, x, y, 1, -v*x, -v*y])); b.extend((u, v))
+    c = np.linalg.solve(np.asarray(a), np.asarray(b))
+    src = im.convert("RGBA"); src.putalpha(stage_mask((W, H)))
+    card = src.transform((W, H), Image.Transform.PERSPECTIVE, tuple(c), Image.Resampling.BICUBIC)
+    shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0)); shadow.putalpha(card.getchannel("A").point(lambda v: round(v * .6)))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(30))
+    bg = stage_background().copy(); bg.alpha_composite(shadow, (0, round(26 * q))); bg.alpha_composite(card)
+    return bg
 
 
 def draw_word_caption(im, s, t):
@@ -339,17 +357,18 @@ def close_card(s,t):
     veil=Image.new("RGBA",(W,H),(10,12,15,165)); im.alpha_composite(veil)
     title=text_img("Paid Signal.",108,"#f4f5f2",700); scale=.85+.15*ease(t/.9); title=title.resize((round(title.width*scale),round(title.height*scale)),Image.Resampling.LANCZOS); paste(im,title,160,210)
     f=font(50,650); d=ImageDraw.Draw(im)
-    spans=[(1.05,2.5,165,365,"#f0f2ef"),(2.55,4.0,165,447,"#2BD27A")]
+    spans=[(1.05,2.5,165,365,"#f0f2ef"),(2.55,s.get("span2_end",4.0),165,447,"#2BD27A")]
     for start,end,x,y,color in spans:
         selected=[w for w in s.get("words",[]) if start<=w["t"]<end and w["t"]<=t]
         for j,w in enumerate(selected):
             word=w["word"] + ("." if j==len([z for z in s.get("words",[]) if start<=z["t"]<end])-1 else "")
             d.text((x,y),word,font=f,fill=color); x+=round(f.getlength(word+" "))
-    url="paid-signal.thelongmarketing.workers.dev/studio"; ti=text_img(url,30,"#dfe5e1",600); x=160; y=560
+    url=os.environ.get("PS_CLOSE_URL","paid-signal.thelongmarketing.workers.dev/studio"); ti=text_img(url,30,"#dfe5e1",600); x=160; y=560
     d.rounded_rectangle((x-22,y-14,x+ti.width+22,y+ti.height+14),radius=24,fill=(31,37,39,235),outline=(43,210,122,170),width=2); paste(im,ti,x,y)
+    xx=160
     for j,label in enumerate(s.get("chips",[])[:3]):
-        fade=ease((t-(3.0+j*.35))/.45); ti=text_img(label,24,"#e9edea",600); xx=160+j*535; yy=650
-        d.rounded_rectangle((xx,yy,xx+ti.width+32,yy+ti.height+24),radius=16,fill=(35,42,43,round(230*fade)),outline=(81,96,91,round(140*fade)),width=1); paste(im,ti,xx+16,yy+12,fade)
+        fade=ease((t-(3.0+j*.35))/.45); ti=text_img(label,24,"#e9edea",600); yy=650
+        d.rounded_rectangle((xx,yy,xx+ti.width+32,yy+ti.height+24),radius=16,fill=(35,42,43,round(230*fade)),outline=(81,96,91,round(140*fade)),width=1); paste(im,ti,xx+16,yy+12,fade); xx+=ti.width+32+16
     text(im,"Independent; synthetic narration",164,742,22,"#a4ada7",500,t,3.8)
     return im
 

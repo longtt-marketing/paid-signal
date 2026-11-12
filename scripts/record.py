@@ -739,7 +739,57 @@ def agent36(pg):
     pg.wait_for_timeout(400); mark(pg, "refused", ".three .card >> nth=2"); glide(pg, pg.locator("#unearned-result"), click=False); pg.wait_for_timeout(3600)
 
 
-SEGMENTS = {"hero36": hero36, "cust36": cust36, "says36": says36, "money36": money36, "agent36": agent36, "agent33": agent33, "tour31a": tour31a, "tour31b": tour31b, "tour31c": tour31c, "tour31d": tour31d, "studio30a": studio30a, "studio30b": studio30b, "studio30c": studio30c, "studio26": studio26, "home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
+PAY37 = OUT / "pay37.json"
+
+
+def cust37(pg):
+    """V37, one payment end to end, part 1: the customer asks, Claude drafts a PayPal invoice, the owner approves, the pay link appears.
+    Saves the invoice, its pay link and this visitor's cookie so parts 2 and 3 show the same payment."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_selector("#try-message", timeout=60000); pg.wait_for_timeout(500)
+    scroll_to(pg, "#customer")
+    box = pg.locator("#try-message"); glide(pg, box); box.fill("")
+    box.type("Hi! Can I book Saturday's trial class for my daughter Mai? Please send me the invoice.", delay=24)
+    mark(pg, "message", "#try-message"); pg.wait_for_timeout(300)
+    glide(pg, pg.locator("#try-run"))
+    pg.wait_for_function("() => /Drafted|Skipped|Flagged|used up|Not run/.test(document.querySelector('#try-result').innerText)", timeout=90000)
+    pg.wait_for_timeout(500); mark(pg, "draft", "#try-result"); glide(pg, pg.locator("#try-result .row").nth(1), click=False); pg.wait_for_timeout(2600)
+    btn = pg.get_by_role("button", name="Approve and send"); mark(pg, "approve", "#try-result .rows")
+    with pg.expect_response(lambda r: "/api/judge/try/send" in r.url, timeout=90000) as ri:
+        glide(pg, btn)
+    inv = ri.value.json()["invoice"]
+    pg.wait_for_function("() => /Now pay|Not sent|used up/.test(document.querySelector('#try-result').innerText)", timeout=90000)
+    pg.wait_for_timeout(500); mark(pg, "sent", "#try-result .rows"); glide(pg, pg.locator("#try-result a.btn.go"), click=False); pg.wait_for_timeout(3500)
+    vid = next(c["value"] for c in pg.context.cookies() if c["name"] == "ps_vid")
+    PAY37.write_text(json.dumps({"inv": inv["id"], "pay_url": inv.get("pay_url"), "vid": vid}))
+    print("PAY37", inv["id"], inv.get("pay_url"), flush=True)
+
+
+def paid37(pg):
+    """V37 part 2: PayPal's own page for the same invoice, after the sandbox buyer paid it."""
+    d = json.loads(PAY37.read_text())
+    pg.goto(d["pay_url"], wait_until="load"); pg.wait_for_timeout(7000)
+    mark(pg, "page", "body"); pg.mouse.move(960, 400, steps=20); pg.wait_for_timeout(5000)
+
+
+def impact37(pg):
+    """V37 part 3: what that payment changed (the testimonial ad gains the order), then Undo refunds it through PayPal."""
+    d = json.loads(PAY37.read_text())
+    pg.context.add_cookies([{"name": "ps_vid", "value": d["vid"], "url": BASE}])
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_timeout(500)
+    scroll_to(pg, "#customer")
+    pg.evaluate("""async (id) => { const d = await (await fetch('/api/judge/try/status?id=' + id)).json();
+      document.getElementById('try-result').replaceChildren(); const w = document.createElement('div'); document.getElementById('try-result').append(w); steps(4); showPaid(d.invoice, w); }""", d["inv"])
+    pg.wait_for_function("() => /Testimonial ad/.test(document.querySelector('#try-result').innerText)", timeout=60000); pg.wait_for_timeout(800)
+    scroll_to(pg, "#try-result", "center")
+    rows = pg.locator("#try-result .row")
+    for i in range(2):
+        mark(pg, f"row{i}", f"#try-result .row >> nth={i}"); glide(pg, rows.nth(i).locator("b").last, click=False); pg.wait_for_timeout(2400)
+    undo = pg.get_by_role("button", name="Undo: refund me"); mark(pg, "undo", "#try-result .foot"); glide(pg, undo)
+    pg.wait_for_function("() => /REFUNDED/.test(document.querySelector('#try-result').innerText)", timeout=90000)
+    pg.wait_for_timeout(600); mark(pg, "refunded", "#try-result .row >> nth=0"); glide(pg, pg.locator("#try-result .row").nth(0).locator("b").last, click=False); pg.wait_for_timeout(3600)
+
+
+SEGMENTS = {"cust37": cust37, "paid37": paid37, "impact37": impact37, "hero36": hero36, "cust36": cust36, "says36": says36, "money36": money36, "agent36": agent36, "agent33": agent33, "tour31a": tour31a, "tour31b": tour31b, "tour31c": tour31c, "tour31d": tour31d, "studio30a": studio30a, "studio30b": studio30b, "studio30c": studio30c, "studio26": studio26, "home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
 
 with sync_playwright() as p:
     b = p.chromium.launch(channel=os.environ.get("PS_CHANNEL") or None, args=["--mute-audio", "--disable-sync", "--no-first-run", "--no-default-browser-check"])
