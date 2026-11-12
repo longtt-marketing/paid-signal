@@ -138,7 +138,7 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           const { invoices } = await get("/api/invoices", ctx.signal);
           const ready = eligibleForReminder(invoices);
           // open the Who still owes page beside the card, so the owner sees who it is about
-          const studio = typeof window !== "undefined" ? window.__studio : null; if (studio) studio.setState({ ...studio.getState(), selectedPageId: "owes" });
+          const studio = typeof window !== "undefined" ? window.__studio : null; if (studio) { const state = studio.getState(); studio.setState({ ...state, selectedPageId: "owes" }); }
           return ctx.success(`${ready.length} invoice(s) a reminder may go to; nothing sent until the owner presses Send.`, { ready: ready.map((i) => ({ id: i.id, who: i.lead, amount_usd: i.amount, sent_at: i.sent_at })) });
         },
       }),
@@ -173,7 +173,7 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
         execute: async (args, ctx) => {
           const studio = typeof window !== "undefined" ? window.__studio : null;
           if (!studio) return ctx.success("The report is not open.", { applied: false });
-          const st = studio.getState(); if (st.selectedPageId !== "overview") studio.setState({ ...st, selectedPageId: "overview" });
+          const st = studio.getState(); if (st.selectedPageId !== "overview") studio.setState({ ...st, selectedPageId: st.selectedPageId || "overview" });
           // an ad that is not in the export (a typo, an ad from another platform) changes nothing: the agent is told which ads exist
           const want = String(args.ad || "").trim(), low = want.toLowerCase();
           const match = want ? Object.entries(AD_NAMES).find(([k, n]) => k === low || n.toLowerCase() === low || n.toLowerCase().startsWith(low) || low.includes(n.toLowerCase().split(" · ")[0]) || low.includes(k)) : null;
@@ -198,7 +198,7 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
         description: "AG Grid AI Toolkit: the PayPal ledger grid's structured schema from api.getStructuredSchema(): its columns, their values, and the JSON shape of the grid states it accepts (filter, sort, row grouping, aggregation). Call it before set_ledger_grid_state, for requests that group or total the payments (for example money kept per ad, or payments grouped by status). Read only.",
         params: (s) => s.object({}),
         execute: async (_args, ctx) => {
-          const st = window.__studio; if (st && st.getState().selectedPageId !== "overview") st.setState({ ...st.getState(), selectedPageId: "overview" });
+          const st = window.__studio; if (st) { const state = st.getState(); if (state.selectedPageId !== "overview") st.setState({ ...state, selectedPageId: state.selectedPageId || "overview" }); }
           const apply = await whenLedger(8000);
           const schema = apply?.toolkit?.() ? await Promise.race([apply.schema(), new Promise((r) => setTimeout(() => r(null), 8000))]) : null;
           if (!schema) return ctx.success("The AG Grid AI Toolkit is not available in this build; use show_payments_in_ledger instead.", { available: false });
@@ -230,7 +230,7 @@ export function buildAi({ getCsv, onInvoices, onRecommendation, onNudge }) {
           if (!studio) return ctx.success("The report is not open.", { applied: false });
           const st = studio.getState(), pg = st.pages.find((p) => p.id === args.page);
           if (!pg) return ctx.success(`No page ${args.page}.`, { applied: false });
-          studio.setState({ ...st, selectedPageId: args.page });
+          studio.setState({ ...st, selectedPageId: args.page || st.selectedPageId || "overview" });
           return ctx.success(`Now showing ${pg.name} (page id ${args.page}).`, { applied: true, page: args.page, name: pg.name, widgets: Object.keys(pg.widgets || {}).length });
         },
       }),

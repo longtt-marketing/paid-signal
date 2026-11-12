@@ -176,7 +176,7 @@ export function LedgerWidget({ dataMapping, widgetApi, context }) {
     const t = setTimeout(() => {
       const nodes = []; api.forEachNodeAfterFilterAndSort((n) => { if (n.data && !n.group && !n.rowPinned && !n.data.isDetail) nodes.push(n); });
       const groups = []; if (view.state) api.forEachNodeAfterFilterAndSort((n) => { if (n.group && n.level === 0) groups.push({ group: String(n.key), rows: n.allLeafChildren?.length || 0, ...(n.aggData ? Object.fromEntries(Object.entries(n.aggData).map(([k, v]) => [k, typeof v === "number" ? Number(v.toFixed(2)) : v])) : {}) }); });
-      if (view.state) setStateTotal(totalsOf(nodes.map((n) => ({ ...n.data, raw: { refunded_amount: n.data.amount - n.data.kept } })), narrow));
+      if (view.state) setStateTotal({ ...totalsOf(nodes.map((n) => ({ ...n.data, raw: { refunded_amount: n.data.amount - n.data.kept } })), narrow), meta: "" }); // grouped rows: the Meta count belongs to the ungrouped ledger
       if (!view.reply) return; // scroll and flash once, when the agent asks; later data refreshes only re-filter
       if (view.quiet) { const r = view.reply; view.reply = null; r({}); return; } // the schema read: nothing to show yet
       if (nodes.length) { api.ensureIndexVisible(0, "top"); api.flashCells({ rowNodes: nodes.slice(0, 6), columns: ["ad", "kept", "status"], flashDuration: 1400, fadeDuration: 900 }); }

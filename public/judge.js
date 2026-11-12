@@ -27,7 +27,7 @@ const btn = (text, cls = "") => $("button", { className: `btn ${cls}`.trim(), ty
 const status = (s) => chip(s || "…", /PAID|COMPLETED|SUCCESS/.test(s || "") ? "ok" : /DENIED|FAILED|CANCEL/.test(s || "") ? "no2" : "neu");
 
 /* 1 · Be the customer */
-const steps = (n) => [...box("steps").children].forEach((li, i) => { li.className = i + 1 < n ? "d" : i + 1 === n ? "n" : ""; });
+const steps = (n) => [...box("steps").children].forEach((li, i) => { li.className = i + 1 < n ? "d" : i + 1 === n ? "n" : ""; li.querySelector("i").textContent = i + 1 < n ? "✓" : String(i + 1); });
 const tryExamples = {
   booking: "Please book one trial class for Saturday and send me the invoice.",
   "not-ready": "What does a trial class include? I am only comparing options for now.",
@@ -80,15 +80,16 @@ function showTryResult(out) {
   const result = box("try-result"), drafted = out.decision === "drafted";
   const trace = (out.trace || []).map((x) => `${x.tool}${x.called_by ? ` (${x.called_by})` : ""}${x.price_set_by ? `, price set by ${x.price_set_by}` : ""}`).join(" → ");
   const lines = (out.line_items || []).map((x) => x.name).join(", ");
+  const paypalStatus = drafted ? status(out.paypal?.status || "DRAFT") : null;
   result.replaceChildren(
     row("Claude", out.reason || "", chip(drafted ? "Drafted" : out.flag === "injection" ? "Flagged" : "Skipped", drafted ? "ok" : out.flag === "injection" ? "no2" : "neu")),
-    ...(drafted ? [row("PayPal", `${usd(out.amount)} · ${lines}`, status(out.paypal?.status || "DRAFT"))] : []),
+    ...(drafted ? [row("PayPal", `${usd(out.amount)} · ${lines}`, paypalStatus)] : []),
     details("Invoice id and tool trace", [p(`${out.invoice_id ? `Invoice ${out.invoice_id}. ` : ""}${trace || "No tool call."} · ${out.ms} ms. Code sets the price and the recipient inside the call.`)]),
-    ...(drafted ? [journey(out)] : []),
+    ...(drafted ? [journey(out, paypalStatus)] : []),
   );
 }
 
-function journey(out) {
+function journey(out, paypalStatus) {
   const wrap = $("div", { className: "rows" }), note = $("span", { className: "ps-note", role: "status" });
   const send = btn("Approve and send");
   steps(2);
@@ -109,11 +110,13 @@ function journey(out) {
       const inv = d.invoice;
       if (inv.status === "DRAFT") { note.textContent = `Not sent: ${d.agent?.summary || "the agent did not send it"}`; send.disabled = false; return; }
       steps(3);
+      paypalStatus?.replaceWith(status(inv.status));
       const pay = inv.pay_url ? $("a", { className: "btn go", href: inv.pay_url, target: "_blank", rel: "noopener noreferrer", textContent: `Pay ${usd(inv.amount)} on PayPal ↗` }) : chip("No pay link", "no2");
       const replay = btn("No sandbox login? Replay a recorded payment", "sec2");
-      replay.onclick = () => { stopPoll(); showRecordedPayment(wrap); };
+      const approvedRow = row("You approved", "The send agent sent it to you", status(inv.status));
+      replay.onclick = () => { stopPoll(); showRecordedPayment(wrap, approvedRow); };
       const payRow = $("div", { className: "row pay-row" }, [$("span", { className: "l", textContent: "Now pay" }), $("div", { className: "pay-actions" }, [pay, replay])]);
-      wrap.replaceChildren(row("You approved", "The send agent sent it to you", status(inv.status)), payRow, $("div", { className: "foot" }, [note]));
+      wrap.replaceChildren(approvedRow, payRow, $("div", { className: "foot" }, [note]));
       note.textContent = "This page asks PayPal every few seconds.";
       poll(inv.id);
     } catch (e) { note.textContent = e.message; send.disabled = false; }
@@ -122,19 +125,18 @@ function journey(out) {
   return wrap;
 }
 
-function showRecordedPayment(wrap) {
+function showRecordedPayment(wrap, approvedRow) {
   steps(6);
   const recorded = () => chip("RECORDED", "neu");
-  const order = $("b", {}, [$("span", { className: "was", textContent: "4" }), " → ", $("span", { className: "up", textContent: "5" }), " → ", $("span", { textContent: "4" })]);
-  wrap.replaceChildren(
-    $("h3", {}, ["What the recorded payment changed ", recorded()]),
-    $("div", { className: "rows" }, [
-      row("Step 4 · Testimonial ad", $("span", {}, ["Paid orders: payment, then Undo ", order]), recorded()),
-      row("Step 4 · Meta", "Purchase test event received · events_received 1", recorded()),
-      row("Step 5 · Undo", "PayPal refunded $49.00 · REFUNDED", recorded()),
-    ]),
-    details("Recorded proof", [p("Live judge run on 6 Nov 2026. Replay only; this button makes no PayPal call and writes no ledger data. Source: docs/proof/judge-click-meta-2026-11-06.json.")]),
-  );
+  const order = $("b", {}, [$("span", { className: "was", textContent: "4" }), " ? ", $("span", { className: "up", textContent: "5" }), " ? ", $("span", { textContent: "4" })]);
+  const heading = $("h3", {}, ["What the recorded payment changed ", recorded()]);
+  const rows = $("div", { className: "rows" }, [
+    row("Step 4 ? Testimonial ad", $("span", {}, ["Paid orders: payment, then Undo ", order]), recorded()),
+    row("Step 4 ? Meta", "Purchase test event received ? events_received 1", recorded()),
+    row("Step 5 ? Undo", "PayPal refunded $49.00 ? REFUNDED", recorded()),
+  ]);
+  const proof = details("Recorded proof", [p("Live judge run on 6 Nov 2026. Replay only; this button makes no PayPal call and writes no ledger data. Source: docs/proof/judge-click-meta-2026-11-06.json.")]);
+  wrap.replaceChildren(approvedRow, $("div", { className: "recorded-changes" }, [heading, rows, proof]));
 }
 
 function showPaid(inv, wrap) {

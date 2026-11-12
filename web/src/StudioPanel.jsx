@@ -70,10 +70,11 @@ const StudioPanel = forwardRef(function StudioPanel({ state, invoices, license, 
     return () => clearInterval(t);
   }, []);
   useImperativeHandle(ref, () => ({
-    openAssistant() { const a = studio.current?.api; if (!a) return false; const s = a.getState(); a.setState({ ...s, panels: { ...(s.panels || {}), ai: { collapsed: false } } }); return true; },
-    selectPage(id) { const a = studio.current?.api; if (a) a.setState({ ...a.getState(), selectedPageId: id }); },
+    isReady() { const a = studio.current?.api; return Boolean(a?.getState && a?.setState); },
+    openAssistant() { const a = studio.current?.api; if (!a) return false; const s = a.getState(); a.setState({ ...s, selectedPageId: s.selectedPageId || "overview", panels: { ...(s.panels || {}), ai: { collapsed: false } } }); return true; },
+    selectPage(id) { const a = studio.current?.api; if (!a) return false; const s = a.getState(); a.setState({ ...s, selectedPageId: id || s.selectedPageId || "overview" }); return true; },
     saveLayout() { const a = studio.current?.api; if (!a) return false; try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(a.getState())); return true; } catch { return false; } },
-    resetLayout() { try { localStorage.removeItem(LAYOUT_KEY); } catch {} const a = studio.current?.api; if (a) a.setState(phone ? phoneReport : initialReport); },
+    resetLayout() { try { localStorage.removeItem(LAYOUT_KEY); } catch {} const a = studio.current?.api; if (a) { const current = a.getState(), base = phone ? phoneReport : initialReport; a.setState({ ...current, ...base, selectedPageId: base.selectedPageId || current.selectedPageId || "overview" }); } },
   }), []);
   return (
     <AgStudioProvider modules={[AgStudioAiModule]} licenseKey={license || undefined}>

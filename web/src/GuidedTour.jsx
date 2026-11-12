@@ -44,6 +44,11 @@ export default function GuidedTour({ autoStart, ready, onStep, onEnd, readBack, 
     return () => window.removeEventListener("keydown", key);
   }, [active]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("tour-running", active);
+    return () => document.documentElement.classList.remove("tour-running");
+  }, [active]);
+
   if (!active) return <ol className="judge-strip" aria-label="Try it: three clicks">
     <li><button type="button" className="js-tour-start" onClick={start}>▶ Take the 60-second tour</button></li>
     <li className="js-k">Try it</li>
@@ -58,13 +63,12 @@ export default function GuidedTour({ autoStart, ready, onStep, onEnd, readBack, 
   return <section className="judge-tour" aria-label="Guided tour" aria-live="polite">
     <div className="jt-heading"><strong>Guided tour</strong><span>{finished ? "Done" : `Step ${index + 1} of 4`}</span></div>
     <p className="jt-caption">{finished ? "That was all real: PayPal sandbox and AG Grid's AI Toolkit." : caption}</p>
-    {finished && <div className="jt-links"><a href="/judge">Pay as a customer</a><a href="/proof">How we measured it</a></div>}
-    <ol className="jt-steps" aria-label="Tour steps">{STEPS.map((step, i) => <li key={step.label} className={i < index ? "done" : i === index ? "current" : "next"} aria-current={i === index ? "step" : undefined}><span>{i + 1}</span> {step.label}</li>)}</ol>
-    <div className="jt-controls">
+    {finished && <div className="jt-links"><a href="/judge">Pay as a customer</a><a href="/proof">How we measured it</a><button type="button" className="jt-end" onClick={end}>End</button></div>}
+    {!finished && <ol className="jt-steps" aria-label="Tour steps">{STEPS.map((step, i) => <li key={step.label} className={i < index ? "done" : i === index ? "current" : "next"} aria-label={`${step.label}${i < index ? ", done" : i === index ? ", current step" : ""}`} aria-current={i === index ? "step" : undefined}><span>{i < index ? "✓" : i + 1}</span></li>)}</ol>}
+    {!finished && <div className="jt-controls">
       <button type="button" disabled={index === 0} onClick={() => act(index - 1)}>Back</button>
-      <button type="button" className="jt-next" onClick={() => finished ? end() : index === 3 ? setIndex(4) : act(index + 1)}>{finished ? "Finish" : index === 3 ? "Done" : "Next"}</button>
+      <button type="button" className="jt-next" onClick={() => index === 3 ? setIndex(4) : act(index + 1)}>{index === 3 ? "Done" : "Next"}</button>
       <button type="button" onClick={end}>End</button>
-    </div>
-    <div className="jt-progress" aria-hidden="true"><span style={{ width: `${(Math.min(index + 1, 4) / 4) * 100}%` }} /></div>
+    </div>}
   </section>;
 }

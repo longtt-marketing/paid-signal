@@ -27,6 +27,8 @@ class StudioGuard extends Component {
   }
 }
 import { adName } from "./names.js";
+import { setPick } from "./adPick.js";
+import { whenLedger } from "./ledgerView.js";
 import FlowChart from "./FlowChart.jsx";
 import GuidedTour from "./GuidedTour.jsx";
 
@@ -199,7 +201,14 @@ export default function App({ first = null }) {
   const [studioPage, setStudioPage] = useState("overview");
   const [studioReady, setStudioReady] = useState(false);
   // an agent may switch the page itself (open_page, a filter, the ledger view): the tab bar follows Studio
-  useEffect(() => { const t = setInterval(() => { if (studio.current) setStudioReady(true); const id = window.__studio?.getState?.().selectedPageId; if (id) setStudioPage((cur) => (cur === id ? cur : id)); }, 800); return () => clearInterval(t); }, []);
+  useEffect(() => { const t = setInterval(() => { if (studio.current?.isReady?.()) setStudioReady(true); const id = window.__studio?.getState?.().selectedPageId; if (id) setStudioPage((cur) => (cur === id ? cur : id)); }, 800); return () => clearInterval(t); }, []);
+  const selectStudioPage = async (id) => {
+    const end = Date.now() + 8000;
+    while (Date.now() < end && !studio.current?.isReady?.()) await new Promise((resolve) => setTimeout(resolve, 100));
+    if (!studio.current?.isReady?.()) return false;
+    setStudioPage(id);
+    return studio.current.selectPage(id);
+  };
   const [morePages, setMorePages] = useState(false);
   // the headline on /studio: how many of the agents' PayPal writes PayPal reports back right now
   const [readBack, setReadBack] = useState(null);
@@ -248,8 +257,8 @@ export default function App({ first = null }) {
   };
   // a step in the judge strip: go to the first page, bring the widget it names into view, flash it and put focus on the
   // control to press (a band, the first ▸, the Nudge button), so the judge sees where to click instead of reading prose
-  const pointTo = (title, control) => {
-    setStudioPage("overview"); studio.current?.selectPage("overview");
+  const pointTo = async (title, control) => {
+    await selectStudioPage("overview");
     const go = (n) => {
       // Studio may keep a hidden copy of a widget: take a visible one, and the one holding the control when there is one
       const all = [...document.querySelectorAll(".ag-studio-layout-widget")].filter((x) => x.offsetHeight > 0 && title.split("|").some((t) => x.textContent.includes(t)));
@@ -268,9 +277,9 @@ export default function App({ first = null }) {
     go(20);
   };
   // the strip's link: open the assistant on a new chat, so its starters (Replay a budget run first) are in view
-  const openReplay = () => {
+  const openReplay = async () => {
     // the recorded run is about the first page: go there first, so the chart it adds lands where the judge is looking
-    setStudioPage("overview"); studio.current?.selectPage("overview");
+    await selectStudioPage("overview");
     openAssistant();
     const tryNew = (n) => { const b = [...document.querySelectorAll("#studio button")].find((x) => /^New( chat)?$/.test(x.textContent.trim())); if (b) b.click(); else if (n > 0) setTimeout(() => tryNew(n - 1), 400); };
     setTimeout(() => tryNew(20), 600);
@@ -301,7 +310,7 @@ export default function App({ first = null }) {
     };
 
     if (step < 2) {
-      setStudioPage("overview"); studio.current?.selectPage("overview");
+      await selectStudioPage("overview");
       const label = step === 0 ? "Ad report vs PayPal: leads → paid money" : "PayPal ledger (AG Grid)";
       const selector = step === 0 ? "[role=button][aria-label^='Testimonial']" : ".trail-toggle";
       const found = await waitFor(() => visibleWidget(label, selector));
@@ -312,7 +321,12 @@ export default function App({ first = null }) {
       return;
     }
     if (step === 2) {
-      setStudioPage("overview"); studio.current?.selectPage("overview");
+      await selectStudioPage("overview");
+      // clear the ad picked in step 1 (the chart's own reset) and put the ledger back to its grouped view, then send
+      setPick([], "flow");
+      const ledger = await whenLedger(8000);
+      if (ledger) await Promise.race([ledger({ reset: true }), new Promise((r) => setTimeout(r, 3000))]);
+      await new Promise((r) => setTimeout(r, 1500));
       openAssistant();
       const fresh = await waitFor(() => [...document.querySelectorAll("button")].find((el) => /^New( chat)?$/.test(el.textContent.trim())));
       if (fresh) fresh.click();
@@ -343,7 +357,7 @@ export default function App({ first = null }) {
       setCaption("The assistant is resting; the grouped view is in the gallery.");
       return;
     }
-    setStudioPage("agents"); studio.current?.selectPage("agents");
+    await selectStudioPage("agents");
     const found = await waitFor(() => visibleWidget("Agent writes, read back from PayPal"));
     if (found) point(found.widget);
   };
@@ -661,12 +675,12 @@ export default function App({ first = null }) {
             readBack={readBack}
             pointTo={pointTo}
             openReplay={openReplay}
-            goAgents={() => { setStudioPage("agents"); studio.current?.selectPage("agents"); }}
+            goAgents={() => selectStudioPage("agents")}
           />}
           <div className="studio-pages" role="group" aria-label="Report pages">
             {/* three pages carry the story; the rest fold under More pages */}
             {[["overview", "Ads vs PayPal"], ["agents", "Agents → PayPal"], ["shop", "Real shop: October"], ...(morePages || !["overview", "agents", "shop"].includes(studioPage) ? [["perad", "Per ad"], ["captures", "PayPal captures"], ["ledger", "Ad → PayPal → Meta"], ["owes", "Who still owes"], ["mine", "Your page"]] : [])].map(([id, label]) => (
-              <button key={id} type="button" aria-pressed={studioPage === id} className={studioPage === id ? "on" : ""} onClick={() => { setStudioPage(id); studio.current?.selectPage(id); }}>{label}</button>
+              <button key={id} type="button" aria-pressed={studioPage === id} className={studioPage === id ? "on" : ""} onClick={() => selectStudioPage(id)}>{label}</button>
             ))}
             {!morePages && ["overview", "agents", "shop"].includes(studioPage) && <button type="button" className="more-pages" onClick={() => setMorePages(true)}>More pages (5) ▾</button>}
           </div>
