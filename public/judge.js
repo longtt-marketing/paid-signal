@@ -354,6 +354,13 @@ async function mcpCall(id, name, args = {}) {
   if (!res.ok || data.result?.isError) throw new Error(result.error || data.error?.message || "MCP call failed.");
   return result;
 }
+box("unearned").onclick = async (event) => {
+  const b = event.currentTarget, out = box("sample-agent-result"); b.disabled = true; out.textContent = "An agent with no PayPal-confirmed sale calls request_commission…";
+  try {
+    const r = await mcpCall(3, "request_commission", { agent_name: `no-sale-agent-${Math.random().toString(36).slice(2, 7)}` });
+    out.textContent = `LIVE · request_commission → ${r.status}, $${r.amount}. ${r.message}`;
+  } catch (e) { out.textContent = `LIVE · refused: ${e.message}`; } finally { b.disabled = false; }
+};
 box("sample-agent").onclick = async (event) => {
   const b = event.currentTarget, out = box("sample-agent-result"); b.disabled = true; out.textContent = "Calling get_offer and starting a sandbox checkout…";
   try {

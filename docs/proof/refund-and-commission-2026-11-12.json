@@ -1,0 +1,144 @@
+{
+ "what": "Snapshot of two live read-backs from PayPal sandbox, as the /judge page shows them: the refund agent's refund of a double payment, and the commission batch paid through PayPal Payouts to the ad creator's sandbox account.",
+ "taken_at": "2026-11-12T04:41:26Z",
+ "sources": [
+  "GET https://paid-signal.thelongmarketing.workers.dev/api/judge/refund-loop",
+  "GET https://paid-signal.thelongmarketing.workers.dev/api/judge/commission"
+ ],
+ "refund_loop_last": {
+  "pair": {
+   "first": {
+    "capture_id": "59A98014DG653005N",
+    "payer_key": "cba559f5b83b",
+    "ad": "trial_video",
+    "amount": "49.00",
+    "currency": "USD",
+    "captured_at": "2026-10-28T10:49:51.000Z"
+   },
+   "second": {
+    "capture_id": "7A791792B60079253",
+    "payer_key": "cba559f5b83b",
+    "ad": "trial_video",
+    "amount": "49.00",
+    "currency": "USD",
+    "captured_at": "2026-10-28T10:53:27.000Z"
+   },
+   "seconds": 216
+  },
+  "approved_at": "2026-11-04T08:29:03.485Z",
+  "finished_at": "2026-11-04T08:29:12.523Z",
+  "refund": {
+   "id": "40H58610AR045544E",
+   "status": "COMPLETED",
+   "amount": "49.00",
+   "note_to_payer": "We noticed you were charged twice for the same trial_video ad a few minutes apart, so we've refunded the duplicate payment of 49.00 USD. Sorry for the inconvenience.",
+   "read_back": {
+    "status": "COMPLETED",
+    "amount": "49.00",
+    "create_time": "2026-11-04T00:29:07-08:00"
+   }
+  },
+  "summary": "I refunded the second capture (7A791792B60079253) in full, 49.00 USD, because it matched the first capture on payer, ad (trial_video) and amount and came 216 seconds later with no sign of a second intended order. PayPal shows refund 40H58610AR045544E as COMPLETED.",
+  "trace": [
+   {
+    "tool": "create_refund",
+    "ok": true
+   },
+   {
+    "tool": "get_refund",
+    "ok": true
+   }
+  ]
+ },
+ "commission": {
+  "program": {
+   "ad": "parent_carousel",
+   "ad_name": "Testimonial · carousel",
+   "creator": "the parent who made the testimonial (fictional; a PayPal sandbox account stands in)",
+   "rate": "5.00",
+   "leads": 11,
+   "per_lead_would_be": "55.00",
+   "contrast": {
+    "ad_name": "Free guide · lead form",
+    "leads": 31,
+    "paid_orders": 1,
+    "per_lead": "155.00",
+    "per_paid_order": "5.00"
+   }
+  },
+  "orders": [
+   {
+    "capture_id": "7G581478P1052730P",
+    "amount": "49.00",
+    "captured_at": "2026-10-28T11:38:20Z",
+    "via": "checkout",
+    "eligible": false,
+    "why_not": "commission already paid (batch 29DTSH6RYGE4C)"
+   },
+   {
+    "capture_id": "19L75638WN729671C",
+    "amount": "49.00",
+    "captured_at": "2026-10-28T11:38:32Z",
+    "via": "checkout",
+    "eligible": false,
+    "why_not": "refunded"
+   },
+   {
+    "capture_id": "3GY34151GC185303G",
+    "amount": "49.00",
+    "captured_at": "2026-10-30T05:56:33Z",
+    "via": "checkout",
+    "eligible": false,
+    "why_not": "commission already paid (batch 29DTSH6RYGE4C)"
+   },
+   {
+    "capture_id": "9NM26871NE612430X",
+    "amount": "49.00",
+    "captured_at": "2026-11-02T02:36:05.572Z",
+    "via": "invoice",
+    "eligible": false,
+    "why_not": "commission already paid (batch 29DTSH6RYGE4C)"
+   },
+   {
+    "capture_id": "2SH783175L252453D",
+    "amount": "49.00",
+    "captured_at": "2026-11-04T19:14:30Z",
+    "via": "checkout",
+    "eligible": true,
+    "why_not": null
+   }
+  ],
+  "batches": [
+   {
+    "batch_id": "29DTSH6RYGE4C",
+    "status": "SUCCESS",
+    "total": "15.00",
+    "capture_ids": [
+     "7G581478P1052730P",
+     "3GY34151GC185303G",
+     "9NM26871NE612430X"
+    ],
+    "note": "Commission for your Testimonial · carousel ad: covers 3 PayPal-confirmed paid orders at $5.00 each. Thank you!",
+    "read_back": {
+     "status": "SUCCESS",
+     "item_status": "SUCCESS",
+     "time_completed": "2026-11-04T08:41:38Z",
+     "transaction_id": "4RW39427AA543281R",
+     "read_at": "2026-11-04T08:42:19.486Z"
+    },
+    "at": "2026-11-04T08:41:18.777Z",
+    "approved_at": "2026-11-04T08:41:12.181Z",
+    "trace": [
+     {
+      "tool": "create_payout",
+      "ok": true
+     },
+     {
+      "tool": "get_payout",
+      "ok": true
+     }
+    ]
+   }
+  ]
+ }
+}

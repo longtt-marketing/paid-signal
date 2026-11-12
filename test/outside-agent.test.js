@@ -97,7 +97,7 @@ test("frozen ad captures are previewed on owner approval and do not call PayPal"
 test("judge includes the MCP connection and live sandbox sample controls", async () => {
   const fs = await import("node:fs");
   const html = fs.readFileSync(new URL("../public/judge.html", import.meta.url), "utf8"), js = fs.readFileSync(new URL("../public/judge.js", import.meta.url), "utf8");
-  assert.match(html, /Connect your own agent/); assert.match(html, /Outside agents/); assert.match(html, /Run a sample agent/);
+  assert.match(html, /An outside AI agent buys/); assert.match(html, /Outside agents/); assert.match(html, /Run a sample agent/); assert.match(html, /Ask for an unearned commission/);
   assert.match(js, /tools\/list/); assert.match(js, /start_checkout/); assert.match(js, /api\/agent-requests\/decide/);
 });
 

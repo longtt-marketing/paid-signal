@@ -1,5 +1,5 @@
 
-**Ads and AI agents both send buyers. Paid Signal credits each only with PayPal-confirmed sales; any agent can start a PayPal checkout or ask for a refund or payout, which waits for the owner.**
+**Small shops credit ads and AI agents only with sales PayPal confirms. Any agent can start a PayPal checkout over MCP; refunds and commissions it asks for wait for approval.**
 
 A small gift shop spent about $10,000 on ads in October. Matched by hand against its 735 bank transfers, the ad that brought 69% of its chats brought 19% of its money. Ad reports count chats, and AI shopping agents now send buyers too, each claiming credit. Paid Signal believes only PayPal: an ad click or an AI agent rides inside the PayPal order, and is credited only when PayPal confirms the payment. Any outside agent can connect to Paid Signal's MCP server, start a PayPal checkout, and ask for a refund or its commission. Those requests wait for the owner, and then PayPal moves the money: refunds through Payments, commissions through Payouts to the agent program's sandbox account set in code, each read back from PayPal. Inside, AI agents do the shop's PayPal work in an AG Grid workspace. The demo shop is fictional and runs on the PayPal sandbox; the gift shop's bank figures are why we built it, not a result of it.
 
@@ -10,7 +10,7 @@ A small gift shop spent about $10,000 on ads in October. Matched by hand against
 - **69% of the chats, 19% of the money.** A real gift shop spent about $10,000 on ads in October. Matched by hand against its 735 bank transfers, the ad that brought 69% of the chats brought 19% of the money. On PayPal, Paid Signal does that match by itself.
 - **62 leads, 9 paid orders.** In the demo shop the ad report says 62 leads and PayPal confirms 9 paid orders. The ad with the most leads returns $0.41 of PayPal revenue per $1 of ads; the testimonial ad returns $2.73.
 - **0 sent without a click.** No invoice or reminder goes out without the owner's click, and the code that checks the budget agent caught 1,100 of 1,100 planted errors (made-up numbers, fake payment ids and more) before the owner sees them.
-- **Real sandbox money.** A $49 double payment refunded (PayPal: COMPLETED) and $15 paid to the ad's creator for 3 paid orders (PayPal: SUCCESS).
+- **Live PayPal sandbox, end to end.** A $49 double payment refunded (PayPal: COMPLETED) and $15 paid to the ad's creator for 3 paid orders (PayPal: SUCCESS) ([proof](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/refund-and-commission-2026-11-12.json)).
 
 ## Inspiration
 
@@ -59,7 +59,7 @@ AG Studio is the shop's workspace, and the PayPal ledger is an AG Grid table the
 
 ## How we built it
 
-- **AI:** six agents on Claude Sonnet 5.5, each with its own tools, every tool call checked against its schema; inside AG Studio they run through a custom model adapter. The model has one job: read free text and draft. It cannot set a price or a recipient, cite a number the ledger does not hold, send an invoice by itself or change an ad budget. A read-only MCP server exposes the ledger.
+- **AI:** six agents on Claude Sonnet 5.5, each with its own tools, every tool call checked against its schema; inside AG Studio they run through a custom model adapter. The model has one job: read free text and draft. It cannot set a price or a recipient, cite a number the ledger does not hold, send an invoice by itself or change an ad budget. An MCP server gives outside agents eight read tools and four write tools; code sets the price, the commission and the payee (the program's sandbox account), and refunds and commissions wait for Approve.
 - **PayPal** and **AG Grid / AG Studio** as above; AG Grid Community and AG Charts on the dashboard.
 - **Runs on** Cloudflare Workers and KV, with 204 tests passing in CI.
 
@@ -72,7 +72,7 @@ AG Studio is the shop's workspace, and the PayPal ledger is an AG Grid table the
 
 ## Accomplishments that we're proud of
 
-- Real sandbox money, end to end: a $49 double payment refunded (PayPal: COMPLETED) and $15 paid to the ad's creator for 3 paid orders (PayPal: SUCCESS), each read back from PayPal.
+- Live PayPal sandbox calls, end to end: a $49 double payment refunded (PayPal: COMPLETED) and $15 paid to the ad's creator for 3 paid orders (PayPal: SUCCESS), each read back from PayPal.
 - In each of two runs on a held-out set of leads, the revenue agent invoiced 12 of 12 ready buyers, left 10 of 10 not-ready leads alone and invoiced 0 of 8 prompt-injection attempts; a browser check of both ledgers passes 7 of 7.
 - 0 accessibility violations on nine pages, phone and desktop (axe-core).
 

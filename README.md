@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/ci.yml) [![Live demo check](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml/badge.svg)](https://github.com/longtt-marketing/paid-signal/actions/workflows/live-demo.yml)
 
-**Ads and AI agents both send buyers. Paid Signal credits each only with PayPal-confirmed sales; any agent can start a PayPal checkout or ask for a refund or payout, which waits for the owner.**
+**Small shops credit ads and AI agents only with sales PayPal confirms. Any agent can start a PayPal checkout over MCP; refunds and commissions it asks for wait for approval.**
 
 ![AG Studio, 30 seconds: a click on an ad filters the page; the PayPal ledger (AG Grid) narrows to it; a payment opens its history; the owner decides in the cell](docs/img/studio-tour.gif)
 
@@ -108,7 +108,7 @@ No login is needed to look around; paying needs the sandbox buyer from the Devpo
 2. **[Dashboard](https://paid-signal.thelongmarketing.workers.dev)**: 62 leads against 9 PayPal-confirmed paid orders; the PayPal ledger as an AG Grid table (grouped by ad with a subtotal per ad, a total row that follows the filters, CSV export, refund or count a held payment from its row); **Ask the revenue agent**, **Approve** a draft (send agent), **Chase unpaid** (chase agent).
 3. **Report · AG Studio** tab (`/studio`): seven custom widgets, led by a money flow from the ad report to PayPal (a click on a band filters the page and shows the budget agent's checked verdict for that ad, to approve or dismiss) with the PayPal ledger under it, filtered by the same click, a page on the real shop's book, and the Studio assistant: **Replay a budget run** (Studio carries out a recorded run, no model call), **Review ad budgets** (a custom Studio agent on Claude submits through the evidence gate) or **Nudge who still owes**. How it is built: [docs/AG-STUDIO.md](docs/AG-STUDIO.md).
 4. **[Proof](https://paid-signal.thelongmarketing.workers.dev/proof)**: held-out evals (revenue agent 24 of 24 bookings, 20 of 20 not-ready leads, 0 of 16 injections invoiced), the evidence gate under attack (11 kinds of planted error, 100 of each: all caught), the refund-agent eval, the shop replay, live PayPal and Meta checks, and a budget simulation (run on the 30 Oct ledger of 6 paid orders: $1,181 vs $847 paid revenue minus ad spend over 8 weeks; ahead in 1,365 of 2,000 runs).
-5. **[Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit)** in the browser (Ads Manager export plus PayPal activity, or a bank-transfer shop's own order book, payments and refunds; *Load the gift shop's book* runs the published one), and any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (six read-only tools; see [MCP server](#mcp-server)).
+5. **[Audit your own ads](https://paid-signal.thelongmarketing.workers.dev/audit)** in the browser (Ads Manager export plus PayPal activity, or a bank-transfer shop's own order book, payments and refunds; *Load the gift shop's book* runs the published one), and any MCP client at `https://paid-signal.thelongmarketing.workers.dev/mcp` (eight read tools and four write tools; see [MCP server](#mcp-server)).
 
 API checks without the UI: import [`postman/paid-signal.postman_collection.json`](postman/paid-signal.postman_collection.json) into Postman (read-only requests, 20 tests, including the MCP server). To add Paid Signal to a real shop: [docs/INTEGRATE.md](docs/INTEGRATE.md).
 
@@ -183,8 +183,10 @@ Studio's widget API so page filters and cross-filters apply to them.
 
 ## MCP server
 
-`POST /mcp` speaks the Model Context Protocol (streamable HTTP, JSON responses; `src/mcp.js`). Read-only tools:
-`read_paid_signal`, `get_ad_truth`, `propose_budget` (proposes, changes nothing), `list_unpaid_leads`, `list_payments`, `check_paypal_ledger`: the same numbers the dashboard shows.
+`POST /mcp` speaks the Model Context Protocol (streamable HTTP, JSON responses; `src/mcp.js`, tools in `src/core.js` `mcpTool`). Twelve tools:
+- Read (8): `read_paid_signal`, `get_ad_truth`, `propose_budget` (proposes, changes nothing), `list_unpaid_leads`, `list_payments`, `check_paypal_ledger`, `get_offer`, `get_request`.
+- Write (4): `start_checkout` (creates a PayPal order for the fixed $49 offer; the buyer approves on PayPal), `get_order_status` (reads the PayPal status and, once the buyer has approved, captures the order and books it to the agent channel), `request_refund` (for an agent's or an ad's payment) and `request_commission` (each only creates a request that waits for Approve on /judge; the demo leaves Approve open so judges can try it).
+- Limits in code: the price, the commission ($5 per PayPal-confirmed order not fully refunded) and the payee (the program's sandbox account) are fixed server-side; per-IP and daily caps on every write; agent orders and payments live under their own KV prefixes and never enter the ad ledger.
 Claude used it through the Anthropic API's MCP connector: [`docs/proof/mcp-claude-run.md`](docs/proof/mcp-claude-run.md).
 For Claude Desktop: `npx mcp-remote https://paid-signal.thelongmarketing.workers.dev/mcp`.
 
