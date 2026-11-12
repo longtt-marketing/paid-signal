@@ -51,8 +51,8 @@ const cover = `<html><head><style>${css}
 const proofRows = [
   ["PayPal refund", "$49 double payment returned to the buyer", "COMPLETED", "40H58610AR045544E"],
   ["PayPal Payouts", "$15 to the ad's creator for 3 paid orders", "SUCCESS", "batch 29DTSH6RYGE4C"],
-  ["PayPal Payouts", "$5 commission for an order placed over MCP", "SUCCESS", "batch XMCUJ2QNCDN8S"],
-  ["Claude over MCP", "Started checkout 2G0821841L9517406; no commission claimed", "NOT PAID YET", "PAYER_ACTION_REQUIRED"],
+  ["Claude over MCP", "Sold one class; asked for its $5 only after PayPal confirmed", "COMPLETED", "capture 5NC08720EW4665251"],
+  ["PayPal Payouts", "$5 commission to the agent program, after the owner approved", "SUCCESS", "batch FYYKYSK29SJTS"],
   ["Ledger vs PayPal", "Every ledger payment read back from PayPal", "13 / 13", "match"],
 ];
 const proof = `<html><head><style>${css}

@@ -29,7 +29,7 @@ Around the loop, agents do the daily PayPal work, each behind the owner's click:
 - **Payouts** pays creators and agents per confirmed sale.
 - The **PayPal Agent Toolkit** gives the agents their PayPal actions (invoices, reminders, refunds, disputes), and every action is read back from PayPal.
 
-Live in the sandbox, each read back from PayPal: a $49 double payment refunded (COMPLETED), $15 paid to an ad's creator for 3 paid orders (SUCCESS), and a $5 commission for an order placed through the MCP server and paid by a sandbox buyer (SUCCESS). [Proof](https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof).
+Live in the sandbox, each read back from PayPal: a $49 double payment refunded (COMPLETED), $15 paid to an ad's creator for 3 paid orders (SUCCESS), and a $5 commission for a sale Claude made as an outside agent over MCP, paid by the sandbox buyer (SUCCESS, [the run](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-sale-2026-11-12.md)). [Proof](https://github.com/longtt-marketing/paid-signal/tree/main/docs/proof).
 
 ### Where the owner works: AG Grid and AG Studio
 
@@ -50,7 +50,7 @@ Cloudflare Workers and KV; React and Vite. Six agents on Claude Sonnet 5.5, each
 
 - **Agents that make up numbers.** A check in code rejects any number or payment id that is not in the ledger. In a test with 1,100 planted errors, it caught all 1,100.
 - **One payment, many signals.** A PayPal payment can arrive from an order, an invoice and a webhook, sometimes twice. Each is matched to its ad once, refunds come off, and likely double charges wait for a person.
-- **Letting outside agents in without letting them move money.** An agent can start a checkout that the buyer approves on PayPal, and it can ask; price, payee and commission are fixed in code. We pointed Claude at the public MCP server as a shopping agent: it started a sandbox checkout, saw that the buyer had not approved yet, and did not claim a commission ([the run](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-buy-2026-11-12.md)).
+- **Letting outside agents in without letting them move money.** An agent can start a checkout that the buyer approves on PayPal, and it can ask; price, payee and commission are fixed in code. We pointed Claude at the public MCP server as a selling agent: it started a sandbox checkout, asked for its commission only after PayPal confirmed the buyer's payment, and the $5 was paid after the owner approved ([the run](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-sale-2026-11-12.md)). In another run the buyer had not paid, and Claude did not ask ([that run](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/mcp-claude-buy-2026-11-12.md)).
 
 ## Accomplishments that we're proud of
 
