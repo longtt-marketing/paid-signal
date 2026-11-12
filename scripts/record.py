@@ -669,7 +669,77 @@ def tour31d(pg):
     pg.wait_for_timeout(3000)
 
 
-SEGMENTS = {"tour31a": tour31a, "tour31b": tour31b, "tour31c": tour31c, "tour31d": tour31d, "studio30a": studio30a, "studio30b": studio30b, "studio30c": studio30c, "studio26": studio26, "home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
+def agent33(pg):
+    """Outside AI agent over MCP: a live sandbox checkout, the commission the owner approved (PayPal Payouts), and an unearned commission refused in code."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_selector("#agent-requests .chip", timeout=60000); pg.wait_for_timeout(500)
+    scroll_to(pg, "#outside-agents")
+    mark(pg, "mcp", "#outside-agents .card .row >> nth=0"); glide(pg, pg.locator("#mcp-url"), click=False); pg.wait_for_timeout(1800)
+    glide(pg, pg.locator("#sample-agent"))
+    pg.wait_for_function("() => /LIVE · Order/.test(document.querySelector('#sample-agent-result').innerText)", timeout=60000)
+    pg.wait_for_timeout(400); mark(pg, "order", "#sample-agent-result"); glide(pg, pg.locator("#sample-agent-result a"), click=False); pg.wait_for_timeout(3000)
+    scroll_to(pg, "#outside-agent-requests", "center")
+    row = pg.locator("#agent-requests .row", has_text="commission").first
+    mark(pg, "commission", "#agent-requests .row:has-text('commission')"); glide(pg, row.locator(".v"), click=False); pg.wait_for_timeout(3600)
+    scroll_to(pg, "#outside-agents")
+    mark(pg, "limits", "#outside-agents .card .row >> nth=2"); glide(pg, pg.locator("#unearned"))
+    pg.wait_for_function("() => /nothing_owed|refused/.test(document.querySelector('#sample-agent-result').innerText)", timeout=60000)
+    pg.wait_for_timeout(400); mark(pg, "refused", "#sample-agent-result"); glide(pg, pg.locator("#sample-agent-result"), click=False); pg.wait_for_timeout(3200)
+
+
+def hero36(pg):
+    """V36: the judge path's first screen: the ad report against PayPal, then the three-step loop."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_selector(".cmp", timeout=60000); pg.wait_for_timeout(800)
+    mark(pg, "h1", ".hero2 h1"); glide(pg, pg.locator(".hero2 h1"), click=False); pg.wait_for_timeout(2200)
+    mark(pg, "bars", ".cmp"); glide(pg, pg.locator(".cmp .vs-ad").nth(0), click=False); pg.wait_for_timeout(2000)
+    glide(pg, pg.locator(".cmp .vs-ad").nth(1), click=False); pg.wait_for_timeout(2200)
+    mark(pg, "loop", ".loop2"); glide(pg, pg.locator(".loop2 .st").nth(1), click=False); pg.wait_for_timeout(2600)
+
+
+def cust36(pg):
+    """V36: be the customer on the rebuilt judge path."""
+    cust23(pg)
+
+
+def says36(pg):
+    """V36: Claude says no (the section now sits in a fold)."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_function("() => /Refused|Accepted/.test(document.querySelector('#ask').textContent)", timeout=60000)
+    scroll_to(pg, ".three", "center"); mark(pg, "card", ".three .card >> nth=0"); glide(pg, pg.locator("[data-open=answer]")); pg.wait_for_timeout(1600)
+    mark(pg, "vs", "#vs"); glide(pg, pg.locator("#vs .big"), click=False); pg.wait_for_timeout(2200)
+    rows = pg.locator("#ask .row")
+    for i in range(3):
+        mark(pg, f"row{i}", f"#ask .row >> nth={i}"); glide(pg, rows.nth(i).locator(".v"), click=False); pg.wait_for_timeout(2300)
+
+
+def money36(pg):
+    """V36: the refund the refund agent made and the creator's payout (both sections now sit in folds)."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_function("() => /COMPLETED/.test(document.querySelector('#refund-real').textContent)", timeout=60000)
+    pg.wait_for_selector("#commission-body .stat", timeout=60000, state="attached")
+    pg.evaluate("document.getElementById('refund').open = true; document.getElementById('commission').open = true"); pg.wait_for_timeout(400)
+    scroll_to(pg, "#refund-real", "center")
+    rows = pg.locator("#refund-real .row")
+    for i in range(3):
+        mark(pg, f"r{i}", f"#refund-real .row >> nth={i}"); glide(pg, rows.nth(i).locator(".v"), click=False); pg.wait_for_timeout(1900)
+    scroll_to(pg, "#commission")
+    mark(pg, "paid", "#commission-body .stat >> nth=0"); glide(pg, pg.locator("#commission-body .stat").nth(0), click=False); pg.wait_for_timeout(2200)
+    mark(pg, "perlead", "#commission-body .stat >> nth=1"); glide(pg, pg.locator("#commission-body .stat").nth(1), click=False); pg.wait_for_timeout(2600)
+
+
+def agent36(pg):
+    """V36: Claude sold one class over MCP and was paid $5 after PayPal confirmed and the owner approved; an unearned ask gets $0."""
+    pg.goto(BASE + "/judge", wait_until="networkidle"); pg.wait_for_selector("#agent-requests .chip", timeout=60000, state="attached"); pg.wait_for_timeout(500)
+    scroll_to(pg, "#outside-agents")
+    mark(pg, "cards", "#outside-agents .two2"); glide(pg, pg.locator("#outside-agents .two2 .card:not(.c-nopay) .t"), click=False); pg.wait_for_timeout(3200)
+    glide(pg, pg.locator("details.dev summary")); pg.wait_for_timeout(700)
+    scroll_to(pg, "#agent-requests", "center")
+    row = pg.locator("#agent-requests .row", has_text="claude-sales-agent").first
+    mark(pg, "commission", "#agent-requests .row:has-text('claude-sales-agent')"); glide(pg, row.locator(".v"), click=False); pg.wait_for_timeout(5200)
+    scroll_to(pg, ".three", "center")
+    mark(pg, "limits", ".three .card >> nth=2"); glide(pg, pg.locator("#unearned"))
+    pg.wait_for_function("() => /nothing_owed|refused/.test(document.querySelector('#unearned-result').innerText)", timeout=60000)
+    pg.wait_for_timeout(400); mark(pg, "refused", ".three .card >> nth=2"); glide(pg, pg.locator("#unearned-result"), click=False); pg.wait_for_timeout(3600)
+
+
+SEGMENTS = {"hero36": hero36, "cust36": cust36, "says36": says36, "money36": money36, "agent36": agent36, "agent33": agent33, "tour31a": tour31a, "tour31b": tour31b, "tour31c": tour31c, "tour31d": tour31d, "studio30a": studio30a, "studio30b": studio30b, "studio30c": studio30c, "studio26": studio26, "home23": home23, "cust23": cust23, "impact23": impact23, "says23": says23, "buyers23": buyers23, "money23": money23, "trail23": trail23, "shop23": shop23, "judge2": judge2, "tryit": tryit, "loop": loop, "audit": audit, "judge": judge, "trail": trail, "owner": owner, "week": week, "nudge": nudge, "ledger": ledger, "chase": chase, "revenue": revenue, "approvesend": approvesend, "dash": dash, "agent": agent, "assistant": assistant, "chart": chart, "budget": budget, "send": send, "signal": signal, "refund": refund, "moneyout": moneyout, "journey": journey, "paidpage": paidpage, "twobuyers": twobuyers, "gap": gap, "replay": replay}
 
 with sync_playwright() as p:
     b = p.chromium.launch(channel=os.environ.get("PS_CHANNEL") or None, args=["--mute-audio", "--disable-sync", "--no-first-run", "--no-default-browser-check"])

@@ -5,15 +5,20 @@
 
 ## Inspiration
 
-In October a small gift shop whose ads we run spent about $10,000 on ads. The ad report said one ad brought 69% of the chats. Matched by hand against the shop's 735 bank transfers, that ad brought 19% of the money. The owner had been paying for chats, not sales.
+In October a small gift shop whose ads we run spent about $10,000 on ads. The ad report said one ad brought 69% of the chats. Matched by hand against the shop's 735 bank transfers, that ad brought 19% of the money. The owner had been paying for chats, not sales. Split by money instead of chats, the shop's own October numbers imply 9% to 18% more revenue from the same ad spend (an estimate from one month, not a measured lift; [how it is computed](https://paid-signal.thelongmarketing.workers.dev/judge#gap)).
+
+> "Ads Manager says a campaign brought plenty of enquiries, but only my payment history shows who actually paid, and the two never line up. Seeing paid orders next to each ad, before I raise a budget, is what I need."
+> A friend who runs an online shop and buys their own Facebook ads (paraphrased from our conversation, shared with their permission, name withheld).
 
 Bank transfers have to be matched one by one. On PayPal the same check can run by itself: every payment is confirmed, and the ad click can travel inside the order. Buyers also no longer come only from ads. Creators and AI shopping agents send them too, and each wants to be paid. So we built one rule for all of them: no PayPal-confirmed sale, no credit and no payout.
+
+**Who it is for:** small shops that sell through chat and click-to-message ads, where the ad platform sees the conversation but never the payment.
 
 ## What it does
 
 One loop, on PayPal:
 
-1. **The click rides inside the payment.** A buyer who comes from an ad carries the ad click (ad, source, click id) into a field of the PayPal order or invoice (`custom_id`, reference).
+1. **The click rides inside the payment.** A buyer who comes from an ad carries the ad click (ad, source, click id) into a field of the PayPal order or invoice (`custom_id`, reference). No tracking pixel and no modelled guess: PayPal's own record of the payment carries the click.
 2. **PayPal confirms, and the ad gets the credit.** Paid Signal reads each payment back from PayPal and books it to its ad. Refunds come off; a payment that looks like a double charge, or one with an open dispute, waits for the owner. In the live demo shop (a fictional robotics club on the PayPal sandbox) the ad report counts 62 leads and PayPal confirms 9 paid orders. The ad with the most leads returns $0.41 of PayPal revenue per $1 of ads; the testimonial ad returns $2.73.
 3. **The budget follows the money.** An agent proposes which ads to grow or cut. Code checks every number it quotes against the ledger, never moves an ad with fewer than 3 paid orders, and the owner approves.
 4. **Whoever sent the buyer is paid per confirmed sale.** The ad's creator is paid through PayPal Payouts for each confirmed order, not each lead. Outside AI agents can sell for the shop too: over MCP (the open protocol AI agents use to call tools) an agent starts a PayPal checkout for the shop's fixed-price offer, and the buyer approves on PayPal. Once PayPal confirms the payment, the agent's $5 commission waits for the owner, then Payouts pays it. An agent with no confirmed sale is owed nothing, and code says so.
