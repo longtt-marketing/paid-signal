@@ -48,7 +48,7 @@ Live in the sandbox, each read back from PayPal: a $49 double payment refunded (
 
 The same PayPal ledger is an AG Grid table inside AG Studio, where the owner and the agents work.
 
-- **Ask the ledger in plain words.** AG Grid's AI Toolkit turns the request into grid state: groups, totals, filters. Measured: 149 of 153 runs right (51 requests, 3 runs each); all 4 misses were on held-out requests written after the last change ([eval](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/grid-agent-eval-2026-11-11.json)).
+- **Ask the ledger in plain words.** For groups and totals, AG Grid's AI Toolkit turns the request into grid state; filters and sorts go through the grid's own API. Measured on 51 requests, 3 runs each: 149 of 153 runs right, 59 of 63 for the AI Toolkit's groups and totals; all 4 misses were on held-out requests written after the last change ([eval](https://github.com/longtt-marketing/paid-signal/blob/main/docs/proof/grid-agent-eval-2026-11-11.json)).
 - **AG Studio's own agents** build a new page from one request; custom Studio tools turn invoice drafts and reminders into cards the owner approves.
 - **Seven custom widgets, one cross-filter.** Click an ad and the whole page follows. The arrow on a row opens a payment's history: the ad click, the PayPal capture, what Meta was told.
 - **An AG Grid pivot** of the real gift shop's 735 payments.
