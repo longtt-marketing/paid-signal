@@ -29,8 +29,8 @@ try {
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
   await page.waitForFunction(() => document.querySelectorAll(".hb-row").length >= 4, null, { timeout: 30000 });
   ok("dashboard renders without loading AG Studio", !early.some((u) => u.includes("StudioPanel")), `${early.length} scripts before load`);
-  const head = (await page.textContent("h1")).replace(/\s+/g, " ");
-  ok("headline compares leads with PayPal paid orders", /\d+ leads\. ?\d+ paid\./.test(head), head);
+  const head = (await page.textContent(".hb-flow")).replace(/\s+/g, " ");
+  ok("the flow compares leads with PayPal paid orders", /\d+ leads\..*\d+ paid\./.test(head), head);
   ok("leads and paid orders per ad", await page.locator(".hb-row").count() >= 4);
   await page.goto(`${BASE}/studio`, { waitUntil: "networkidle" });
   await page.waitForFunction(() => document.querySelectorAll(".ag-row").length >= 8, null, { timeout: 60000 }).catch(() => {});

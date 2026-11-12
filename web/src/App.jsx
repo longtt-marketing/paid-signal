@@ -447,58 +447,38 @@ export default function App({ first = null }) {
       </header>
 
       <main id="main" className="desk">
-        <section id="overview" className="hero" aria-label="Claimed vs paid">
-          <div className="hero-copy">
-            <p className="kicker">Kite Robotics Club · demo shop</p>
-            <h1 className="duo"><span className="n claimed">{(t || first)?.leads ?? "…"} leads.</span><span className="n paid">{(t || first)?.paid ?? "…"} paid.</span></h1>
-            {paymentBreakdown && <p className="payment-count-line">{paymentBreakdown}</p>}
-            <p className="pitch">Ads learn from leads. PayPal knows who paid.</p>
-            <div className="hero-actions"><a className="cta" href="/studio?tour=1">▶ Take the 60-second tour</a><a className="cta ghost" href="/judge#customer">Be the customer: pay $49</a></div>
+        <section id="overview" className="hb-hero" aria-label="Claimed vs paid">
+          <div className="hb-top">
+            <h1 className="hb-h1">Ad reports count chats.<br /><span>PayPal counts money.</span></h1>
+            <div className="hb-acts"><a className="hb-go" href="/judge#customer">Be the customer: pay $49</a><a className="hb-ghost" href="/studio?tour=1">60-second tour</a></div>
           </div>
-          <div className="hero-bars" aria-label="Leads and paid orders by ad">
-            <div className="hb-head"><b>By ad</b><span>paid revenue per $1 of ads</span></div>
-            {byCost.length ? [...ads].sort((a, b) => b.leads - a.leads).map((a) => {
-              const top = Math.max(...ads.map((x) => x.leads), 1), back = a.spend_cents ? a.revenue_cents / a.spend_cents : 0;
-              return <div key={a.ad} className="hb-row">
-                <div className="hb-main"><span>{adName(a.ad)}</span>
-                  <div className="hb-bars"><i className="l" style={{ width: `${(a.leads / top) * 100}%` }} /><i className="p" style={{ width: `${Math.max((a.paid / top) * 100, 2)}%` }} /></div>
-                  <small>{a.leads} leads · {a.paid} paid</small></div>
-                <b className={a.ad === best ? "good" : back < 1 ? "warn" : ""}>{"$" + back.toFixed(2)}</b>
-              </div>;
-            }) : <p className="ghost">Loading the ledger…</p>}
-            {t && <div className="totals" aria-label="Totals">
-              <div><b>{usd(t.revenue_cents)}</b><small>paid revenue</small></div>
-              <div><b>{usd(t.spend_cents)}</b><small>ad spend</small></div>
-              <div title="Same payer, same ad, minutes apart: not counted until a person decides"><b>{t.held}</b><small>double payment held</small></div>
-            </div>}
+          <div className="hb-flow">
+            <div className="hb-step"><span className="k">Ad report</span><b className="duo">{(t || first)?.leads ?? "…"} leads.</b><small>{ads.length ? `${adName([...ads].sort((x, y) => y.leads - x.leads)[0].ad).split(" · ")[0]} claims ${Math.max(...ads.map((x) => x.leads))}` : "Loading the ledger…"}</small></div>
+            <svg className="hb-arrow" viewBox="0 0 64 24" aria-hidden="true"><path d="M6 12h46M44 5l8 7-8 7" /></svg>
+            <div className="hb-step on"><span className="k">PayPal confirms</span><b>{(t || first)?.paid ?? "…"} paid.</b><small>{t ? `${usd(t.revenue_cents)} kept · ${t.held} double held` : ""}</small></div>
+            <svg className="hb-arrow" viewBox="0 0 64 24" aria-hidden="true"><path d="M6 12h46M44 5l8 7-8 7" /></svg>
+            <div className="hb-step"><span className="k">Credit goes to</span><b>{best ? adName(best).split(" · ")[0] : "…"}</b><small>{(() => { const a = ads.find((x) => x.ad === best); return a ? `${a.paid} paid · $${(a.revenue_cents / a.spend_cents).toFixed(2)} back per $1` : ""; })()}</small></div>
           </div>
         </section>
         {error && <p className="err" role="alert">{error}</p>}
 
-        <section className="flow-card" aria-label="From the ad report, through PayPal, back to Meta">
-          <div className="hb-head"><b>Ad report → PayPal → Meta</b><a className="link-btn" href={adLink("trial_video", "fb")}>Pay from an ad link</a></div>
-          {state ? <FlowChart ads={ads} payments={state.payments} sends={state.metaSends} held={(state.duplicates || []).map((d) => d.capture_id)} worst={worst} /> : <p className="ghost">Loading the ledger…</p>}
-          <div className="legend"><span><i className="l" />what the ads report</span><span><i className="p" />what PayPal confirms</span><span><i className="m" />what Meta learns</span></div>
+        <section className="hb-ads" aria-label="Leads and paid orders by ad">
+          {[...ads].sort((x, y) => y.leads - x.leads).map((a) => {
+            const top = Math.max(...ads.map((x) => x.leads), 1), back = a.spend_cents ? a.revenue_cents / a.spend_cents : 0;
+            return <article key={a.ad} className={`hb-row${a.ad === best ? " best" : ""}`}>
+              <span className="nm">{adName(a.ad).split(" · ")[0]}</span>
+              <b className={a.ad === best ? "good" : back < 1 ? "warn" : ""}>{"$" + back.toFixed(2)}</b>
+              <div className="hb-bars"><i className="l" style={{ width: `${(a.leads / top) * 100}%` }} /><i className="p" style={{ width: `${Math.max((a.paid / top) * 100, 2)}%` }} /></div>
+              <small>{a.leads} leads · {a.paid} paid</small>
+            </article>;
+          })}
+          {ads.length > 0 && <div className="hb-key"><span><i className="l" />Leads</span><span><i className="p" />Paid on PayPal</span><span><b>$</b> paid revenue per $1 of ads</span></div>}
         </section>
-        <section className="agents" aria-label="Agents">
-          <div className="sec-head"><h2>Agents draft. Code checks. You approve.</h2></div>
-          <div className="agent-grid">
-            {[
-              ["Revenue", "Reads the chat, drafts the invoice.", "PayPal invoice", <button className="mini" disabled={revenue.status === "running"} onClick={askRevenue}>{revenue.status === "running" ? "Reading…" : "Run"}</button>],
-              ["Send", "Sends it once you approve.", "PayPal invoice", <button className="mini" onClick={() => scrollToId("approvals")}>Approvals</button>],
-              ["Chase", "Reminds who still owes.", "PayPal reminder", <button className="mini" disabled={chase.status === "running"} onClick={askChase}>{chase.status === "running" ? "Chasing…" : "Chase"}</button>],
-              ["Refund", "Returns a double payment.", "PayPal refund", <a className="mini" href="/judge#refund">Watch</a>],
-              ["Commission", "Pays the creator per paid order.", "PayPal Payouts", <a className="mini" href="/judge#commission">Watch</a>],
-              ["Budget", "Moves money only on PayPal proof.", "Checked in code", <button className="mini" disabled={agent.status === "running"} onClick={() => ask()}>{agent.status === "running" ? "Reading…" : "Ask"}</button>],
-            ].map(([n, does, tool, act]) => <article key={n}><div><b>{n}</b><p>{does}</p></div><div className="agent-foot"><span className="agent-tool">{tool}</span>{act}</div></article>)}
-          </div>
-        </section>
-
 
         <div className="cols">
           <div className="col-main">
             <section className="card" aria-label="Per ad">
-              <div className="card-head"><h2>Per ad</h2><span className="muted">No budget moves under 3 paid orders</span></div>
+              <div className="card-head"><h2>Per ad</h2></div>
               <div className="scroll-x desktop-only">
                 <table className="grid">
                   <thead><tr><th>Ad</th><th>Spend</th><th>Leads</th><th>Paid</th><th>Revenue</th><th title="Chance, computed in code, that this ad's paid revenue covers its ad spend">Chance it covers spend</th></tr></thead>
@@ -533,7 +513,6 @@ export default function App({ first = null }) {
 
             <PhoneDisclosure id="signal" title="Ad platform signal" className="card" summaryText={state ? `${state.meta.events.length} Meta events` : ""}>
               <div className="card-head phone-section-head"><h2>Ad platform signal</h2>{state && <span className="ok">{state.meta.events.length} Meta Purchase events · {state.google.conversions.length} Google {state.google.conversions.length === 1 ? "row" : "rows"}</span>}</div>
-              <p className="muted">PayPal-confirmed payments from Meta ads become Purchase events, one per capture.</p>
               {state?.metaLive && <div className="live-meta" role="status">
                 <span className="pulse" aria-hidden="true" />
                 {lastMeta ? <span><b>Live to Meta:</b> last Purchase (${lastMeta.value}) received {clock(lastMeta.at)}, events_received {lastMeta.events_received}.</span>
@@ -641,7 +620,6 @@ export default function App({ first = null }) {
 
             <PhoneDisclosure id="links" title="Ad links & data" className="card">
               <div className="card-head phone-section-head"><h2>Ad links</h2></div>
-              <p className="muted">Each opens the shop with an ad click.</p>
               <div className="links">
                 {AD_LINKS.map(([k, s]) => <a key={k} className="adlink" href={adLink(k, s)}>{adName(k)}<small>{s === "fb" ? "Meta" : "Google"} click</small></a>)}
               </div>
@@ -657,7 +635,7 @@ export default function App({ first = null }) {
 
         <section id="studio" className="card studio-card" ref={studioBox} aria-label="AG Studio">
           <div className="card-head">
-            <div><h2>{view === "report" ? "The shop's PayPal workspace · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2><p className="muted">{STUDIO_PAGE ? "AI agents do the PayPal work here; nothing reaches a customer until you click." : "Seven custom widgets, a real shop's book, cross-filters, Claude in the assistant."}{layoutNote ? ` ${layoutNote}.` : ""}</p></div>
+            <div><h2>{view === "report" ? "The shop's PayPal workspace · AG Studio" : "Claimed vs confirmed, in AG Studio"}</h2>{layoutNote && <p className="muted">{layoutNote}.</p>}</div>
             <div className="row">
               {view === "report" ? <button className="btn" onClick={() => goDesk("approvals")}>Approvals {myDecisionCount > 0 && <span className="count">{myDecisionCount}</span>}</button> : <a className="btn" href="#report">Open the report</a>}
               <button className="btn" onClick={() => setLayoutNote(studio.current?.saveLayout() ? "Saved in this browser" : "Could not save")}>Save layout</button>
