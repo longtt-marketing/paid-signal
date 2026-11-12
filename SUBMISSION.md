@@ -84,13 +84,13 @@ A pilot with the gift shop on PayPal; approved budget changes sent straight to t
 
 ## Testing instructions (private field)
 
-Demo: https://paid-signal.thelongmarketing.workers.dev (no login for anything except paying).
-PayPal sandbox buyer: [SANDBOX BUYER EMAIL] / [PASSWORD], for the PayPal step in the demo shop.
-Outside agent (MCP): add https://paid-signal.thelongmarketing.workers.dev/mcp as a connector in Claude (or any MCP client) and ask "buy one trial class from this shop and tell me the PayPal status", or press **Run a sample agent** on /judge. Requests an agent makes (refund, commission) appear on /judge under Outside agents with Approve and Decline. Example: curl -s https://paid-signal.thelongmarketing.workers.dev/mcp -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
-0. Start at /judge: the read-only path (owner request, Claude's answer, the rule in code, the PayPal capture behind it, one lead's invoice loop), no login and no AI quota. /audit runs the same ledger on your own Ads Manager and PayPal files, in the browser.
-1. Press **Ask the revenue agent**: it drafts for any lead ready to pay that has no invoice yet (drafts it made earlier wait under Invoices), leaves the rest, and flags the prompt injection.
-2. Under Invoices, press **Approve** on a draft: the send agent checks it and sends it. **Chase unpaid** runs the chase agent on sent invoices that are still unpaid.
-3. **Report · AG Studio** tab, then open the Studio assistant, then *Review ad budgets*.
-4. Open an ad link from Ad links and pay with the sandbox buyer: the receipt shows Meta's answer, and the dashboard counts it under that ad within 15 seconds.
-5. Under Payments, Refund previews on the seeded payments; a payment you made can be refunded for real.
-6. /proof lists every measured number and the script that reproduces it.
+Demo: https://paid-signal.thelongmarketing.workers.dev (no login needed to look around; desktop browser recommended)
+PayPal sandbox buyer: [SANDBOX BUYER EMAIL] / [PASSWORD], for the PayPal step.
+Outside agent (MCP): add https://paid-signal.thelongmarketing.workers.dev/mcp as a connector in Claude (or any MCP client) and ask "buy one trial class from this shop and tell me the PayPal status".
+
+1. Start at https://paid-signal.thelongmarketing.workers.dev/judge (no login): press "Be the customer: pay $49". Claude drafts a PayPal sandbox invoice for you, you approve it, then pay on PayPal's page with the sandbox buyer above (or press "Replay a recorded payment"). The testimonial ad gains your order; Undo refunds it through PayPal.
+2. On the same page, "What the agents can't do": Ask it live (Claude refuses to raise an ad with 31 leads and 1 paid order), Send it (a prompt injection is not invoiced), Ask for an unearned commission (code returns $0 owed).
+3. https://paid-signal.thelongmarketing.workers.dev/studio?tour=1: the 60-second guided tour of AG Studio (an ad filter, a payment's history, a live AG Grid AI Toolkit call, the PayPal read-back). Then open the Studio assistant and pick "Group the ledger by ad (AI Toolkit)" or "Invoice warm leads".
+4. Outside agents: on /judge open "An outside AI agent buys: connect yours over MCP". "Run a sample agent" starts a sandbox order; requests an agent makes appear under Outside agents with Approve and Decline (open for judging). Claude's own end-to-end sale: docs/proof/mcp-claude-sale-2026-11-12.md in the repo.
+5. https://paid-signal.thelongmarketing.workers.dev/trail follows one payment from ad click to PayPal to Meta's reply; https://paid-signal.thelongmarketing.workers.dev/audit runs the same ledger on your own Ads Manager and PayPal files, in the browser.
+6. https://paid-signal.thelongmarketing.workers.dev/proof lists every measured number and the script that reproduces it.

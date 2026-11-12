@@ -187,7 +187,7 @@ Studio's widget API so page filters and cross-filters apply to them.
 - Read (8): `read_paid_signal`, `get_ad_truth`, `propose_budget` (proposes, changes nothing), `list_unpaid_leads`, `list_payments`, `check_paypal_ledger`, `get_offer`, `get_request`.
 - Write (4): `start_checkout` (creates a PayPal order for the fixed $49 offer; the buyer approves on PayPal), `get_order_status` (reads the PayPal status and, once the buyer has approved, captures the order and books it to the agent channel), `request_refund` (for an agent's or an ad's payment) and `request_commission` (each only creates a request that waits for Approve on /judge; the demo leaves Approve open so judges can try it).
 - Limits in code: the price, the commission ($5 per PayPal-confirmed order not fully refunded) and the payee (the program's sandbox account) are fixed server-side; per-IP and daily caps on every write; agent orders and payments live under their own KV prefixes and never enter the ad ledger.
-Claude used it through the Anthropic API's MCP connector: [`docs/proof/mcp-claude-run.md`](docs/proof/mcp-claude-run.md).
+Claude used it through the Anthropic API's MCP connector: [`docs/proof/mcp-claude-run.md`](docs/proof/mcp-claude-run.md). As an outside selling agent, Claude sold one class end to end: it started the checkout, the sandbox buyer paid, it asked for its commission only after PayPal confirmed, the owner approved, and PayPal Payouts paid $5 (SUCCESS): [`docs/proof/mcp-claude-sale-2026-11-12.md`](docs/proof/mcp-claude-sale-2026-11-12.md).
 For Claude Desktop: `npx mcp-remote https://paid-signal.thelongmarketing.workers.dev/mcp`.
 
 ## Architecture
